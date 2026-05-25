@@ -1,0 +1,341 @@
+# API contract (v1)
+
+This document defines the stable contract between the Django backend and
+the React frontend. **Changes to this contract require a PR that updates
+this file in lockstep**, plus matching changes on both sides.
+
+- API base path: whatever the consumer mounts. All examples below use
+  `/admin-react/api/v1/` for clarity.
+- Auth: Django session cookie. Unsafe methods require the
+  `X-CSRFToken` header.
+- Encoding: `application/json` request and response bodies.
+- Timezones: all datetimes are ISO 8601 with offset (UTC unless the
+  consumer's `USE_TZ` is False).
+- Errors: see §6 below.
+
+---
+
+## 1. Endpoint summary
+
+| Method | Path                                                | Purpose                          | Auth         |
+| ------ | --------------------------------------------------- | -------------------------------- | ------------ |
+| GET    | `/api/v1/registry/`                                 | List apps/models the user sees   | staff        |
+| GET    | `/api/v1/{app_label}/{model_name}/`                 | List objects                     | staff + view |
+| POST   | `/api/v1/{app_label}/{model_name}/`                 | Create an object                 | staff + add  |
+| GET    | `/api/v1/{app_label}/{model_name}/{pk}/`            | Object detail                    | staff + view |
+| PATCH  | `/api/v1/{app_label}/{model_name}/{pk}/`            | Partial update                   | staff + change |
+| DELETE | `/api/v1/{app_label}/{model_name}/{pk}/`            | Delete                           | staff + delete |
+
+There is **no** `PUT` in v1. Use `PATCH` for partial updates.
+
+The `app_label`/`model_name` segments must match a model that is
+registered in the configured admin site **and** that the requesting user
+can view via `ModelAdmin.has_view_permission(request)` (the broader
+permission gate for the path; specific operations check their own
+`has_*_permission`).
+
+---
+
+## 2. `GET /api/v1/registry/`
+
+Response 200:
+
+```json
+{
+  "mount": "/admin-react/",
+  "user": {
+    "id": 42,
+    "username": "alice",
+    "is_staff": true,
+    "is_superuser": false,
+    "display_name": "Alice Example"
+  },
+  "apps": [
+    {
+      "app_label": "fintech",
+      "verbose_name": "Fintech",
+      "models": [
+        {
+          "app_label": "fintech",
+          "model_name": "account",
+          "verbose_name": "account",
+          "verbose_name_plural": "accounts",
+          "object_name": "Account",
+          "permissions": {
+            "view": true,
+            "add": true,
+            "change": true,
+            "delete": false
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+Rules:
+
+- Only models registered in the configured admin site are included.
+- A model is included for a user only if
+  `ModelAdmin.has_module_permission(request)` and
+  `ModelAdmin.has_view_permission(request)` both return truthy.
+- `mount` is the absolute URL path at which the package is mounted, so the
+  SPA can construct links without hardcoding.
+
+---
+
+## 3. `GET /api/v1/{app_label}/{model_name}/`
+
+Query parameters:
+
+| Name        | Type    | Default | Notes                                                            |
+| ----------- | ------- | ------- | ---------------------------------------------------------------- |
+| `q`         | string  | `""`    | Forwarded to `ModelAdmin.get_search_results(request, qs, q)`.    |
+| `page`      | int     | `1`     | 1-indexed.                                                       |
+| `page_size` | int     | `DEFAULT_PAGE_SIZE` | Clamped to `MAX_PAGE_SIZE`.                          |
+| `ordering`  | string  | `""`    | Comma-separated list. Each entry must appear in `get_ordering(request)` or `ModelAdmin.ordering`. Unknown values are ignored. |
+
+Response 200:
+
+```json
+{
+  "app_label": "fintech",
+  "model_name": "account",
+  "permissions": { "view": true, "add": true, "change": true, "delete": false },
+  "columns": [
+    { "name": "name",     "label": "Name",     "sortable": true  },
+    { "name": "balance",  "label": "Balance",  "sortable": true  },
+    { "name": "is_active","label": "Active",   "sortable": false }
+  ],
+  "search_fields": ["name", "iban"],
+  "page": 1,
+  "page_size": 25,
+  "total": 137,
+  "results": [
+    {
+      "pk": 1,
+      "label": "Checking — Alice",
+      "fields": {
+        "name": "Checking — Alice",
+        "balance": "1023.45",
+        "is_active": true
+      }
+    }
+  ]
+}
+```
+
+Rules:
+
+- `columns` is built from `ModelAdmin.get_list_display(request)`. Callable
+  list-display values are resolved using the admin's standard helpers.
+- `search_fields` is the literal list from the `ModelAdmin` (so the SPA
+  can label the search box). Empty list means no search.
+- `results[*].fields` only contains values for `columns[*].name`.
+- `results[*].label` is `str(obj)` (the admin's display fallback).
+- `total` reflects the filtered queryset count **after** search is
+  applied.
+
+---
+
+## 4. `GET /api/v1/{app_label}/{model_name}/{pk}/`
+
+Response 200:
+
+```json
+{
+  "app_label": "fintech",
+  "model_name": "account",
+  "pk": 1,
+  "label": "Checking — Alice",
+  "permissions": { "view": true, "add": true, "change": true, "delete": false },
+  "fieldsets": [
+    {
+      "title": null,
+      "fields": ["name", "balance", "is_active", "owner"]
+    }
+  ],
+  "fields": {
+    "name": {
+      "type": "string",
+      "label": "Name",
+      "required": true,
+      "readonly": false,
+      "help_text": "",
+      "max_length": 120,
+      "value": "Checking — Alice"
+    },
+    "balance": {
+      "type": "decimal",
+      "label": "Balance",
+      "required": true,
+      "readonly": false,
+      "help_text": "",
+      "decimal_places": 2,
+      "value": "1023.45"
+    },
+    "is_active": {
+      "type": "boolean",
+      "label": "Active",
+      "required": false,
+      "readonly": false,
+      "value": true
+    },
+    "owner": {
+      "type": "foreignkey",
+      "label": "Owner",
+      "required": true,
+      "readonly": false,
+      "to": { "app_label": "auth", "model_name": "user" },
+      "value": { "id": 7, "label": "alice" }
+    }
+  }
+}
+```
+
+Rules:
+
+- Field set is derived from `ModelAdmin.get_form(request, obj)`'s declared
+  fields, intersected with `ModelAdmin.get_fields(request, obj)` (or
+  `get_fieldsets`). Anything in `exclude`/`get_exclude` is omitted.
+- `readonly: true` corresponds to membership in
+  `ModelAdmin.get_readonly_fields(request, obj)`.
+- Field `type` is a closed v1 vocabulary:
+  - `string`, `text`, `email`, `url`, `slug`
+  - `integer`, `float`, `decimal`
+  - `boolean`
+  - `date`, `datetime`, `time`
+  - `uuid`
+  - `choice`
+  - `foreignkey`
+  - `unsupported` (manytomany and unknown types in v1; client renders a
+    read-only label and no edit control)
+- For `choice` fields the response includes `"choices": [{ "value":...,
+  "label":... }, ...]`.
+- Sensitive-shaped field names (password, secret, token, api_key, hash,
+  ...) are never serialized; the field is omitted as if `exclude`d.
+  Defense-in-depth atop the form's own exclusion rules.
+
+---
+
+## 5. Write endpoints
+
+### 5.1 `POST /api/v1/{app_label}/{model_name}/`
+
+Request body:
+
+```json
+{ "name": "Checking — Bob", "balance": "0.00", "is_active": true, "owner": 9 }
+```
+
+- The payload keys must be a subset of the writable fields returned by the
+  GET-detail equivalent for a new object (`obj=None`). Unknown keys
+  produce `400`.
+- For `foreignkey` fields, the value is the related object's primary key.
+- The backend constructs `ModelAdmin.get_form(request)(data=payload)`,
+  calls `form.is_valid()`, and on success calls
+  `ModelAdmin.save_model(request, instance, form, change=False)`.
+- Validation errors are returned as in §6.
+
+Response 201:
+
+```json
+{
+  "pk": 17,
+  "label": "Checking — Bob",
+  "redirect": "/admin-react/fintech/account/17/"
+}
+```
+
+### 5.2 `PATCH /api/v1/{app_label}/{model_name}/{pk}/`
+
+- Loads the existing object via `ModelAdmin.get_queryset(request)`.
+- Builds form initial data from the existing instance.
+- Merges the request body on top of that initial data.
+- Validates with `ModelAdmin.get_form(request, obj)(data=merged)`.
+- Saves via `ModelAdmin.save_model(request, instance, form, change=True)`.
+- Readonly and excluded fields in the payload produce a `400`.
+
+Response 200: same shape as `GET .../{pk}/`.
+
+### 5.3 `DELETE /api/v1/{app_label}/{model_name}/{pk}/`
+
+- Checks `has_delete_permission(request, obj)`.
+- Calls `ModelAdmin.delete_model(request, obj)`.
+
+Response 204 (no body).
+
+---
+
+## 6. Error format
+
+All errors use a uniform shape:
+
+```json
+{
+  "error": {
+    "code": "validation_failed",
+    "message": "One or more fields are invalid.",
+    "fields": {
+      "balance": ["Ensure this value is greater than or equal to 0."]
+    }
+  }
+}
+```
+
+v1 error codes:
+
+| HTTP | `code`                  | When                                              |
+| ---- | ----------------------- | ------------------------------------------------- |
+| 400  | `bad_request`           | Malformed JSON, unknown keys, write-to-readonly.  |
+| 400  | `validation_failed`     | Form `is_valid()` returned False.                 |
+| 401  | `not_authenticated`     | (Reserved; the package usually redirects to login.) |
+| 403  | `forbidden`             | CSRF or `has_*_permission` failure.               |
+| 404  | `not_found`             | Model not in registry, or object not in queryset. |
+| 405  | `method_not_allowed`    | e.g., PUT or HEAD.                                |
+| 409  | `conflict`              | Reserved for optimistic concurrency in v1.x.      |
+| 500  | `internal_error`        | Anything else. Body never includes a stack trace. |
+
+Permission-related `403`s do **not** leak whether the object exists.
+
+---
+
+## 7. Pagination, ordering, search
+
+- Pagination is offset-based and `1-indexed`. The response always
+  includes `page`, `page_size`, `total`.
+- Ordering is opt-in via `?ordering=...`. The backend validates each token
+  against the admin's allowed ordering before applying it. Invalid tokens
+  are silently dropped (not an error) so the UI keeps working.
+- Search is **only** active if `ModelAdmin.search_fields` is non-empty.
+  The backend calls `get_search_results(request, qs, q)` and respects
+  whatever it returns (including `may_have_duplicates`, applied with
+  `.distinct()` if needed).
+
+---
+
+## 8. Forwards compatibility
+
+- New optional fields may be added to any response.
+- Clients must ignore unknown fields rather than fail.
+- No field changes name, type, or meaning without a new `api/v2/`
+  namespace.
+
+---
+
+## 9. Examples
+
+Curl examples (assuming session + CSRF in cookies):
+
+```bash
+curl -H "Cookie: sessionid=...; csrftoken=XYZ" \
+     -H "X-CSRFToken: XYZ" \
+     https://example.com/admin-react/api/v1/registry/
+
+curl -H "Cookie: ..." -H "X-CSRFToken: ..." \
+     -X PATCH \
+     -H "Content-Type: application/json" \
+     -d '{"name":"Renamed"}' \
+     https://example.com/admin-react/api/v1/fintech/account/17/
+```
