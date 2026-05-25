@@ -60,7 +60,7 @@ behavior it introduces.
 | 3  | `pr/03-registry-endpoint`    | `GET /api/v1/registry/` reads `admin.site._registry`, applies staff + module permissions.           | anon 403, non-staff 403, staff 200, unregistered hidden |
 | 4  | `pr/04-list-detail`          | List + detail endpoints using `get_queryset`, `get_list_display`, `get_search_results`.            | search delegated, queryset delegated, fields filtered, perms enforced |
 | 5  | `pr/05-write-endpoints`      | Create / partial update / delete using `get_form` + `save_model` + `delete_model`.                 | excluded fields blocked, readonly blocked, perms enforced, PATCH merges initial |
-| 6  | `pr/06-frontend-shell`       | `frontend/` pnpm workspace, `@dar/ui`, `@dar/api`, `@dar/data`, `@dar/shell`, build pipeline, theming. Includes the eslint rule that forbids UI packages from importing `@dar/api`. | lint + typecheck + build pass |
+| 6  | `pr/06-frontend-shell`       | `frontend/` pnpm workspace, `@dar/ui`, `@dar/api`, `@dar/data`, `@dar/web`, build pipeline, theming. Includes the eslint rule that forbids UI packages from importing `@dar/api`. | lint + typecheck + build pass |
 | 7  | `pr/07-frontend-pages`       | `@dar/list`, `@dar/details`, `@dar/models`, wired exclusively through `@dar/data` providers. Tailwind theme. | component tests for happy path, debounce/localStorage round-trip |
 | 8  | `pr/08-examples-and-polish`  | `examples/fintech`, `examples/library`, `examples/blog`, install docs, screenshots, release notes. | examples run, E2E smoke optional |
 

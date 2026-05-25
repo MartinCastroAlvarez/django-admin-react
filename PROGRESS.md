@@ -21,7 +21,7 @@ below on every merge.
 | `GET /api/v1/<app>/<model>/` (list)                               | ⬜ Pending    | PR #4 in `PLAN.md` §2 |
 | `GET /api/v1/<app>/<model>/<pk>/` (detail)                        | ⬜ Pending    | PR #4 in `PLAN.md` §2 |
 | Create / update / delete endpoints                                | ⬜ Pending    | PR #5 in `PLAN.md` §2 |
-| Frontend shell (`@dar/shell` + Vite + router + auth boundary)     | ⬜ Pending    | PR #6 in `PLAN.md` §2 |
+| Frontend shell (`@dar/web` + Vite + router + auth boundary)     | ⬜ Pending    | PR #6 in `PLAN.md` §2 |
 | Frontend pages (`@dar/list`, `@dar/details`, `@dar/models`)       | ⬜ Pending    | PR #7 in `PLAN.md` §2 |
 | Frontend forms + `@dar/data` (SWR + debounced mutations)          | ⬜ Pending    | PR #7 in `PLAN.md` §2 |
 | Example apps wired to the React admin + screenshots in README     | ⬜ Pending    | PR #8 in `PLAN.md` §2 |

@@ -14,7 +14,7 @@ frontend/
 ├── .npmrc                    # Locks to pnpm, no npm/yarn drift
 ├── tsconfig.base.json        # Shared TS compiler options
 └── packages/
-    ├── shell/    # @dar/shell    — App entry, router, auth boundary, builds with Vite
+    ├── shell/    # @dar/web    — App entry, router, auth boundary, builds with Vite
     ├── ui/       # @dar/ui       — Tailwind primitives. No business logic.
     ├── api/      # @dar/api      — Typed REST client + React Query hooks
     ├── list/     # @dar/list     — Generic list-view components
@@ -50,8 +50,8 @@ PR #6 (see [`PLAN.md`](../PLAN.md) §2).
 ## Shipping to the Python package
 
 ```bash
-pnpm --filter @dar/shell build
-# Copy frontend/packages/shell/dist/ → django_admin_react/static/admin_react/
+pnpm --filter @dar/web build
+# Copy frontend/apps/web/dist/ → django_admin_react/static/admin_react/
 # (handled by a script that lands in PR #6)
 ```
 

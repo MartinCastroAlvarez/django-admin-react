@@ -42,10 +42,10 @@ Use `LINT_PY_ONLY=1` to skip frontend, `LINT_FE_ONLY=1` to skip Python.
 
 ## Build pipeline (`build.sh`)
 
-1. `pnpm install --frozen-lockfile && pnpm -r typecheck && pnpm --filter @dar/shell build`
-2. Copy `frontend/packages/shell/dist/` into
+1. `pnpm install --frozen-lockfile && pnpm -r typecheck && pnpm --filter @dar/web build`
+2. Copy `frontend/apps/web/dist/` into
    `django_admin_react/static/admin_react/` and
-   `frontend/packages/shell/dist/index.html` into
+   `frontend/apps/web/dist/index.html` into
    `django_admin_react/templates/admin_react/index.html`.
 3. `poetry build` → `dist/*.tar.gz` and `dist/*-py3-none-any.whl` with
    the pre-built SPA bundled inside the wheel.
