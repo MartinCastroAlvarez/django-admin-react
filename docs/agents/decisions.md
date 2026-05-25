@@ -7,6 +7,26 @@ Newest decisions on top.
 
 ---
 
+## 2026-05-25 — Acceptance criteria + durable agent state
+
+- **`ACCEPTANCE.md` is the production-ready bar.** Sectioned by role:
+  §2 PM/UX, §3 Architect, §4 Security, §5 composite release gate.
+  Each role owns its own section. Every criterion is binary (yes/no)
+  and verifiable by a documented command or file read. Engineering
+  §3 has 14 sub-sections + a release-blocking checklist. — `ACCEPTANCE.md`
+- **`agents/<role>/` is durable per-role memory.** Distinct from
+  `docs/agents/` (which is cross-PR collaboration protocol). Each
+  role keeps `AGENT.md` (entrypoint), `STATUS.md`, `DECISIONS.md`,
+  `OPEN_QUESTIONS.md`, `NEXT_STEPS.md`, `SKILLS.md`. A fresh session
+  reads `AGENT.md` and resumes from there. — `agents/README.md`,
+  `agents/software-architect/AGENT.md`
+- **Test coverage thresholds codified.** Overall ≥ 90 %;
+  `permissions.py` and `serializers.py` at 100 % statements + 100 %
+  branches; `views/*` ≥ 95 %. Enforced via
+  `--cov-fail-under=90` in pytest. — `ACCEPTANCE.md` §3.5 T-2
+
+---
+
 ## 2026-05-25 — Foundation
 
 - **Autonomous PR ops protocol.** Sessions adopt one of Author /
