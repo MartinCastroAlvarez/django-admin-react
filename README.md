@@ -1,96 +1,22 @@
 # django-admin-react
 
-A Django package that replaces the stock `django.contrib.admin` HTML
-views with a responsive, single-page React UI — **without** requiring
-you to write any React.
+A drop-in **React single-page admin** for any Django 5+ project. Same
+`pip install`, same `INSTALLED_APPS`, same `urls.py include()` — and
+your `ModelAdmin` classes drive everything. No React code on your side.
 
-```
-pip install django-admin-react
-```
-
-```python
-# settings.py
-INSTALLED_APPS = [
-    "django.contrib.admin",
-    "django_admin_react",
-    # ... your apps
-]
-
-# urls.py
-from django.urls import include, path
-urlpatterns = [
-    path("admin/",        include("django_admin_react.urls")),  # or wherever
-    # path("admin-react/", include("django_admin_react.urls")), # any prefix is fine
-]
-```
-
-That's it. Log into the admin and you'll see a modern, Tailwind-styled
-SPA driven by your existing `ModelAdmin` classes.
+> **Pre-alpha.** Not yet on PyPI. Install from source today (see below);
+> a `pip install django-admin-react` release will follow. Track progress
+> in [`PROGRESS.md`](PROGRESS.md).
 
 ---
 
-## What you get
+## Install in your Django project
 
-- **Plug-and-play**: works with any `ModelAdmin` you already have.
-- **Shared auth**: uses Django's existing sessions, CSRF, and staff
-  permissions. No new user model, no new permission system.
-- **Responsive, modern UI**: built with React, Tailwind, React Query.
-- **Extensible by editing `ModelAdmin`, not React**. Change
-  `has_add_permission` server-side and the Add button disappears
-  client-side. No JS required.
-- **Configurable mount point**: serve at `/admin/`, `/admin-react/`,
-  `/staff/`, anywhere.
-- **Conservative & secure-by-default**: never exposes models the admin
-  doesn't already expose; never writes fields the admin form
-  excludes.
-
-See [`ARCHITECTURE.md`](ARCHITECTURE.md) for the design contract.
-
----
-
-## Status
-
-**Pre-alpha**. Not yet on PyPI. APIs, contracts, and the React bundle
-are all subject to change. See [`PLAN.md`](PLAN.md) for the roadmap and
-the in-scope / out-of-scope list.
-
----
-
-## Documentation map
-
-This README is intentionally lean. Detailed docs live in dedicated
-files:
-
-| Doc                                                | Topic                                          |
-| -------------------------------------------------- | ---------------------------------------------- |
-| [`ARCHITECTURE.md`](ARCHITECTURE.md)               | System design, contracts, invariants           |
-| [`PLAN.md`](PLAN.md)                               | What's in v1, sequenced PR plan, risks         |
-| [`SECURITY.md`](SECURITY.md)                       | Threat model, guarantees, required tests       |
-| [`CONTRIBUTING.md`](CONTRIBUTING.md)               | Dev workflow, code style, tests, releases      |
-| [`CLAUDE.md`](CLAUDE.md)                           | Rules for AI agents working on this repo       |
-| [`docs/api-contract.md`](docs/api-contract.md)     | Full API spec (endpoints, payloads, errors)    |
-| [`docs/agents/decisions.md`](docs/agents/decisions.md) | Durable architectural decisions log         |
-| [`docs/agents/open-questions.md`](docs/agents/open-questions.md) | Unresolved questions                |
-| [`docs/agents/changelog.md`](docs/agents/changelog.md) | Running log of meaningful repo changes      |
-| [`forum/`](forum/)                                 | Ephemeral coordination between AI agents       |
-| [`examples/README.md`](examples/README.md)         | How to run the demo Django apps                |
-| [`tests/README.md`](tests/README.md)               | Test suite layout                              |
-| [`django_admin_react/README.md`](django_admin_react/README.md) | Python package internals             |
-| [`frontend/README.md`](frontend/README.md)         | React monorepo internals                       |
-
----
-
-## Quickstart for consumers (preview)
-
-### 1. Install
+### Option A — once on PyPI (planned)
 
 ```bash
 pip install django-admin-react
 ```
-
-(Currently, install from source — see [`CONTRIBUTING.md`](CONTRIBUTING.md).)
-
-### 2. Add to `INSTALLED_APPS`
 
 ```python
 # settings.py
@@ -101,48 +27,58 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "django_admin_react",
-    # ... your apps
+    "django_admin_react",   # ← add this
+    # ... your own apps
 ]
 ```
 
-### 3. Mount the URLs wherever you want
-
 ```python
 # urls.py
-from django.contrib import admin
 from django.urls import include, path
 
 urlpatterns = [
-    # Option A: replace the default admin entirely
     path("admin/", include("django_admin_react.urls")),
-
-    # Option B: keep the old admin and mount the React UI alongside
-    path("admin/legacy/", admin.site.urls),
-    path("admin/",        include("django_admin_react.urls")),
-
-    # Option C: any prefix you like
+    # any prefix is fine:
+    # path("admin-react/", include("django_admin_react.urls")),
     # path("staff/",       include("django_admin_react.urls")),
 ]
 ```
 
-### 4. Optional: configure
+That is the entire integration. Log in as a staff user → modern,
+Tailwind-styled SPA driven by your existing `ModelAdmin` classes.
+
+The wheel ships the **pre-built React bundle**. You do **not** need
+Node, pnpm, or any frontend toolchain to install or run.
+
+### Option B — install from source (today)
+
+```bash
+git clone https://github.com/MartinCastroAlvarez/django-admin-react.git
+cd django-admin-react
+./scripts/build.sh              # builds the SPA + Python wheel
+pip install dist/*.whl          # install into your venv
+```
+
+Then wire it into your project as in Option A.
+
+### Optional configuration
 
 All settings are optional. Defaults shown:
 
 ```python
-# settings.py
 DJANGO_ADMIN_REACT = {
-    "ADMIN_SITE": "django.contrib.admin.site",  # dotted path
+    "ADMIN_SITE": "django.contrib.admin.site",   # dotted path
     "DEFAULT_PAGE_SIZE": 25,
     "MAX_PAGE_SIZE": 200,
     "ENABLE_PROFILING": False,
 }
 ```
 
-### 5. Extend without writing React
+---
 
-Just edit your `ModelAdmin` classes — the UI follows.
+## Extend without writing React
+
+Just edit your `ModelAdmin` — the UI follows. No JS required.
 
 ```python
 # yourapp/admin.py
@@ -153,24 +89,141 @@ from .models import Invoice
 class InvoiceAdmin(admin.ModelAdmin):
     list_display = ("number", "customer", "total", "issued_at")
     search_fields = ("number", "customer__name")
-    readonly_fields = ("total",)        # ← UI hides the input
-    list_filter = ("status",)           # ← UI surfaces the filter (v1.1+)
+    readonly_fields = ("total",)            # ← UI hides the input
+    list_filter = ("status",)               # ← UI surfaces the filter
 
     def has_add_permission(self, request):
-        return request.user.has_perm("billing.create_invoice")  # ← UI hides Add button
+        return request.user.has_perm("billing.create_invoice")
+        #                                                     ↑
+        # UI hides the Add button automatically when this returns False.
 ```
+
+Permissions, querysets, search, validation — all your `ModelAdmin`'s
+answers, surfaced verbatim in the React UI. The package never invents
+its own permission model.
 
 ---
 
-## Tailwind / theming
+## Screenshots
 
-The package ships a minimalist, modern Tailwind config with CSS-variable
-backed colors so light customization doesn't require rebuilding the
-bundle. Full Tailwind config replacement is **not** supported in v1; see
-[`ARCHITECTURE.md`](ARCHITECTURE.md) §5.3 for the rationale.
+> The React bundle is wired in PR #6/#7. While the SPA is being built,
+> the screenshots below are ASCII mockups that match the API contract
+> exactly. They will be replaced with real screenshots once the UI is
+> usable. See [`PROGRESS.md`](PROGRESS.md) for live status.
 
-For deeper customization, rebuild the bundle from source against your
-own Tailwind config — see [`frontend/README.md`](frontend/README.md).
+**Model registry / sidebar** — sourced from `GET /api/v1/registry/`:
+
+```
+┌───────────────────────────────┐ ┌─────────────────────────────────┐
+│ django-admin-react            │ │  Welcome, Alice                │
+│  • Auth                       │ │                                 │
+│      Users                    │ │  Apps you can manage:           │
+│      Groups                   │ │   ▸ Auth        (2 models)      │
+│  • Fintech                    │ │   ▸ Fintech     (4 models)      │
+│      Accounts                 │ │   ▸ Library     (5 models)      │
+│      Transactions             │ │                                 │
+│      Statements               │ │  Recent activity: —             │
+│      Cards                    │ │                                 │
+│  • Library                    │ │                                 │
+│      Authors                  │ │                                 │
+│      Books                    │ │                                 │
+│      Loans                    │ │                                 │
+└───────────────────────────────┘ └─────────────────────────────────┘
+```
+
+**Object list** — list_display columns + search + pagination,
+sourced from `GET /api/v1/<app>/<model>/`:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  Fintech / Accounts                              [ + Add new ]  │
+│  ┌─────────────────────────────────────┐  ┌──────────────────┐  │
+│  │ 🔎 Search by name or IBAN…          │  │ Filter ▾         │  │
+│  └─────────────────────────────────────┘  └──────────────────┘  │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │ Name                  Balance     Active   Owner         │   │
+│  │ ───────────────────────────────────────────────────────  │   │
+│  │ Checking — Alice      1 023.45    ✓        alice         │   │
+│  │ Savings — Alice         512.00    ✓        alice         │   │
+│  │ Investing — Bob       8 900.10    ✓        bob           │   │
+│  └──────────────────────────────────────────────────────────┘   │
+│  Page 1 of 6 · 137 results                ⟨ Prev    Next ⟩      │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Detail / edit** — fields built from `ModelAdmin.get_form()`,
+sourced from `GET /api/v1/<app>/<model>/<pk>/`:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  Fintech / Accounts / Checking — Alice          [ Save ] [ … ]  │
+│                                                                 │
+│  Name        [ Checking — Alice                              ]  │
+│  Balance     [ 1023.45                       ] (read-only)      │
+│  Active      [✓]                                                │
+│  Owner       [ alice ▾ ]                                        │
+│                                                                 │
+│  Statements  ⚠ unsupported field (M2M) — coming in v1.x         │
+│                                                                 │
+│  ───────────────────────────────────────────────────────────    │
+│  [ Delete ]                                                     │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+The "Delete" button hides automatically if the user's
+`has_delete_permission` is false. The "unsupported" stub appears
+verbatim for M2M fields until v1.x.
+
+---
+
+## What you get
+
+- **Plug-and-play**: works with any `ModelAdmin` you already have.
+- **Shared auth**: Django sessions, CSRF, staff permissions. No new
+  user model, no parallel permission system.
+- **Responsive, modern UI**: React + Tailwind + React Query, served
+  as a single bundle from `django_admin_react/static/admin_react/`.
+- **Extensible by editing `ModelAdmin`**, not React.
+- **Configurable URL prefix** — `/admin/`, `/admin-react/`, anywhere.
+- **Conservative & secure-by-default** — never exposes models the
+  admin doesn't already expose; never writes fields the admin form
+  excludes; CSRF on every unsafe method.
+- **Boring + auditable** — no parallel permission system, no
+  client-side workarounds for backend permissions, conservative
+  serializer with `str()` fallback.
+
+---
+
+## Documentation map
+
+| Doc                                                             | Topic                                       |
+| ---------------------------------------------------------------- | -------------------------------------------- |
+| [`PROGRESS.md`](PROGRESS.md)                                     | Live status of merged PRs / what's coming   |
+| [`ARCHITECTURE.md`](ARCHITECTURE.md)                             | Design contract                              |
+| [`PLAN.md`](PLAN.md)                                             | v1 scope, PR sequence, risks                 |
+| [`SECURITY.md`](SECURITY.md)                                     | Threat model, guarantees, required tests     |
+| [`CONTRIBUTING.md`](CONTRIBUTING.md)                             | Dev workflow                                 |
+| [`CLAUDE.md`](CLAUDE.md)                                         | Rules for AI contributors                    |
+| [`docs/api-contract.md`](docs/api-contract.md)                   | Full API spec                                |
+| [`docs/data-layer.md`](docs/data-layer.md)                       | `@dar/data` design (SWR + debounce)          |
+| [`docs/agents/pr-workflow.md`](docs/agents/pr-workflow.md)       | How agents send / review / merge PRs         |
+| [`docs/agents/autonomy-policy.md`](docs/agents/autonomy-policy.md) | What's auto-mergeable vs human-only        |
+| [`docs/agents/decisions.md`](docs/agents/decisions.md)           | Decisions log                                |
+| [`scripts/README.md`](scripts/README.md)                         | `lint.sh` / `build.sh` / `deploy.sh`         |
+| [`examples/README.md`](examples/README.md)                       | Demo Django apps                             |
+
+---
+
+## Developer scripts
+
+```bash
+./scripts/lint.sh        # ruff + black + isort + flake8 + pylint + mypy + bandit + prettier + tsc
+./scripts/build.sh       # pnpm install + vite build + poetry build (wheel ships pre-built SPA)
+./scripts/deploy.sh      # poetry publish to PyPI (requires POETRY_PYPI_TOKEN_PYPI)
+```
+
+The Merger runs `./scripts/lint.sh` before every merge — there is
+no CI in this repo by design.
 
 ---
 
@@ -178,18 +231,14 @@ own Tailwind config — see [`frontend/README.md`](frontend/README.md).
 
 MIT — see [`LICENSE`](LICENSE).
 
----
-
 ## Security
 
 Please report security issues privately. See
-[`SECURITY.md`](SECURITY.md) §4 for the process. Do **not** open a
-public GitHub issue.
-
----
+[`SECURITY.md`](SECURITY.md) §4. Do **not** open a public issue.
 
 ## Contributing
 
-Both humans and AI agents are welcome. Start with
-[`CONTRIBUTING.md`](CONTRIBUTING.md). If you're an AI agent,
-[`CLAUDE.md`](CLAUDE.md) is required reading.
+Humans and AI agents both welcome. Start with
+[`CONTRIBUTING.md`](CONTRIBUTING.md). AI agents must also read
+[`CLAUDE.md`](CLAUDE.md), [`docs/agents/pr-workflow.md`](docs/agents/pr-workflow.md),
+and [`docs/agents/autonomy-policy.md`](docs/agents/autonomy-policy.md).
