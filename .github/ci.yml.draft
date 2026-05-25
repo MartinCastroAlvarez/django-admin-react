@@ -1,3 +1,21 @@
+# ---------------------------------------------------------------------------
+# THIS FILE IS A DRAFT, NOT AN ACTIVE WORKFLOW.
+#
+# It was committed at `.github/ci.yml.draft` instead of
+# `.github/workflows/ci.yml` because the repo's authenticating PAT did not
+# have the `workflow` scope (GitHub refuses to accept workflow file pushes
+# from PATs that lack that scope).
+#
+# To activate:
+#   1. Rotate the embedded PAT in your local `.git/config` to one with
+#      the `workflow` scope (or switch to SSH / `gh auth login`).
+#   2. Move this file into place:
+#        git mv .github/ci.yml.draft .github/workflows/ci.yml
+#   3. Commit and push.
+#
+# See `.github/README.md` for the full story.
+# ---------------------------------------------------------------------------
+
 name: CI
 
 on:
