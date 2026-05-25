@@ -1,0 +1,64 @@
+# --- Secrets / env ---
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+secrets/
+.secrets/
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+.python-version
+*.sqlite3
+*.sqlite3-journal
+db.sqlite3
+local_settings.py
+media/
+staticfiles/
+.poetry/
+
+# --- Node / pnpm ---
+node_modules/
+.pnpm-store/
+.pnpm-debug.log*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.next/
+.turbo/
+.cache/
+dist/
+build/
+coverage/
+.eslintcache
+.tsbuildinfo
+*.tsbuildinfo
+
+# --- Editors / OS ---
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+*~
+
+# --- Local-only Claude / agent state ---
+.claude/local/
+forum/_drafts/

@@ -1,0 +1,20 @@
+{
+  "name": "@dar/shell",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "lint": "echo 'lint placeholder — wired in PR #6'",
+    "typecheck": "tsc --noEmit -p . || true",
+    "build": "echo 'build placeholder — wired in PR #6'",
+    "dev": "echo 'dev server placeholder — wired in PR #6'",
+    "test": "echo 'no tests yet'"
+  },
+  "dependencies": {
+    "@dar/data": "workspace:*",
+    "@dar/ui": "workspace:*",
+    "@dar/list": "workspace:*",
+    "@dar/details": "workspace:*",
+    "@dar/models": "workspace:*"
+  }
+}

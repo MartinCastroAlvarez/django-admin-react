@@ -1,0 +1,131 @@
+[tool.poetry]
+name = "django-admin-react"
+version = "0.0.0"
+description = "A drop-in React single-page admin for Django, driven entirely by ModelAdmin."
+authors = ["django-admin-react contributors"]
+license = "MIT"
+readme = "README.md"
+homepage = "https://github.com/MartinCastroAlvarez/django-admin-react"
+repository = "https://github.com/MartinCastroAlvarez/django-admin-react"
+documentation = "https://github.com/MartinCastroAlvarez/django-admin-react#readme"
+keywords = ["django", "admin", "react", "spa", "tailwind"]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Environment :: Web Environment",
+    "Framework :: Django",
+    "Framework :: Django :: 5.0",
+    "Framework :: Django :: 5.1",
+    "Framework :: Django :: 5.2",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Internet :: WWW/HTTP :: Site Management",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+packages = [{ include = "django_admin_react" }]
+include = [
+    "django_admin_react/templates/**/*",
+    "django_admin_react/static/**/*",
+    "LICENSE",
+]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+django = ">=5.0,<6.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0"
+pytest-django = "^4.8"
+pytest-cov = "^5.0"
+ruff = "^0.6"
+mypy = "^1.10"
+django-stubs = { version = "^5.0", extras = ["compatible-mypy"] }
+bandit = "^1.7"
+pip-audit = "^2.7"
+
+[build-system]
+requires = ["poetry-core>=1.6.0"]
+build-backend = "poetry.core.masonry.api"
+
+# --------------------------------------------------------------------------- #
+# Ruff — lint + format
+# --------------------------------------------------------------------------- #
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+extend-exclude = ["frontend", "examples/*/migrations", "tests/test_project/migrations"]
+
+[tool.ruff.lint]
+select = [
+    "E", "W",       # pycodestyle
+    "F",            # pyflakes
+    "I",            # isort
+    "B",            # bugbear
+    "S",            # bandit-style security
+    "DJ",           # django-specific
+    "UP",           # pyupgrade
+    "SIM",          # simplify
+    "RET",          # returns
+    "PIE",          # misc
+]
+ignore = [
+    "S101",   # asserts are fine in tests
+    "DJ001",  # nullable charfield warning — opt-in elsewhere
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101", "S106", "S107"]
+"examples/**/*.py" = ["S101", "DJ001"]
+
+# --------------------------------------------------------------------------- #
+# Pytest
+# --------------------------------------------------------------------------- #
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "tests.test_project.settings"
+python_files = ["test_*.py", "*_test.py"]
+addopts = [
+    "-ra",
+    "--strict-markers",
+    "--strict-config",
+    "--cov=django_admin_react",
+    "--cov-report=term-missing",
+]
+testpaths = ["tests"]
+filterwarnings = [
+    "error",
+    "ignore::DeprecationWarning:django.*",
+]
+
+# --------------------------------------------------------------------------- #
+# MyPy — best effort for v1
+# --------------------------------------------------------------------------- #
+[tool.mypy]
+python_version = "3.10"
+strict = false
+warn_unused_ignores = true
+warn_redundant_casts = true
+ignore_missing_imports = true
+plugins = ["mypy_django_plugin.main"]
+
+[tool.django-stubs]
+django_settings_module = "tests.test_project.settings"
+
+# --------------------------------------------------------------------------- #
+# Coverage
+# --------------------------------------------------------------------------- #
+[tool.coverage.run]
+branch = true
+source = ["django_admin_react"]
+omit = ["*/migrations/*", "*/tests/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+]
