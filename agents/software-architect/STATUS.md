@@ -56,12 +56,19 @@ Authoring the engineering section of [`ACCEPTANCE.md`](../../ACCEPTANCE.md)
 
 ### Active blockers
 
-None. The PM PR (with `PRODUCT_VISION.md`, `DESIGN_SYSTEM.md`,
-`agents/README.md`, and `ACCEPTANCE.md` §2) is in flight in another
-session's worktree; my PR builds on top of `main` (which already has
-the PM's `ACCEPTANCE.md` skeleton landed in this session's `main`).
-If the PM force-pushes their branch with structural changes to
-`ACCEPTANCE.md`, I will rebase.
+PR #10 is **awaiting review** per the multi-agent review workflow
+(established 2026-05-25). I cannot merge it. The required reviewers
+are: PM/UX (consistency with §2 + PM handoffs), Architect (already
+me — out per the no-self-review rule), Security (consistency with
+§4 + new B-7/B-8 cross-refs). Once at least PM and Security approve,
+the repo owner (human) merges.
+
+Other agents have local working-tree changes (PM:
+`PRODUCT_VISION.md`, `DESIGN_SYSTEM.md`, `ROADMAP.md`,
+`ONBOARDING.md`, `docs/ux/`; Security: `ACCEPTANCE.md` §4 content
+on branch `feat/security-acceptance-and-state`). Their PRs will
+open in their own time; my PR is independent of them mechanically
+(my changes are append-only to shared files).
 
 ### Lint status (last run)
 

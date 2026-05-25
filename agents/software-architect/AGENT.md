@@ -101,6 +101,52 @@ Each entry below must be read before I touch code or open a PR.
 - `frontend/tsconfig.base.json` and per-package `tsconfig.json` — the
   TypeScript strictness gate.
 
+## Review protocol (multi-agent; established 2026-05-25)
+
+Every PR must be reviewed by **all three** roles (PM, Architect,
+Security) before merge. No agent may merge its own PR.
+
+As Architect, I review **other roles' PRs** through this lens:
+
+- Modularity and package boundaries (`ACCEPTANCE.md` §3.1, §3.2, §3.3).
+- Maintainability (`ACCEPTANCE.md` §3.12 — file/function size, complexity).
+- Tests (`ACCEPTANCE.md` §3.5 — coverage thresholds, determinism,
+  regression discipline).
+- Architecture / dependency graph (no circular deps, no
+  cross-boundary imports).
+- Performance (perf budgets per §3.5 T-7 when applicable).
+- Code quality (lint, typecheck, no `# type: ignore` /
+  `// @ts-ignore` without a linked issue).
+- Impact on `ACCEPTANCE.md` §3 criteria — explicitly note which §3.x
+  items the PR moves toward (✅) or risks regressing.
+
+For each review I post one of:
+
+- **approve** — every §3.x criterion the PR touches is met.
+- **request-changes** — at least one criterion is violated; cite the
+  exact §3.x reference and the file/line.
+- **comment** — non-blocking concerns / follow-ups; the PR may
+  merge but I record what I want a follow-up PR to address.
+
+Reviews are also a chance to **flag cross-role dependencies** that
+the PR creates (e.g., "this needs Security to verify B-7 after merge"
+→ a new entry in `agents/HANDOFF.md`).
+
+## Periodic checks (every session, every active turn)
+
+Before doing other work, run a fast triage:
+
+1. `gh pr list --state open` — anything I haven't reviewed yet?
+2. `gh pr view <N> --json reviewDecision,statusCheckRollup` — any
+   PR stuck on a missing Architect review?
+3. `grep -RIn 'TODO\|FIXME' django_admin_react/ frontend/packages/` —
+   undocumented debt growing?
+4. `agents/HANDOFF.md` — anything addressed to Architect that I
+   haven't picked up?
+
+If any of these are non-empty, the next action is to resolve them
+before opening new work.
+
 ## Hard rules (no exceptions, ever)
 
 1. **No `Model.objects.all()` in `django_admin_react/`.** Querysets
