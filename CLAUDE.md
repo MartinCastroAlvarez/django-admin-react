@@ -29,6 +29,12 @@ Read these files, in order, every session:
    `decisions.md`.
 7. [`docs/agents/changelog.md`](docs/agents/changelog.md) — what other
    agents have shipped recently.
+8. [`docs/agents/pr-workflow.md`](docs/agents/pr-workflow.md) — the
+   author/reviewer/merger protocol for autonomous PR ops. **Pick your
+   role for the session before any tool call.**
+9. [`docs/agents/autonomy-policy.md`](docs/agents/autonomy-policy.md)
+   — tier rules and kill switches. Before merging anything, classify
+   the PR by its highest-tier touched file.
 
 If your session's task touches a specific folder, also read that folder's
 `README.md`.
@@ -78,6 +84,16 @@ Detailed shape is in [`ARCHITECTURE.md`](ARCHITECTURE.md).
   commit. Open a branch `pr/<NN>-<slug>` for planned PRs (see
   [`PLAN.md`](PLAN.md)), or `feat/...` / `fix/...` / `docs/...` /
   `chore/...` otherwise.
+- **Autonomous PR ops.** Sessions pick a role — Author, Reviewer, Merger,
+  Releaser — at session start, post the role to `forum/`, and obey
+  [`docs/agents/pr-workflow.md`](docs/agents/pr-workflow.md). Auto-merge
+  is gated by [`docs/agents/autonomy-policy.md`](docs/agents/autonomy-policy.md).
+  Author ≠ Reviewer ≠ Merger on the same PR.
+- **Tier 5 / 6 is always human.** Any change to `SECURITY.md`,
+  `LICENSE`, `docs/api-contract.md`, `pyproject.toml` deps, frontend
+  root `package.json` deps, `.github/workflows/`, CSRF/auth code, or
+  the serializer denylist is human-review-only. Releases (PyPI) are
+  human + token.
 - **One PR per branch.** Keep PRs small; split aggressively.
 - **Use Poetry for Python, pnpm for JavaScript.** No mixing.
 - **Update docs in the same PR** as the change. Architecture/plan/scope
