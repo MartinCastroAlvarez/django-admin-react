@@ -10,6 +10,11 @@ For end-user-facing release notes, see the (future) top-level
 
 ## 2026-05-25
 
+- Autonomous PR protocol (PR #2 in flight): `docs/agents/pr-workflow.md`
+  + `docs/agents/autonomy-policy.md` define roles (Author/Reviewer/
+  Merger/Releaser), tiers (1 docs → 6 releases), kill switches, two-
+  agent rule, and hard prohibitions. `CLAUDE.md` reading list + rules
+  updated to point to them.
 - Foundation PR #1 in flight: `ARCHITECTURE.md`, `PLAN.md`, `SECURITY.md`,
   `CONTRIBUTING.md`, `CLAUDE.md`, `README.md`, `LICENSE`,
   `docs/api-contract.md`, `docs/agents/*` coordination files, and forum
