@@ -20,7 +20,9 @@ Implementation lands in PRs #3-#5 (backend) and #6 (frontend index).
 
 from __future__ import annotations
 
-from django.urls import include, path, re_path
+from django.urls import include
+from django.urls import path
+from django.urls import re_path
 
 from django_admin_react import views
 
