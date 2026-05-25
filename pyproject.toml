@@ -46,6 +46,12 @@ mypy = "^1.10"
 django-stubs = { version = "^5.0", extras = ["compatible-mypy"] }
 bandit = "^1.7"
 pip-audit = "^2.7"
+black = "^24.8"
+isort = "^5.13"
+flake8 = "^7.1"
+Flake8-pyproject = "^1.2"
+pylint = "^3.2"
+pylint-django = "^2.5"
 
 [build-system]
 requires = ["poetry-core>=1.6.0"]
@@ -81,6 +87,11 @@ ignore = [
 "tests/**/*.py" = ["S101", "S106", "S107"]
 "examples/**/*.py" = ["S101", "DJ001"]
 
+[tool.ruff.lint.isort]
+# Match standalone isort: one import per line (repo policy).
+force-single-line = true
+known-first-party = ["django_admin_react", "tests"]
+
 # --------------------------------------------------------------------------- #
 # Pytest
 # --------------------------------------------------------------------------- #
@@ -113,6 +124,77 @@ plugins = ["mypy_django_plugin.main"]
 
 [tool.django-stubs]
 django_settings_module = "tests.test_project.settings"
+
+# --------------------------------------------------------------------------- #
+# Black — formatter (the source of truth for line wrapping)
+# --------------------------------------------------------------------------- #
+[tool.black]
+line-length = 100
+target-version = ["py310", "py311", "py312"]
+include = "\\.pyi?$"
+extend-exclude = "frontend|examples/[^/]+/migrations|tests/test_project/migrations|dist"
+
+# --------------------------------------------------------------------------- #
+# isort — import sorter (one import per line per repo policy)
+# --------------------------------------------------------------------------- #
+[tool.isort]
+profile = "black"
+line_length = 100
+force_single_line = true
+known_first_party = ["django_admin_react", "tests"]
+skip_glob = ["frontend/*", "examples/*/migrations/*", "dist/*"]
+
+# --------------------------------------------------------------------------- #
+# flake8 — additional lint checks beyond ruff / black
+# --------------------------------------------------------------------------- #
+[tool.flake8]
+max-line-length = 100
+extend-ignore = [
+    "E203",  # whitespace before ':' — conflicts with black
+    "E501",  # line length — already enforced by black
+    "W503",  # line break before binary operator — black style
+]
+exclude = [
+    ".git",
+    "__pycache__",
+    "frontend",
+    "examples/*/migrations",
+    "tests/test_project/migrations",
+    "dist",
+    ".venv",
+]
+per-file-ignores = [
+    "tests/*:S101",
+]
+
+# --------------------------------------------------------------------------- #
+# pylint — used in `--errors-only` mode for additional checks not in
+# ruff / black / flake8. Style is owned by ruff + black.
+# --------------------------------------------------------------------------- #
+[tool.pylint.main]
+load-plugins = ["pylint_django"]
+django-settings-module = "tests.test_project.settings"
+ignore-paths = [
+    "frontend/.*",
+    "examples/.*/migrations/.*",
+    "tests/test_project/migrations/.*",
+    "dist/.*",
+]
+
+[tool.pylint."messages control"]
+disable = [
+    "missing-module-docstring",   # docs/agents/decisions.md: docstrings optional
+    "missing-class-docstring",
+    "missing-function-docstring",
+    "too-few-public-methods",
+    "import-outside-toplevel",    # we intentionally do lazy imports
+    "line-too-long",              # black owns line length
+    "fixme",
+    "duplicate-code",
+]
+
+[tool.pylint.format]
+max-line-length = 100
 
 # --------------------------------------------------------------------------- #
 # Coverage

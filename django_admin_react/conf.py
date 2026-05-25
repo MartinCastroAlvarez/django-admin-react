@@ -48,9 +48,7 @@ def _load() -> _PackageSettings:
     # Reject unknown keys defensively to surface typos early.
     unknown = set(merged) - set(DEFAULTS)
     if unknown:
-        raise ValueError(
-            "Unknown DJANGO_ADMIN_REACT keys: " + ", ".join(sorted(unknown))
-        )
+        raise ValueError("Unknown DJANGO_ADMIN_REACT keys: " + ", ".join(sorted(unknown)))
     return _PackageSettings(**merged)
 
 

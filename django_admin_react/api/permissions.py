@@ -16,7 +16,9 @@ from __future__ import annotations
 from typing import Final
 
 from django.contrib.admin.sites import AdminSite
-from django.http import HttpRequest, HttpResponse, JsonResponse
+from django.http import HttpRequest
+from django.http import HttpResponse
+from django.http import JsonResponse
 
 from django_admin_react.api.registry import get_admin_site
 

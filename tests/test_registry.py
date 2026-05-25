@@ -12,8 +12,10 @@ from contextlib import contextmanager
 
 import pytest
 from django.contrib import admin
-from django.contrib.auth.admin import GroupAdmin, UserAdmin
-from django.contrib.auth.models import Group, User
+from django.contrib.auth.admin import GroupAdmin
+from django.contrib.auth.admin import UserAdmin
+from django.contrib.auth.models import Group  # pylint: disable=imported-auth-user
+from django.contrib.auth.models import User  # pylint: disable=imported-auth-user
 from django.test import Client
 from django.urls import reverse
 

@@ -16,11 +16,15 @@ Implementation rules followed (`SECURITY.md` §3):
 
 from __future__ import annotations
 
-from django.http import HttpRequest, HttpResponse, JsonResponse
+from django.http import HttpRequest
+from django.http import HttpResponse
+from django.http import JsonResponse
 from django.views.generic import View
 
-from django_admin_react.api.permissions import forbidden_response, is_admin_user
-from django_admin_react.api.registry import build_registry_payload, get_admin_site
+from django_admin_react.api.permissions import forbidden_response
+from django_admin_react.api.permissions import is_admin_user
+from django_admin_react.api.registry import build_registry_payload
+from django_admin_react.api.registry import get_admin_site
 
 
 class RegistryView(View):
