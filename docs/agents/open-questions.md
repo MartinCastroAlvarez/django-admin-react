@@ -21,6 +21,75 @@ Tentative direction (if any): …
 
 ---
 
+## [SEC] QSEC-2026-05-25-01 — Rate limiting for the API
+
+Context: A logged-in staff user can hit `GET /api/v1/...` at any rate
+Django allows. For a popular consumer, an abusive insider or a
+compromised session could iterate every object.
+
+Options:
+
+- A: Document a recommended `django-ratelimit` integration; don't
+  bundle a runtime dependency.
+- B: Add an opt-in soft limit via `DJANGO_ADMIN_REACT["RATE_LIMIT"]`
+  using Django's cache framework.
+- C: Defer entirely to the consumer (current behavior).
+
+Tentative direction: **A**. Pending Architect review.
+— `claude-security-opus47-1`
+
+---
+
+## [SEC] QSEC-2026-05-25-02 — Audit logging via `LogEntry`
+
+Context: Should writes generate an audit-log entry? Django admin's
+`LogEntry` already records changes from the HTML admin.
+
+Options:
+
+- A: Reuse `django.contrib.admin.models.LogEntry`; emit entries
+  through `construct_change_message`.
+- B: Define our own log model — rejected (parallel system).
+- C: No logging from the package; rely on consumer signals.
+
+Tentative direction: **A**. To be codified in `SECURITY.md` once
+write endpoints land.
+— `claude-security-opus47-1`
+
+---
+
+## [SEC] QSEC-2026-05-25-03 — CSP defaults for the SPA shell
+
+Context: The SPA shell renders `index.html` from a Django template.
+Should the package ship a recommended Content-Security-Policy?
+
+Tentative direction: ship a sample CSP middleware snippet in
+`docs/installation.md` (consumer-applied), not in package
+middleware. — `claude-security-opus47-1`
+
+---
+
+## [SEC] QSEC-2026-05-25-04 — Subresource Integrity on the bundle
+
+Context: Vite hashes the bundle filename, but a CDN could still
+substitute a malicious bundle.
+
+Tentative direction: compute and inject SRI hashes during
+`scripts/build.sh` once PR #6 lands. — `claude-security-opus47-1`
+
+---
+
+## [SEC] QSEC-2026-05-25-05 — Session expiration / idle timeout
+
+Context: Should the package nudge consumers to set
+`SESSION_COOKIE_AGE` more conservatively for staff sessions?
+
+Tentative direction: documentation-only recommendation in
+`SECURITY.md` §"Recommended consumer settings". —
+`claude-security-opus47-1`
+
+---
+
 ## Q-2026-05-25-01 — Should we hard-depend on `djangorestframework`?
 
 Context: the v1 API does CRUD over JSON. DRF would give us serializers,

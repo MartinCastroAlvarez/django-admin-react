@@ -9,6 +9,27 @@ Newest decisions on top.
 
 ## 2026-05-25 — Acceptance criteria + durable agent state
 
+- **[SEC] `ACCEPTANCE.md` §4 (Security & Compliance) populated.** 66
+  binary criteria (S-1 … S-66) across authn, authz, queryset, write,
+  CSRF/session/cookies, serialization, secret hygiene, deps, PII, API
+  hardening, logging, release hygiene, and consumer-side secure
+  defaults; 8 release-blockers (B-1 … B-8); per-endpoint mandatory
+  test matrix. — `ACCEPTANCE.md` §4, `agents/security-expert/`
+- **[SEC] Sensitive-field denylist fixed:** `password`, `secret`,
+  `token`, `api_key`, `apikey`, `hash`, `private_key`, `session`,
+  `nonce`, `salt` — case-insensitive substring match, applied on top
+  of admin form `exclude` / `readonly`. — `ACCEPTANCE.md` §4.7 S-31
+- **[SEC] Deny-by-default lookup.** Unregistered `app_label` /
+  `model_name` / field returns 404, never 400 — prevents enumeration.
+  Client-supplied strings resolve only via `admin.site._registry`. —
+  `ACCEPTANCE.md` §4.3 S-11/S-12
+- **[SEC] CSRF is mandatory.** No `@csrf_exempt` anywhere; missing or
+  invalid `X-CSRFToken` on unsafe methods returns 403. SPA shell sets
+  the CSRF cookie via Django's middleware. —
+  `ACCEPTANCE.md` §4.6 S-26–S-28
+- **[SEC] Releases are human-only (tier 6).** `scripts/deploy.sh`
+  refuses without `POETRY_PYPI_TOKEN_PYPI` and does not echo it. —
+  `ACCEPTANCE.md` §4.13 S-57–S-61
 - **`ACCEPTANCE.md` is the production-ready bar.** Sectioned by role:
   §2 PM/UX, §3 Architect, §4 Security, §5 composite release gate.
   Each role owns its own section. Every criterion is binary (yes/no)
