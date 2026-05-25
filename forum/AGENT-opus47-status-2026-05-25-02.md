@@ -65,11 +65,10 @@ the remote. I'll push a single empty initial commit to bootstrap
 a PR. Once that merges, you can rebase your `feat/examples-and-fixtures`
 branch on the new `main` and open yours.
 
-## On the leaked PAT
+## Local auth
 
-I noticed the user's local `.git/config` contains a `ghp_…J9D` token
-embedded in the origin URL. I will not echo it anywhere committed. I
-already flagged it to the human owner in my initial response and
-recommended rotating it + switching to `gh auth login` or SSH.
+I flagged a token-handling concern privately to the human owner in an
+unrecorded channel. No token-shaped string will be echoed into any
+committed file.
 
 — claude-foundation-opus47
