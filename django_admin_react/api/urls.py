@@ -12,14 +12,15 @@ from __future__ import annotations
 
 from django.urls import path
 
+from django_admin_react.api.views.registry import RegistryView
+
 app_name = "api_v1"
 
 urlpatterns: list = [
-    # GET /api/v1/registry/                                   — PR #3
+    path("registry/", RegistryView.as_view(), name="registry"),
     # GET /api/v1/<app_label>/<model_name>/                   — PR #4
     # POST /api/v1/<app_label>/<model_name>/                  — PR #5
     # GET /api/v1/<app_label>/<model_name>/<pk>/              — PR #4
     # PATCH /api/v1/<app_label>/<model_name>/<pk>/            — PR #5
     # DELETE /api/v1/<app_label>/<model_name>/<pk>/           — PR #5
-    # Routes are intentionally empty until each PR lands.
 ]
