@@ -106,45 +106,121 @@ Every endpoint added must include all of these tests before merging:
 
 ## 5. Secrets in the repository
 
-- `.env`, `*.pem`, `*.key`, and `secrets/` are gitignored.
+- `.env`, `*.pem`, `*.key`, `*.crt`, and `secrets/` are gitignored.
 - Never paste a token, password, or API key into any file in this repo
   (including `forum/`, `docs/agents/`, PR descriptions, commit messages).
+  **Partial / redacted token references** (e.g., `ghp_…XYZ`) are also
+  forbidden and detected by the pre-commit hook + `tests/test_security.py`.
 - If a secret is accidentally committed, the response is:
-  1. Rotate the secret immediately.
-  2. Force-push a rewritten history that removes the secret (and notify
-     downstream consumers).
+  1. Rotate the secret immediately on the upstream provider.
+  2. **Wait for human approval** before rewriting history. No agent may
+     `git push --force` autonomously. Once approved, force-push the
+     rewritten history that removes the secret and notify downstream
+     consumers.
   3. File an entry in `docs/agents/changelog.md` describing what happened
-     and what was rotated.
-- The CI does a `gitleaks`-style scan on every PR.
+     and what was rotated. Also open `forum/INCIDENT-<date>-secret-leak.md`
+     (a "kill switch" entry that disables auto-merge per
+     `docs/agents/autonomy-policy.md` §3).
+- A pre-commit hook (`.pre-commit-config.yaml`) runs `gitleaks` plus a
+  custom `pygrep` for partial token patterns. Enable it locally with:
+  `pre-commit install`.
 
 ## 6. Dependencies
 
-- We pin direct dependencies in `pyproject.toml` and lock with Poetry.
-- We pin direct frontend dependencies with pnpm's lockfile.
-- A Dependabot/Renovate config (added in PR #2) keeps them current.
-- Major version bumps require explicit review.
+- Runtime dependencies are deliberately minimal: only Django
+  (`>=5.0,<6.0`). No DRF, no auth framework, no JWT lib. See
+  `ACCEPTANCE.md` §4.9 S-47.
+- Dev dependencies are pinned in `pyproject.toml` and locked with Poetry.
+  Frontend dev dependencies are locked with `pnpm-lock.yaml`.
+- Every new third-party dependency (runtime **or** dev) requires a
+  matching entry in `docs/agents/decisions.md` explaining why and what
+  alternative was rejected.
+- Run `./scripts/audit-deps.sh` before every release. CI is intentionally
+  absent (repo-owner direction); the dep audit is a local gate that the
+  Merger / Releaser owns.
 
 ## 7. Build & release
 
-- The PyPI artifact is built in CI from a tagged commit.
-- The PyPI token lives in repository secrets, not in any file.
-- A release requires a maintainer to approve the publishing job — CI never
-  publishes on every merge.
-- TestPyPI may be used for verification by maintainers but is also
-  human-approved.
+- The PyPI artifact is built locally via `./scripts/build.sh`:
+  `pnpm install` → `pnpm -r typecheck` → `vite build` →
+  copy bundle into `django_admin_react/{static,templates}/admin_react/`
+  → `poetry build`. The wheel ships pre-built React assets so consumers
+  do not need Node.
+- The PyPI token lives in environment variables only
+  (`POETRY_PYPI_TOKEN_PYPI`), never in any file in the repo. The token
+  is **never** echoed or logged by `scripts/deploy.sh`.
+- Releases require a **human maintainer** (tier 6 in
+  `docs/agents/autonomy-policy.md`). Agents do not tag, do not publish,
+  do not auto-bump the version.
+- TestPyPI may be used for verification by the maintainer with a
+  separate token; same hygiene rules apply.
 
-## 8. Static analysis
+## 8. Static analysis (local-only — no CI in v0.x)
 
-CI runs:
+Run via `./scripts/lint.sh`:
 
-- `ruff` for lint (includes `S` security rules).
-- `mypy` (best-effort; tightening planned for v1.x).
-- `bandit` on the package source.
-- `pip-audit` on the locked dependencies.
-- Frontend: `eslint` (with `eslint-plugin-react`, `-jsx-a11y`,
-  `-security`), `tsc --noEmit`.
+- `ruff` (includes `S` bandit-style security rules)
+- `ruff format --check`
+- `black --check`
+- `isort --check-only` (`force_single_line=True`)
+- `flake8`
+- `pylint --errors-only` (with `pylint-django`)
+- `mypy` (best-effort; tightening planned for v1.x)
+- `bandit -r django_admin_react`
+- `pytest -q` (including `tests/test_security.py`)
+- Frontend: `prettier --check`, `pnpm -r typecheck`, `pnpm -r lint`
+  (`eslint` wires up in PR #6).
 
-## 9. Disclosure timeline
+Dependency audit runs separately via `./scripts/audit-deps.sh`
+(see §6).
+
+## 9. Recommended consumer settings
+
+These are not enforced by the package — they are best-practice defaults
+the consumer's Django project **should** set. The package never
+overrides them.
+
+```python
+# settings.py
+
+# Cookies
+SESSION_COOKIE_SECURE  = True   # ACCEPTANCE §4.14 S-62
+CSRF_COOKIE_SECURE     = True   # S-62
+SESSION_COOKIE_HTTPONLY = True  # S-62 (CSRF cookie stays readable by JS by design)
+SESSION_COOKIE_SAMESITE = "Lax" # CSRF defense in depth
+
+# Transport
+SECURE_HSTS_SECONDS            = 31_536_000   # S-63
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True         # S-63
+SECURE_HSTS_PRELOAD            = True         # S-63 — only after HSTS is verified
+SECURE_SSL_REDIRECT            = True         # if behind a TLS-terminating proxy
+
+# Headers
+X_FRAME_OPTIONS              = "DENY"   # clickjacking — S-64
+SECURE_CONTENT_TYPE_NOSNIFF  = True     # S-65
+SECURE_BROWSER_XSS_FILTER    = True     # S-65 (legacy IE; cheap to leave on)
+SECURE_REFERRER_POLICY       = "same-origin"
+
+# Optional but recommended
+SESSION_COOKIE_AGE = 60 * 60 * 8   # 8h staff session (QSEC-05)
+```
+
+A `Content-Security-Policy` middleware (via `django-csp` or
+equivalent) is recommended once the SPA is live; sample snippet will
+ship in `docs/installation.md` alongside PR #6
+(see `docs/agents/open-questions.md` QSEC-2026-05-25-03).
+
+## 10. Cross-references
+
+- [`ACCEPTANCE.md`](ACCEPTANCE.md) §4 — measurable security criteria.
+- [`docs/threat-model.md`](docs/threat-model.md) — STRIDE pass per
+  endpoint group.
+- [`agents/security-expert/AGENT.md`](agents/security-expert/AGENT.md)
+  — Security Lead role contract.
+- [`agents/security-expert/REVIEW_CHECKLIST.md`](agents/security-expert/REVIEW_CHECKLIST.md)
+  — what Security checks on every PR.
+
+## 11. Disclosure timeline
 
 For valid vulnerability reports we aim for:
 
