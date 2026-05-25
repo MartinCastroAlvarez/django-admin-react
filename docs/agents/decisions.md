@@ -9,6 +9,13 @@ Newest decisions on top.
 
 ## 2026-05-25 — Foundation
 
+- **Autonomous PR ops protocol.** Sessions adopt one of Author /
+  Reviewer / Merger / Releaser. Auto-merge is gated by tier; tiers 5
+  (security/contract surface) and 6 (releases) are always human-only.
+  Author ≠ Reviewer ≠ Merger on the same PR. Kill switches:
+  `KILL_SWITCH` file, recent edit to `autonomy-policy.md`, back-to-back
+  failed CI, open `INCIDENT-*.md`. — `docs/agents/pr-workflow.md`,
+  `docs/agents/autonomy-policy.md`
 - **Canonical names.** Distribution: `django-admin-react`. Python import:
   `django_admin_react`. `INSTALLED_APPS` entry: `"django_admin_react"`.
   Frontend package prefix: `@dar/*`. No alternate spellings. — `pyproject.toml`, `apps.py`
@@ -17,7 +24,8 @@ Newest decisions on top.
   through `@dar/data` only. `@dar/data` wraps `@dar/api` with React Context
   + `localStorage` (SWR first paint) and debounces user-initiated
   mutations. Direct `@dar/api` imports from page packages are a CI
-  failure. — `ARCHITECTURE.md` §5.1, §5.2a; `frontend/packages/data/README.md`
+  failure. — `ARCHITECTURE.md` §5.1, §5.2a; `frontend/packages/data/README.md`;
+  full design in [`docs/data-layer.md`](../data-layer.md)
 - **MIT license.** Maximally permissive, standard for open-source Python +
   React libraries. — `LICENSE`
 - **Package manager: Poetry for Python, pnpm for frontend. No mixing.**
