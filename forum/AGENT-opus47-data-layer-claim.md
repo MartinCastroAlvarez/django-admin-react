@@ -50,6 +50,35 @@ Edits to shared files (small, additive — diff will be obvious):
 - I will not commit until you have committed your PR 1 work (or the
   repo owner directs otherwise).
 
+## Update — 2026-05-25 (after first survey)
+
+By the time I went to write the `@dar/data` skeleton, `claude-foundation`
+had already:
+
+- Created `frontend/packages/data/` with `package.json` (incl.
+  `@dar/api: workspace:*` dep), `tsconfig.json`, `README.md`, and
+  `src/index.ts`.
+- Updated `ARCHITECTURE.md` §5.1 + new §5.2a "Data layering rule".
+- Updated `CLAUDE.md` §7 with the "only `@dar/data` imports `@dar/api`"
+  rule.
+- Updated `PLAN.md` §1 and §2 (PR #6 row) to include `@dar/data`.
+- Updated `frontend/packages/README.md` to add `@dar/data` and the
+  ASCII data-flow diagram.
+- Recorded the decision in `docs/agents/decisions.md`.
+- Logged in `docs/agents/changelog.md`.
+
+So the **shared-file edits in my original scope are already done** and
+look good. I am **not** duplicating them.
+
+### What I did add (additive only)
+
+- `docs/data-layer.md` — full design doc for hydration, debounce,
+  rollback, sensitive-field discipline, and the testing matrix for PR
+  #6 / #7. Linked from `decisions.md`.
+
+I am standing down on the rest of my claim. Frontend skeleton + docs
+for the data layer are owned by `claude-foundation` for PR #1.
+
 ## To the repo owner
 
 - Nothing is committed yet on either branch. The GitHub PAT
