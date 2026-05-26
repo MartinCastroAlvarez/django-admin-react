@@ -6,7 +6,7 @@
 // the data layer's job.
 
 import { useEffect, useMemo, useState } from 'react';
-import { ListFilter } from 'lucide-react';
+import { ListFilter, Settings2 } from 'lucide-react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import {
@@ -69,6 +69,38 @@ export function ListPage() {
   // The action awaiting confirmation (#206) — drives the styled
   // confirm modal instead of the native window.confirm.
   const [pendingAction, setPendingAction] = useState<ActionDescriptor | null>(null);
+  // Column customizer (#196): hidden columns persist per app/model in
+  // localStorage so the operator's layout survives reloads. UI-only
+  // preference (not data) — keyed outside the `dar:v1:*` cache.
+  const colsStorageKey = `dar:cols:${appLabel}:${modelName}`;
+  const [hiddenCols, setHiddenCols] = useState<Set<string>>(() => {
+    try {
+      const raw = localStorage.getItem(`dar:cols:${appLabel}:${modelName}`);
+      return raw ? new Set(JSON.parse(raw) as string[]) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
+  const [colsOpen, setColsOpen] = useState(false);
+
+  function toggleColumn(name: string, visibleCount: number): void {
+    setHiddenCols((prev) => {
+      const next = new Set(prev);
+      if (next.has(name)) {
+        next.delete(name);
+      } else if (visibleCount > 1) {
+        // Keep at least one column visible — never let the operator
+        // hide the entire table out from under themselves.
+        next.add(name);
+      }
+      try {
+        localStorage.setItem(colsStorageKey, JSON.stringify([...next]));
+      } catch {
+        /* localStorage unavailable (private mode) — preference is best-effort. */
+      }
+      return next;
+    });
+  }
 
   // Debounced search: commit `q` to the URL ~300ms after the user
   // stops typing, so the list refetches without a keystroke flood
@@ -181,12 +213,15 @@ export function ListPage() {
   }
   if (!data) return null;
 
-  const columns = data.columns.map((c) => ({
-    key: c.name,
-    header: c.label,
-    sortable: c.sortable,
-    render: (row: ListRow) => <FieldValueView value={row.fields[c.name]} />,
-  }));
+  const columns = data.columns
+    .filter((c) => !hiddenCols.has(c.name))
+    .map((c) => ({
+      key: c.name,
+      header: c.label,
+      sortable: c.sortable,
+      render: (row: ListRow) => <FieldValueView value={row.fields[c.name]} />,
+    }));
+  const visibleColumnCount = data.columns.length - hiddenCols.size;
 
   const totalPages = Math.max(1, Math.ceil(data.total / data.page_size));
   const filters = data.filters ?? [];
@@ -294,6 +329,21 @@ export function ListPage() {
             )}
           </button>
         )}
+        <button
+          type="button"
+          onClick={() => setColsOpen(true)}
+          aria-haspopup="dialog"
+          aria-label="Customize columns"
+          title="Customize columns"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded border border-gray-300 px-3 py-2 text-sm hover:bg-gray-100"
+        >
+          <Settings2 className="h-4 w-4" aria-hidden />
+          {hiddenCols.size > 0 && (
+            <span className="ml-0.5 rounded-full bg-gray-500 px-1.5 py-0.5 text-xs text-white">
+              {hiddenCols.size} hidden
+            </span>
+          )}
+        </button>
       </div>
 
       {chips.length > 0 && (
@@ -410,6 +460,43 @@ export function ListPage() {
             Run <span className="font-medium">{pendingAction.label}</span> on {selected.size}{' '}
             selected item{selected.size === 1 ? '' : 's'}?
           </p>
+        </Modal>
+      )}
+
+      {colsOpen && (
+        <Modal
+          title="Columns"
+          onClose={() => setColsOpen(false)}
+          footer={
+            <Button variant="primary" onClick={() => setColsOpen(false)}>
+              Done
+            </Button>
+          }
+        >
+          <p className="mb-3 text-sm text-gray-500">Show or hide list columns.</p>
+          <ul className="space-y-2">
+            {data.columns.map((c) => {
+              const visible = !hiddenCols.has(c.name);
+              const isLastVisible = visible && visibleColumnCount <= 1;
+              return (
+                <li key={c.name}>
+                  <label
+                    className={`flex items-center gap-2 text-sm ${
+                      isLastVisible ? 'text-gray-400' : 'text-gray-800'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={visible}
+                      disabled={isLastVisible}
+                      onChange={() => toggleColumn(c.name, visibleColumnCount)}
+                    />
+                    {c.label}
+                  </label>
+                </li>
+              );
+            })}
+          </ul>
         </Modal>
       )}
     </div>
