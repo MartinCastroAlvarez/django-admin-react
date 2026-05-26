@@ -24,6 +24,7 @@ from django_admin_react.api.views.actions import ActionView
 from django_admin_react.api.views.autocomplete import AutocompleteView
 from django_admin_react.api.views.bulk import BulkUpdateView
 from django_admin_react.api.views.create import CreateView
+from django_admin_react.api.views.delete_preview import DeletePreviewView
 from django_admin_react.api.views.destroy import DestroyView
 from django_admin_react.api.views.detail import DetailView
 from django_admin_react.api.views.history import HistoryView
@@ -120,6 +121,13 @@ urlpatterns: list = [
         "<str:app_label>/<str:model_name>/<str:pk>/history/",
         HistoryView.as_view(),
         name="history",
+    ),
+    # Delete-preview sub-resource (#153) — cascade / protected preview
+    # before the destructive DELETE. Same ordering caveat as above.
+    path(
+        "<str:app_label>/<str:model_name>/<str:pk>/delete-preview/",
+        DeletePreviewView.as_view(),
+        name="delete_preview",
     ),
     path(
         "<str:app_label>/<str:model_name>/<str:pk>/",
