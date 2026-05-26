@@ -24,6 +24,7 @@ export type {
   FilterDescriptor,
   FilterOption,
   ForeignKeyValue,
+  HtmlValue,
   ListResponse,
   ListRow,
   Permissions,
@@ -46,7 +47,7 @@ export type { DetailState } from './detail-context';
 export { createObject, updateObject, deleteObject } from './mutations';
 export type { CreateArgs, UpdateArgs, DeleteArgs } from './mutations';
 
-export { renderValue } from './format';
+export { renderValue, isHtmlValue } from './format';
 
 export { useSwrCache } from './swr-cache';
 export type { SwrState, UseSwrCacheArgs } from './swr-cache';

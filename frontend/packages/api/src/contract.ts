@@ -87,7 +87,26 @@ export interface ForeignKeyValue {
   label: string;
 }
 
-export type FieldValue = string | number | boolean | null | ForeignKeyValue | ForeignKeyValue[];
+/**
+ * A value the backend marked as safe HTML — produced when a
+ * `ModelAdmin` `list_display` / readonly display method returns a
+ * Django `SafeString` (`format_html` / `mark_safe`). The SPA renders
+ * `html` as markup (Django changelist parity). A plain string is
+ * NEVER this shape, so untrusted text stays escaped. See
+ * api-contract §4 + SECURITY.md.
+ */
+export interface HtmlValue {
+  html: string;
+}
+
+export type FieldValue =
+  | string
+  | number
+  | boolean
+  | null
+  | ForeignKeyValue
+  | ForeignKeyValue[]
+  | HtmlValue;
 
 export interface ListRow {
   pk: number | string;

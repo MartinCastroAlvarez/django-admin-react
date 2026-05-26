@@ -14,9 +14,10 @@ import {
   type FilterDescriptor,
   type FilterOption,
   type ListRow,
-  renderValue,
 } from '@dar/data';
 import { Card, EmptyState, Input, Spinner, Table } from '@dar/ui';
+
+import { FieldValueView } from '../components/FieldValueView';
 
 // Query params the page manages itself; everything else is a
 // `list_filter` key.
@@ -93,7 +94,7 @@ export function ListPage() {
     key: c.name,
     header: c.label,
     sortable: c.sortable,
-    render: (row: ListRow) => renderValue(row.fields[c.name]),
+    render: (row: ListRow) => <FieldValueView value={row.fields[c.name]} />,
   }));
 
   const totalPages = Math.max(1, Math.ceil(data.total / data.page_size));

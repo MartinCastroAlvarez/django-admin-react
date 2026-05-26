@@ -30,6 +30,7 @@ from django.db.models import Field
 from django.db.models import ForeignKey
 from django.db.models import ManyToManyField
 from django.db.models import Model
+from django.utils.safestring import SafeString
 
 SENSITIVE_NAME_SUBSTRINGS: Final[tuple[str, ...]] = (
     "password",
@@ -71,6 +72,20 @@ def serialize_value(value: Any, field: Field | None = None) -> Any:
         custom = _registered_serializer(field)
         if custom is not None:
             return custom(value)
+    # SafeString FIRST — it subclasses ``str``, so it must be detected
+    # before the plain-``str`` pass-through below. A ``SafeString`` is
+    # produced by ``format_html`` / ``mark_safe``, which is how a
+    # ``ModelAdmin`` ``list_display`` method (or a readonly display
+    # method) opts a value into being rendered as HTML in Django's own
+    # changelist. We mirror that: emit a typed ``{"html": ...}``
+    # envelope so the SPA renders it as markup. A *plain* ``str`` —
+    # e.g. a ``CharField`` containing ``"<script>"`` — is NOT a
+    # ``SafeString`` and stays inert text (rendered escaped by React).
+    # Trust boundary is identical to Django's: the admin author marked
+    # it safe; interpolated args in ``format_html`` are auto-escaped.
+    # See docs/api-contract.md §4 + SECURITY.md (Closes #172).
+    if isinstance(value, SafeString):
+        return {"html": str(value)}
     if value is None or isinstance(value, bool | int | float | str):
         return value
     if isinstance(value, decimal.Decimal):

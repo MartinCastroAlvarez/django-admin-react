@@ -116,6 +116,36 @@ class TestSerializeValue:
 
         assert serialize_value(Custom()) == "custom-repr"
 
+    def test_safestring_emits_html_envelope(self) -> None:
+        """A Django ``SafeString`` (``format_html`` / ``mark_safe``) —
+        how a ``list_display`` method opts into HTML — serializes to a
+        typed ``{"html": ...}`` envelope so the SPA renders it as markup
+        (Django changelist parity). Closes #172.
+        """
+        from django.utils.html import format_html
+
+        value = format_html('<span class="label">{}</span>', "Test Bank 9")
+        result = serialize_value(value)
+        assert result == {"html": '<span class="label">Test Bank 9</span>'}
+
+    def test_plain_string_with_html_chars_stays_inert_text(self) -> None:
+        """A *plain* str (not SafeString) — e.g. a CharField holding
+        ``<script>`` — is returned verbatim as a string, NOT the html
+        envelope. The SPA renders it escaped, so it can never execute.
+        This is the security boundary that distinguishes the two paths.
+        """
+        result = serialize_value("<script>alert(1)</script>")
+        assert result == "<script>alert(1)</script>"
+        assert not isinstance(result, dict), "plain string must never become {html: ...}"
+
+    def test_mark_safe_value_emits_html_envelope(self) -> None:
+        """``mark_safe`` (the other SafeString producer) also maps to the
+        html envelope."""
+        from django.utils.safestring import mark_safe
+
+        result = serialize_value(mark_safe("<b>bold</b>"))  # noqa: S308 — test input
+        assert result == {"html": "<b>bold</b>"}
+
     def test_no_exception_for_weird_input(self) -> None:
         """Defense-in-depth: serializer never raises (§4.7)."""
 
