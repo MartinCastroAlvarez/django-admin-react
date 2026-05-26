@@ -41,6 +41,19 @@ DEFAULTS: dict[str, Any] = {
     #                        URL or a path under your ``STATIC_URL``.
     "BRAND_TITLE": None,
     "BRAND_LOGO_URL": None,
+    # ``REACT_LOGIN`` — opt-in React-rendered login (Issue #167).
+    # Default ``False`` keeps today's behavior: ``SpaIndexView``
+    # redirects anonymous / unauthorized users to Django's HTML login
+    # (or the package's own ``<mount>/login/`` page). When ``True``,
+    # the SPA shell is served to anonymous users (with the CSRF cookie
+    # set) so the React app can render its own login form, which POSTs
+    # to ``/api/v1/login/``. The auth *mechanism* is unchanged — still
+    # Django's ``authenticate``/``login`` behind the JSON endpoint
+    # (`api/views/auth.py`); only the UI surface differs. The shell
+    # carries no user data, so serving it to anonymous users discloses
+    # nothing the static bundle wouldn't, and every data API call still
+    # returns 403 until the user authenticates.
+    "REACT_LOGIN": False,
 }
 
 
@@ -58,6 +71,7 @@ class _PackageSettings:
     ENABLE_PROFILING: bool = DEFAULTS["ENABLE_PROFILING"]
     BRAND_TITLE: str | None = DEFAULTS["BRAND_TITLE"]
     BRAND_LOGO_URL: str | None = DEFAULTS["BRAND_LOGO_URL"]
+    REACT_LOGIN: bool = DEFAULTS["REACT_LOGIN"]
 
 
 def _load() -> _PackageSettings:

@@ -59,16 +59,13 @@ function filterApps(apps: RegistryApp[], query: string): RegistryApp[] {
   const out: RegistryApp[] = [];
   for (const app of apps) {
     const appMatches =
-      app.verbose_name.toLowerCase().includes(q) ||
-      app.app_label.toLowerCase().includes(q);
+      app.verbose_name.toLowerCase().includes(q) || app.app_label.toLowerCase().includes(q);
     if (appMatches) {
       out.push(app);
       continue;
     }
     const models = app.models.filter(
-      (m) =>
-        modelLabel(m).toLowerCase().includes(q) ||
-        m.model_name.toLowerCase().includes(q),
+      (m) => modelLabel(m).toLowerCase().includes(q) || m.model_name.toLowerCase().includes(q),
     );
     if (models.length > 0) out.push({ ...app, models });
   }
@@ -84,10 +81,7 @@ export function Layout({ children }: PropsWithChildren) {
   const [drawerOpen, setDrawerOpen] = useState(false);
 
   const apps = (data?.apps ?? []) as RegistryApp[];
-  const totalModels = useMemo(
-    () => apps.reduce((n, app) => n + app.models.length, 0),
-    [apps],
-  );
+  const totalModels = useMemo(() => apps.reduce((n, app) => n + app.models.length, 0), [apps]);
   const showFilter = totalModels >= FILTER_THRESHOLD;
   const visibleApps = useMemo(
     () => (showFilter ? filterApps(apps, query) : apps),
@@ -151,7 +145,9 @@ export function Layout({ children }: PropsWithChildren) {
             onClick={closeDrawer}
             className="flex items-center gap-2 text-lg font-semibold hover:text-white"
           >
-            {BRAND_LOGO_URL && <img src={BRAND_LOGO_URL} alt="" className="h-6 w-6 shrink-0 rounded" />}
+            {BRAND_LOGO_URL && (
+              <img src={BRAND_LOGO_URL} alt="" className="h-6 w-6 shrink-0 rounded" />
+            )}
             <span>{BRAND_TITLE}</span>
           </Link>
           {data?.user && (
