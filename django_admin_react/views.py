@@ -86,7 +86,7 @@ class SpaIndexView(View):
         # POST carries a valid CSRF token.
         get_token(request)
 
-        return render(
+        response = render(
             request,
             "admin_react/index.html",
             {
@@ -96,6 +96,19 @@ class SpaIndexView(View):
                 "brand_logo_url": dar_conf.BRAND_LOGO_URL,
             },
         )
+        # The SPA shell must never be cached: it references the
+        # hash-named bundle (``index-<hash>.js``), so a stale shell
+        # points at an asset filename that no longer exists after a
+        # rebuild — the browser then boots an old/broken SPA. The
+        # bundle assets themselves are immutable + hash-named, so they
+        # stay cacheable forever (served by staticfiles); only this
+        # HTML entrypoint must always revalidate. ``no-cache`` =
+        # "store but revalidate before use"; combined with the
+        # per-user CSRF cookie + auth gate, the shell is per-request
+        # anyway. (Also avoids the recurring "I still see the old
+        # build" after an upgrade.)
+        response["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        return response
 
 
 class DarStaffAuthenticationForm(AuthenticationForm):
