@@ -345,12 +345,16 @@ def merged_initial_for_update(
             # cause every PATCH that doesn't touch the M2M to
             # CLEAR it, since ModelForm runs full validation on
             # every save.
-            try:
-                merged[name] = list(
-                    getattr(obj, name).all().values_list("pk", flat=True)
-                )
-            except Exception:  # pragma: no cover — defensive
-                merged[name] = []
+            #
+            # Closes issue #119 / S-CRIT-1: this read is intentionally
+            # NOT wrapped in try/except. A defensive fallback to ``[]``
+            # would flow into ``form.save_m2m()`` and silently wipe every
+            # existing related row during a PATCH that didn't touch the
+            # M2M. Silent data loss > a visible 500. If the descriptor
+            # ever raises in production, ops must see it.
+            merged[name] = list(
+                getattr(obj, name).all().values_list("pk", flat=True)
+            )
         else:
             merged[name] = getattr(obj, name, None)
     merged.update(coerce_fk_values(payload, model))
