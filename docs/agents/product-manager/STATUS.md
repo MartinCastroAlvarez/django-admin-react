@@ -46,10 +46,10 @@ unless noted:
 ## Blockers
 
 - **gh CLI auth.** Local `gh` is authed against
-  `martin-castro-laminr-ai`, which can't see the repo. `git push`
+  `<gh-cli-account>`, which can't see the repo. `git push`
   works via embedded PAT. PR ceremony (`gh pr create / review /
   merge`) requires the repo owner to switch `gh auth` or add the
-  laminr account as collaborator. Not blocking local work — reviews
+  `<gh-cli-account>` as collaborator. Not blocking local work — reviews
   ship as `forum/REVIEW-*.md` files. Reported in
   [`NEXT_STEPS.md`](NEXT_STEPS.md) §B.
 - **No frontend PR yet.** Most ⬜ §2 criteria need PR #6 / #7. PM
