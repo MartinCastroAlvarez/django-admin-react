@@ -54,10 +54,38 @@ The Merger runs these locally before each merge (no CI by design):
 
 ## Screenshots
 
-Real screenshots will land in the PR that lights up the React UI
-(PR #6 / #7 per `PLAN.md` §2). Until then the README ships ASCII
-mockups that match the API contract exactly so reviewers can sanity-
-check the expected layout against `docs/api-contract.md`.
+| Screenshot                                         | Status      | Source                                                              |
+| -------------------------------------------------- | ----------- | ------------------------------------------------------------------- |
+| `01-admin-login.png`                               | ✅ shipped  | `scripts/screenshots.sh` (PR `feat/pm-screenshots-real`).            |
+| `02-admin-index.png`                               | ✅ shipped  | same.                                                                |
+| `03-admin-library-list.png`                        | ✅ shipped  | same.                                                                |
+| `04-admin-library-list-mobile.png`                 | ✅ shipped  | same.                                                                |
+| `05-admin-library-detail.png`                      | ✅ shipped  | same.                                                                |
+| `06-registry-api-json.png`                         | ✅ shipped  | same.                                                                |
+| React SPA captures (registry / list / detail / mobile / dark / login) | ⬜ pending | Frontend PR #6 / #7. Same script regenerates.   |
+
+The current set shows the **legacy HTML admin** running against
+the example apps — i.e., the experience the React UI modernises.
+Regenerate via `bash scripts/screenshots.sh`.
+
+---
+
+## v0.1 PM / UX criteria lane
+
+The PM/UX role tracks `ACCEPTANCE.md` §2 against the same milestone
+lens as the engineering lane. Live status board:
+[`docs/pm-acceptance-status.md`](docs/pm-acceptance-status.md).
+
+Headline numbers (2026-05-26):
+
+- ✅ verified — 10 criteria (mostly §2.1, §2.6, onboarding docs).
+- 🟡 partial — 9 criteria (need frontend + PyPI release to flip).
+- ⬜ blocked on frontend — the rest (~25), per
+  [`PLAN.md`](PLAN.md) §2 PR #6 / #7.
+
+The v0.1 release gate (`ACCEPTANCE.md` §5) cannot pass until the
+frontend lands. Every PM doc / spec / screenshot that does **not**
+depend on the SPA is shipped or in review.
 
 ---
 

@@ -106,73 +106,35 @@ its own permission model.
 
 ## Screenshots
 
-> The React bundle is wired in PR #6/#7. While the SPA is being built,
-> the screenshots below are ASCII mockups that match the API contract
-> exactly. They will be replaced with real screenshots once the UI is
-> usable. See [`PROGRESS.md`](PROGRESS.md) for live status.
+> **Captured live** with `scripts/screenshots.sh` from
+> `examples/project/` — real pixels, not mockups. The React SPA
+> shell lands in PR #6 / #7; until then, the images below show the
+> **legacy HTML admin** running against the example apps — i.e.,
+> the experience `django-admin-react` modernises. Once the SPA
+> renders, this section regenerates from the same script. Tracked
+> in [`PROGRESS.md`](PROGRESS.md).
 
-**Model registry / sidebar** — sourced from `GET /api/v1/registry/`:
+| Login (the entry door)                            | Admin index (legacy)                                    |
+| ------------------------------------------------- | ------------------------------------------------------- |
+| ![Login](docs/screenshots/01-admin-login.png)     | ![Admin index](docs/screenshots/02-admin-index.png)     |
 
-```
-┌───────────────────────────────┐ ┌─────────────────────────────────┐
-│ django-admin-react            │ │  Welcome, Alice                │
-│  • Auth                       │ │                                 │
-│      Users                    │ │  Apps you can manage:           │
-│      Groups                   │ │   ▸ Auth        (2 models)      │
-│  • Fintech                    │ │   ▸ Fintech     (4 models)      │
-│      Accounts                 │ │   ▸ Library     (5 models)      │
-│      Transactions             │ │                                 │
-│      Statements               │ │  Recent activity: —             │
-│      Cards                    │ │                                 │
-│  • Library                    │ │                                 │
-│      Authors                  │ │                                 │
-│      Books                    │ │                                 │
-│      Loans                    │ │                                 │
-└───────────────────────────────┘ └─────────────────────────────────┘
-```
+| Library / Authors — list view                                  | Library / Author — detail view                                  |
+| -------------------------------------------------------------- | --------------------------------------------------------------- |
+| ![Author list](docs/screenshots/03-admin-library-list.png)     | ![Author detail](docs/screenshots/05-admin-library-detail.png)  |
 
-**Object list** — list_display columns + search + pagination,
-sourced from `GET /api/v1/<app>/<model>/`:
+| Mobile (375 px)                                                       | API: `GET /api/v1/registry/` JSON                       |
+| --------------------------------------------------------------------- | ------------------------------------------------------- |
+| ![Mobile list](docs/screenshots/04-admin-library-list-mobile.png)     | ![Registry JSON](docs/screenshots/06-registry-api-json.png) |
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  Fintech / Accounts                              [ + Add new ]  │
-│  ┌─────────────────────────────────────┐  ┌──────────────────┐  │
-│  │ 🔎 Search by name or IBAN…          │  │ Filter ▾         │  │
-│  └─────────────────────────────────────┘  └──────────────────┘  │
-│  ┌──────────────────────────────────────────────────────────┐   │
-│  │ Name                  Balance     Active   Owner         │   │
-│  │ ───────────────────────────────────────────────────────  │   │
-│  │ Checking — Alice      1 023.45    ✓        alice         │   │
-│  │ Savings — Alice         512.00    ✓        alice         │   │
-│  │ Investing — Bob       8 900.10    ✓        bob           │   │
-│  └──────────────────────────────────────────────────────────┘   │
-│  Page 1 of 6 · 137 results                ⟨ Prev    Next ⟩      │
-└─────────────────────────────────────────────────────────────────┘
+Every screenshot uses a deterministic synthetic seed (no real
+people, accounts, or PII). Regenerate with:
+
+```bash
+bash scripts/screenshots.sh
 ```
 
-**Detail / edit** — fields built from `ModelAdmin.get_form()`,
-sourced from `GET /api/v1/<app>/<model>/<pk>/`:
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  Fintech / Accounts / Checking — Alice          [ Save ] [ … ]  │
-│                                                                 │
-│  Name        [ Checking — Alice                              ]  │
-│  Balance     [ 1023.45                       ] (read-only)      │
-│  Active      [✓]                                                │
-│  Owner       [ alice ▾ ]                                        │
-│                                                                 │
-│  Statements  ⚠ unsupported field (M2M) — coming in v1.x         │
-│                                                                 │
-│  ───────────────────────────────────────────────────────────    │
-│  [ Delete ]                                                     │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-The "Delete" button hides automatically if the user's
-`has_delete_permission` is false. The "unsupported" stub appears
-verbatim for M2M fields until v1.x.
+The script boots a one-off SQLite DB, seeds fixtures, captures via
+Playwright (Chromium), and writes the six PNGs above.
 
 ---
 
