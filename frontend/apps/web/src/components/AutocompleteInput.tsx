@@ -71,8 +71,7 @@ export function AutocompleteInput({
 
   const base = useMemo(
     () =>
-      'w-full rounded border px-2 py-1 text-sm ' +
-      (invalid ? 'border-red-400' : 'border-gray-300'),
+      'w-full rounded border px-2 py-1 text-sm ' + (invalid ? 'border-red-400' : 'border-gray-300'),
     [invalid],
   );
 

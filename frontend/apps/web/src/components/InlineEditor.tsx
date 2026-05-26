@@ -63,16 +63,15 @@ export interface InlineEditorProps {
 }
 
 export function InlineEditor({ inline, onItems }: InlineEditorProps) {
-  const editableFields = useMemo(
-    () => inline.fields.filter((f) => !f.readonly),
-    [inline.fields],
-  );
+  const editableFields = useMemo(() => inline.fields.filter((f) => !f.readonly), [inline.fields]);
 
   const [rows, setRows] = useState<EditRow[]>(() =>
     inline.rows.map((r) => ({
       key: `existing-${r.pk}`,
       pk: r.pk,
-      values: Object.fromEntries(editableFields.map((f) => [f.name, initialCell(r.fields[f.name])])),
+      values: Object.fromEntries(
+        editableFields.map((f) => [f.name, initialCell(r.fields[f.name])]),
+      ),
       deleted: false,
     })),
   );
@@ -98,7 +97,9 @@ export function InlineEditor({ inline, onItems }: InlineEditorProps) {
 
   function setCell(rowKey: string, fieldName: string, value: WriteValue) {
     setRows((prev) =>
-      prev.map((r) => (r.key === rowKey ? { ...r, values: { ...r.values, [fieldName]: value } } : r)),
+      prev.map((r) =>
+        r.key === rowKey ? { ...r, values: { ...r.values, [fieldName]: value } } : r,
+      ),
     );
   }
 
