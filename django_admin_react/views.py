@@ -35,7 +35,8 @@ from django.http import HttpResponse
 from django.middleware.csrf import get_token
 from django.shortcuts import redirect
 from django.shortcuts import render
-from django.urls import reverse_lazy
+from django.urls import NoReverseMatch
+from django.urls import reverse
 from django.views.generic import View
 
 from django_admin_react.api.permissions import is_admin_user
@@ -128,9 +129,51 @@ def _mount_from_request(request: HttpRequest) -> str:
 def _redirect_to_login(request: HttpRequest) -> HttpResponse:
     """Redirect unauthenticated requests to the configured login URL.
 
-    Uses ``settings.LOGIN_URL`` if set (Django's standard), else
-    falls back to the standard admin login. The ``next`` query
-    parameter brings the user back to the SPA after login.
+    Resolution order (Issue #114):
+
+    1. ``<configured AdminSite>:login`` — reverse against the same
+       site the consumer registered. A consumer who customised
+       ``DJANGO_ADMIN_REACT["ADMIN_SITE"]`` to a site at ``/admin/``
+       gets ``/admin/login/`` automatically; this works whether or
+       not the consumer set ``settings.LOGIN_URL``.
+    2. ``settings.LOGIN_URL`` — honoured when the consumer
+       explicitly configured an authentication flow outside the
+       admin (e.g. their own SSO endpoint). Used regardless of
+       whether the URL resolves; the consumer owns it.
+    3. ``admin:login`` — last-resort reverse on Django's stock
+       admin site.
+    4. ``/accounts/login/`` — Django's default. Last resort; rarely
+       useful because many real apps route ``/accounts/`` to DRF.
+
+    The ``next`` query parameter brings the user back to the SPA
+    after login.
     """
-    login_url = getattr(settings, "LOGIN_URL", reverse_lazy("admin:login"))
+    from django_admin_react.api.registry import get_admin_site
+
+    login_url: str | None = None
+
+    # 1. Consumer's configured AdminSite.
+    try:
+        admin_site = get_admin_site()
+        site_namespace = getattr(admin_site, "name", None) or "admin"
+        login_url = reverse(f"{site_namespace}:login")
+    except (NoReverseMatch, Exception):  # noqa: BLE001 — defensive
+        login_url = None
+
+    # 2. Explicit settings.LOGIN_URL — but only when the consumer
+    #    explicitly customised it. Django sets a default
+    #    `/accounts/login/` so we treat that exact value as "not
+    #    customised" and prefer the AdminSite path.
+    if login_url is None:
+        configured = getattr(settings, "LOGIN_URL", None)
+        if configured and configured != "/accounts/login/":
+            login_url = str(configured)
+
+    # 3. Stock admin login.
+    if login_url is None:
+        try:
+            login_url = reverse("admin:login")
+        except NoReverseMatch:
+            login_url = "/accounts/login/"
+
     return redirect(f"{login_url}?next={request.path}")
