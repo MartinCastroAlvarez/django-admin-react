@@ -142,12 +142,97 @@ Failing any of these is an automatic "Request changes" on the PR.
 
 ---
 
-## 9. Acceptance cross-reference
+## 9. Creative mobile patterns
 
-| Topic                | Criterion |
-| -------------------- | --------- |
-| 375 px usable        | R-1       |
-| Table → card         | R-2       |
-| Form stacking        | R-3       |
-| Touch targets        | R-4       |
-| Hover not required   | R-5       |
+Django's HTML admin has no real mobile experience. We do — **the SPA
+on a phone should feel like a native admin app**, not a shrunken
+desktop page. Tracked under
+[issue #85](https://github.com/MartinCastroAlvarez/django-admin-react/issues/85).
+
+Five patterns ship in v0.2. Each maps to a new `ACCEPTANCE.md` §2.4
+row (R-6..R-10) lifted when this lands.
+
+### 9.1 Floating Action Button (FAB) — R-6
+
+At `<1024px`, the list page's **Add `<verbose_name>`** button (when
+`has_add_permission`) renders as a circular `Button.icon` floating
+bottom-right (`fixed bottom-4 right-4`, 56×56 px, `shadow-lg`).
+Disappears under the keyboard. At `≥1024px` it sits in the page
+header bar as a regular `Button.primary`.
+
+### 9.2 Bottom-sheet detail / inspector — R-7
+
+At `<1024px`, clicking a row pushes a full-screen detail view that
+**slides up from the bottom** (250 ms ease-out; 0 ms under
+`prefers-reduced-motion`). The shell sidebar is not visible; a
+top-left back chevron returns to the list. The list scroll
+position is preserved on return.
+
+### 9.3 Pull-to-refresh — R-8
+
+At `<1024px` on touch devices (`pointer: coarse`), the list page
+supports pull-to-refresh. The gesture re-runs the list query
+against the server (skipping cache). A subtle Skeleton overlay
+covers the rows while the request resolves; the chip row (filters
+applied) stays visible.
+
+### 9.4 Swipe row actions — R-9
+
+At `<1024px`, swiping a card left exposes the row's
+permissions-gated actions:
+
+- **Swipe-left short** (≤80 px) → reveals a `Delete` button (only
+  if `has_delete_permission`).
+- **Swipe-left long** (full row) → triggers the same Delete
+  confirmation flow as the click path. Does not auto-execute.
+- **Swipe-right** → reveals contextual actions (`Open`,
+  `Duplicate` if applicable). v0.2 ships `Open` only.
+
+A 4-px vertical-only scroll threshold prevents accidental swipes
+during scroll. Long-press is reserved for bulk-select (§9.5).
+
+### 9.5 Long-press to enter bulk-select — R-10
+
+At `<1024px`, long-press (≥400 ms) on a card enters bulk-select
+mode. The card grows a checkbox indicator, the FAB swaps to an
+actions button matching [#58](https://github.com/MartinCastroAlvarez/django-admin-react/issues/58)
+(custom admin actions), and the top bar swaps to a count +
+"Cancel" button. Mobile-equivalent of the desktop checkbox
+column. Exit via Cancel or by emptying the selection.
+
+### 9.6 What we never do on mobile
+
+- **A separate mobile route or build.** Same SPA, same URL, same
+  code path. The patterns above are CSS / event-handler branches.
+- **Block desktop features on mobile.** Every desktop primary
+  flow has a mobile equivalent (FAB ↔ header button, bottom-sheet
+  ↔ in-page detail, swipe-delete ↔ row delete, long-press select
+  ↔ checkbox select).
+- **A "request desktop site" button.** The mobile experience is
+  the canonical mobile experience.
+
+### 9.7 Cross-references
+
+- The PWA installability story extends these patterns; installed-app
+  behaviour mirrors the responsive web experience in `display:
+  standalone`. See [`pwa.md`](pwa.md).
+- The skeleton-loading rules ([`states.md`](states.md) §1) apply to
+  bottom-sheet pushes too — the sheet shows Skeleton rows on push,
+  swaps to real content when the payload resolves.
+
+---
+
+## 10. Acceptance cross-reference
+
+| Topic                  | Criterion |
+| ---------------------- | --------- |
+| 375 px usable          | R-1       |
+| Table → card           | R-2       |
+| Form stacking          | R-3       |
+| Touch targets          | R-4       |
+| Hover not required     | R-5       |
+| FAB on mobile          | R-6       |
+| Bottom-sheet detail    | R-7       |
+| Pull-to-refresh        | R-8       |
+| Swipe row actions      | R-9       |
+| Long-press bulk-select | R-10      |

@@ -15,7 +15,9 @@ testable, every claim cross-references an acceptance criterion.
 | [`states.md`](states.md)                   | Loading / empty / error / optimistic spec.           |
 | [`navigation.md`](navigation.md)           | SPA navigation and the URL contract.                 |
 | [`accessibility.md`](accessibility.md)     | WCAG 2.1 AA checklist with examples.                 |
-| [`responsive.md`](responsive.md)           | Breakpoints, the table → card rule, touch targets.   |
+| [`responsive.md`](responsive.md)           | Breakpoints, table → card, touch targets, mobile patterns (FAB / bottom-sheet / swipe). |
+| [`theming.md`](theming.md)                 | Light / dark theme contract, no-flash server-side resolution. |
+| [`pwa.md`](pwa.md)                         | Installability, service worker, offline shell, cache-on-logout. |
 | [`extensibility.md`](extensibility.md)     | Plug-and-play vs extensibility contract (X-1..X-7).  |
 | [`primary-flows.md`](primary-flows.md)     | End-to-end flows tied to acceptance criteria.        |
 
