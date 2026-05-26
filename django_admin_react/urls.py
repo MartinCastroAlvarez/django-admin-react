@@ -29,8 +29,10 @@ from django_admin_react import views
 app_name = "django_admin_react"
 
 urlpatterns: list = [
-    # API namespace — implemented in PRs #3-#5.
-    path("api/v1/", include("django_admin_react.api.urls", namespace="api_v1")),
+    # API endpoints. No URL namespace: the SPA builds these URLs from
+    # the wire contract (see ``docs/api-contract.md``), not via Django's
+    # ``reverse()``, so a namespace would be dead weight.
+    path("api/v1/", include("django_admin_react.api.urls")),
     # SPA fallback — implemented in PR #6. The catch-all is intentionally
     # last so any future server-rendered route can take precedence.
     re_path(r"^.*$", views.SpaIndexView.as_view(), name="spa_index"),

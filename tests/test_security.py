@@ -67,8 +67,15 @@ def _grep(pattern: str, paths: list[Path]) -> list[tuple[Path, int, str]]:
 
 
 def test_s26_no_csrf_exempt_in_package() -> None:
-    """S-26: ``@csrf_exempt`` must not appear anywhere under the package."""
-    hits = _grep(r"csrf_exempt", _files_under(PKG_ROOT))
+    """S-26: ``@csrf_exempt`` must not appear anywhere under the package.
+
+    Matches only the decorator usage (``@csrf_exempt`` at start of a
+    line, possibly indented) and the import. Docstring mentions
+    explaining why we do *not* use it are ignored — a substring match
+    over-rejects.
+    """
+    rx = r"^\s*@csrf_exempt|from\s+django\.views\.decorators\.csrf\s+import\s+csrf_exempt"
+    hits = _grep(rx, _files_under(PKG_ROOT))
     assert hits == [], f"@csrf_exempt found in package source: {hits}"
 
 

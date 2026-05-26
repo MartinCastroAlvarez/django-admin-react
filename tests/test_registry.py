@@ -207,7 +207,7 @@ def test_response_does_not_leak_password_field_names(superuser_client: Client) -
 @pytest.mark.django_db
 def test_url_resolves_via_reverse(superuser_client: Client) -> None:
     """The named URL pattern is the source of truth, not the literal string."""
-    url = reverse("django_admin_react:api_v1:registry")
+    url = reverse("django_admin_react:registry")
     assert url == REGISTRY_URL
     response = superuser_client.get(url)
     assert response.status_code == 200
