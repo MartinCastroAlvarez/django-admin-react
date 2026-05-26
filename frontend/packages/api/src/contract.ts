@@ -346,4 +346,27 @@ export interface FieldErrorEnvelope {
 export type WriteValue = string | number | boolean | null;
 
 export type CreatePayload = Record<string, WriteValue>;
-export type UpdatePayload = Record<string, WriteValue>;
+
+/**
+ * One row in an inline write payload (#54 / api-contract §5.2.1):
+ * `{pk:null}` = add, `{pk:N, fields}` = change, `{pk:N, DELETE:true}`
+ * = delete. Matches the Django-formset row states the backend expects.
+ */
+export interface InlineWriteItem {
+  pk: number | string | null;
+  fields?: Record<string, WriteValue>;
+  DELETE?: boolean;
+}
+
+/** `inlines` block of an update body, keyed by the inline `name`. */
+export type InlineWritePayload = Record<string, { items: InlineWriteItem[] }>;
+
+/**
+ * PATCH body: parent field values plus an optional `inlines` block the
+ * backend routes through the inline formsets (api/views/update.py pops
+ * `inlines` before validating the parent form).
+ */
+export type UpdatePayload = {
+  [field: string]: WriteValue | InlineWritePayload | undefined;
+  inlines?: InlineWritePayload;
+};
