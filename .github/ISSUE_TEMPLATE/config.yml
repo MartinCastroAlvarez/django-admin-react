@@ -1,0 +1,14 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/MartinCastroAlvarez/django-admin-react/security/advisories/new
+    about: >-
+      Please do NOT open a public issue for security problems. Open a
+      private GitHub Security Advisory instead so we can coordinate
+      disclosure. See SECURITY.md §1 for the full reporting protocol.
+  - name: Questions and ideas
+    url: https://github.com/MartinCastroAlvarez/django-admin-react/discussions
+    about: >-
+      "How do I integrate this with X?" or "What if the package did Y?"
+      fit better as a Discussion (Q&A or Ideas category) than as an
+      issue. Issues are for actionable bugs and shaped enhancements.

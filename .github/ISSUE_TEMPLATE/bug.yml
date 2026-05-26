@@ -1,0 +1,73 @@
+name: Bug report
+description: Something the package does that contradicts its documented behaviour.
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug report. Before
+        submitting, please check that the same bug isn't already
+        tracked in [open issues](https://github.com/MartinCastroAlvarez/django-admin-react/issues?q=is%3Aissue+is%3Aopen+label%3Abug).
+
+        **Security bugs do not go here.** Use the private
+        Security Advisory link instead (see `SECURITY.md` §1).
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: Describe the actual behaviour you observed.
+      placeholder: |
+        Loaded /admin/library/book/ as a staff user; the list page
+        returned 500 instead of rendering. Stack trace below.
+    validations:
+      required: true
+  - type: textarea
+    id: what-expected
+    attributes:
+      label: What you expected
+      description: Describe the documented or implied behaviour.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction steps
+      description: Smallest sequence that triggers the bug.
+      placeholder: |
+        1. pip install django-admin-react==<version>
+        2. Add a Book ModelAdmin with `date_hierarchy = "published"`.
+        3. ...
+    validations:
+      required: true
+  - type: input
+    id: dar-version
+    attributes:
+      label: django-admin-react version
+      placeholder: 0.1.0a2
+    validations:
+      required: true
+  - type: input
+    id: django-version
+    attributes:
+      label: Django version
+      placeholder: 5.1.3
+    validations:
+      required: true
+  - type: input
+    id: python-version
+    attributes:
+      label: Python version
+      placeholder: 3.12.4
+    validations:
+      required: true
+  - type: textarea
+    id: traceback
+    attributes:
+      label: Traceback or relevant logs
+      render: shell
+  - type: textarea
+    id: context
+    attributes:
+      label: Any other context
+      description: Reverse-proxy setup, custom AdminSite subclass, etc.

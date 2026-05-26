@@ -1,0 +1,59 @@
+name: Enhancement
+description: A feature or behaviour change the package doesn't yet do.
+title: "[enh] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the suggestion. Before filing, please check the
+        [Project board](https://github.com/users/MartinCastroAlvarez/projects/3)
+        and [Ideas Discussions](https://github.com/MartinCastroAlvarez/django-admin-react/discussions/categories/ideas)
+        in case the same idea is already in flight or under
+        discussion.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What's the use case
+      description: |
+        Describe the consumer-side situation that prompts the request.
+        Concrete is better than abstract — name the `ModelAdmin`
+        knob, the workflow, or the operator pain point.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behaviour
+      description: |
+        What you'd like the package to do. If you have a wire shape
+        or API contract in mind, sketch it here.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you considered
+      description: |
+        What you tried first, and why it didn't work. Also: anything
+        the package could do *worse* in exchange for the feature
+        (size, complexity, security surface, breaking change).
+  - type: dropdown
+    id: scope
+    attributes:
+      label: Rough scope
+      options:
+        - Small (≤ 50 lines, single endpoint or descriptor change)
+        - Medium (one feature, multiple files)
+        - Large (cross-cutting; needs a contract before code)
+        - Not sure
+    validations:
+      required: true
+  - type: checkboxes
+    id: agreement
+    attributes:
+      label: Acceptance signal you're proposing
+      description: Per `ACCEPTANCE.md` rules, every behaviour change ships with a binary acceptance criterion.
+      options:
+        - label: I've sketched a one-line acceptance criterion above (or I'm OK with the maintainer adding one).
+          required: true
