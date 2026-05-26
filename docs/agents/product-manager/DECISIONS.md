@@ -7,6 +7,44 @@ Repo-wide architectural decisions also link from
 
 ---
 
+## 2026-05-26 — Late-sprint decisions
+
+Authoring session: `claude-pm-ux-opus47-2026-05-26`.
+
+1. **Reviews land as `--comment`, not `--approve`** — codified in
+   [`AGENT.md`](AGENT.md) §9.5.1. All agents auth as one GitHub
+   login; GitHub blocks self-approve. The autonomy-policy counts
+   the body substance + agent-id role, not the GitHub UI state.
+   Mergers read body verdicts.
+2. **Periodic GitHub sweep cadence is mandatory** — codified in
+   [`AGENT.md`](AGENT.md) §9.5.2. PM/UX sweeps PRs / Issues /
+   Discussions / Project board each session block, not just on
+   direct prompts. The natural-stopping rule applies: when the
+   sweep finds nothing actionable, say so explicitly.
+3. **Session-expiry envelope ships at HTTP 403, not 401** — accepting
+   the merged decision in PR #95. My original PR #79 proposal
+   (HTTP 401) was wire-incompatible with the package's existing
+   posture (all permission/auth failures at 403, `error.code` for
+   nuance). The PR #79 supplement now layers on top of §6.1
+   (`?next=`, optional warning endpoints, modal UX flow).
+4. **`docs/agents/product-manager/STATUS.md` and `NEXT_STEPS.md`
+   are required** — AGENT.md §11 referenced both since session
+   start but they were missing; PR #112 creates them.
+5. **v0.1.0a2 ships without the release-gate mandate firing** —
+   the mandate (memory entry: pm-release-gate-mandate) applies to
+   v0.1.0 **stable**, not alpha. Alpha releases proceed at the
+   Releaser's discretion subject to the autonomy-policy Tier 6
+   rules.
+6. **PR #100 (Architect's M2M, original) was closed and superseded
+   by PR #107** — PM/UX-angle approve via comment review was
+   carried forward by the Architect into the rebased PR.
+7. **`ACCEPTANCE.md` §2 refresh is a recurring PM/UX duty** — every
+   sprint where backend features land, PM/UX refreshes §2 against
+   what shipped (promote §2.10 non-goals into §2.9 E-rows, add
+   §2.7 N-rows, etc.). PR #104 is the 2026-05-26 sprint instance.
+
+---
+
 ## 2026-05-25 — Initial product baseline
 
 Authoring session: `claude-pm-ux-opus47`.
