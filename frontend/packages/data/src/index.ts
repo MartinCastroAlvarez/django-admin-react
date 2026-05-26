@@ -20,6 +20,8 @@ export type {
   CreateResponse,
   DateHierarchy,
   DateHierarchyBucket,
+  DeleteCascadeEntry,
+  DeletePreviewResponse,
   DetailResponse,
   FieldChoice,
   FieldDescriptor,
@@ -57,8 +59,8 @@ export type { ListState } from './list-context';
 export { useDetail } from './detail-context';
 export type { DetailState } from './detail-context';
 
-export { createObject, updateObject, deleteObject } from './mutations';
-export type { CreateArgs, UpdateArgs, DeleteArgs } from './mutations';
+export { createObject, updateObject, deleteObject, fetchDeletePreview } from './mutations';
+export type { CreateArgs, UpdateArgs, DeleteArgs, DeletePreviewArgs } from './mutations';
 
 export { renderValue, isHtmlValue, isForeignKeyValue } from './format';
 
