@@ -134,24 +134,90 @@ def build_registry_payload(admin_site: AdminSite, request: HttpRequest) -> dict:
     """Build the ``GET /api/v1/registry/`` response body.
 
     The shape is documented in ``docs/api-contract.md`` §2.
+
+    Walks ``admin_site.get_app_list(request)`` rather than iterating
+    ``_registry`` directly, so consumer overrides of
+    ``AdminSite.get_app_list`` (custom groupings, curated model lists,
+    operator-meaningful section names) are honored 1:1.
+    ``get_app_list`` already filters by ``has_module_permission`` +
+    per-model ``has_view_permission`` inside Django — we inherit that
+    filtering; no parallel permission gate (rule 1).
+
+    Each ``apps[]`` entry carries:
+
+    - ``name``: human-readable group name from ``get_app_list``.
+    - ``app_label``: the group's identifier — Django's real label
+      when the default ``get_app_list`` runs, or the consumer's
+      synthetic label when overridden.
+    - ``verbose_name``: alias of ``name`` for backwards compatibility
+      with clients of earlier ``0.1.0a*`` responses.
+    - ``is_group``: ``True`` when ``app_label`` is *not* one of the
+      installed Django apps (i.e. the consumer coined it inside their
+      override); ``False`` otherwise.
+    - ``models``: per-model entries, each carrying ``real_app_label``
+      (the underlying ``model._meta.app_label``) so the SPA can
+      construct URLs as ``<mount>/api/v1/<real_app_label>/<model_name>/``
+      regardless of how the group was labelled.
+
+    See issue #138 for the design discussion; the contract change
+    landed in PR #140.
     """
-    apps_payload: dict[str, dict] = {}
-    for model, model_admin in iter_visible_models(admin_site, request):
-        app_label = model._meta.app_label
-        bucket = apps_payload.setdefault(
-            app_label,
+    real_app_labels: frozenset[str] = frozenset(c.label for c in apps.get_app_configs())
+    apps_payload: list[dict] = []
+    for app in admin_site.get_app_list(request):
+        group_label = app["app_label"]
+        group_name = str(app.get("name") or group_label)
+        is_group = group_label not in real_app_labels
+        models_payload: list[dict] = []
+        for raw_entry in app["models"]:
+            # ``get_app_list`` populates each entry with the model class
+            # under the ``"model"`` key (Django ≥3.1). Re-resolve to
+            # ``(model, model_admin)`` via ``_registry`` so the per-model
+            # entry comes from ``_model_entry`` (rule 1: ModelAdmin is
+            # the source of truth for permissions / metadata).
+            model = raw_entry.get("model")
+            if model is None:
+                continue
+            model_admin = admin_site._registry.get(model)
+            if model_admin is None:
+                # Defensive: ``get_app_list`` surfaced a model not in
+                # ``_registry``. Skip — surfacing a model the package
+                # can't address via its URL space would be misleading.
+                continue
+            # Django's ``get_app_list`` includes a model when the user
+            # has *any* perm on it (view OR add OR change OR delete) —
+            # the HTML admin's sidebar carries the entry even if the
+            # list view would 403. For the SPA the registry IS the nav
+            # surface, so a model without view permission would just
+            # render as a broken tile (the list endpoint returns 403).
+            # Apply the same per-model ``has_view_permission`` gate the
+            # original ``iter_visible_models`` enforced (rule 5 in
+            # ``SECURITY.md`` §3).
+            if not model_admin.has_view_permission(request):
+                continue
+            entry = _model_entry(model, model_admin, request)
+            entry["real_app_label"] = model._meta.app_label
+            entry["app_label"] = group_label
+            models_payload.append(entry)
+        # Don't surface an empty group — matches Django's
+        # ``get_app_list`` behavior, which drops apps whose models list
+        # is empty after permission filtering.
+        if not models_payload:
+            continue
+        apps_payload.append(
             {
-                "app_label": app_label,
-                "verbose_name": _app_verbose_name(app_label),
-                "models": [],
-            },
+                "name": group_name,
+                "app_label": group_label,
+                "verbose_name": group_name,
+                "is_group": is_group,
+                "models": models_payload,
+            }
         )
-        bucket["models"].append(_model_entry(model, model_admin, request))
 
     return {
         "mount": _mount_from_request(request),
         "user": _user_payload(request),
-        "apps": list(apps_payload.values()),
+        "apps": apps_payload,
     }
 
 
