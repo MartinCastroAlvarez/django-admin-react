@@ -55,6 +55,7 @@ extension surface declared here.
 | X-5 | Custom detail blocks ("reports") | New `ModelAdmin.get_detail_blocks(request, obj)` hook | Return a list of typed block descriptors.        | Returns `[]` → no extra blocks. |
 | X-6 | Custom HTML in detail blocks | A specific block type (`type: "html"`) under X-5 | Server returns sanitised HTML; SPA renders it.    | Not used unless X-5 returns it. |
 | X-7 | Custom React components     | **Not supported in v1.** See §10.            | n/a                                                   | n/a                          |
+| X-8 | List filters                | `ModelAdmin.list_filter` (Django's own contract) | Just define them on `ModelAdmin`.                  | No `list_filter` → no filter sidebar. |
 
 Each row of this table has a section below. The shared invariant
 across all of them:
@@ -586,6 +587,113 @@ not live**; X-6 is implementable but not part of the v0.1 release
 gate. PM/UX is comfortable shipping v0.1 with X-1..X-5 + X-7
 only, deferring X-6 to a follow-up release. The 80 % consumer
 loses nothing.
+
+---
+
+## 7b. X-8 — Custom list filters (`ModelAdmin.list_filter`)
+
+### Goal
+
+Reuse Django's existing `ModelAdmin.list_filter` mechanism — the
+same one consumers already write for the HTML admin — to drive
+the SPA list page's filter sidebar. **No new filter-definition
+DSL.** This is the same posture as X-2 (actions) and X-4
+(inlines): we build on top of the Django admin contract; we do
+not invent a parallel system.
+
+### Contract (PM/UX requirements — Architect designs the wire
+shape in [`docs/api-contract.md`](../api-contract.md))
+
+- The backend exposes filter metadata in the list-page response
+  (`GET /api/v1/<app>/<model>/`) under a new `filters` key:
+
+  ```json
+  {
+    "filters": [
+      {
+        "name": "status",
+        "label": "Status",
+        "kind": "choices",
+        "choices": [
+          {"value": "draft",     "label": "Draft",     "count": 12},
+          {"value": "published", "label": "Published", "count": 47}
+        ]
+      },
+      {
+        "name": "created_at",
+        "label": "Created at",
+        "kind": "date_hierarchy",
+        "ranges": [
+          {"key": "today",     "label": "Today"},
+          {"key": "past_7d",   "label": "Past 7 days"},
+          {"key": "this_year", "label": "This year"}
+        ]
+      }
+    ]
+  }
+  ```
+
+  Source: `ModelAdmin.get_list_filter(request)` plus
+  `SimpleListFilter` subclasses if any are listed. The Architect
+  pins the closed `kind` enum and the `count` semantics.
+
+- The list endpoint accepts filters as **query-string params**:
+  `?status=published&created_at=past_7d&q=hello`. This is the
+  URL-as-state principle from [`states.md`](states.md) /
+  `ACCEPTANCE.md` §2.7 N-3 — reload the page, get the same view.
+
+- Filter values are server-validated against the filter's
+  declared choices/ranges; an unknown value returns
+  `400 invalid_filter_value`, not 500.
+
+### SPA UX
+
+- The filter sidebar lives on the **right** of the list table on
+  desktop (≥ 1024 px); collapses into a "Filters (N)" button
+  above the table at < 1024 px ([`responsive.md`](responsive.md)
+  R-2 + DESIGN_SYSTEM §6 Layout).
+- One section per filter, named by `label`, rendered as:
+  - `kind: "choices"` → a list of radio-buttons or checkboxes
+    (one selectable for a `SimpleListFilter`, multi-selectable
+    for a `BooleanFieldListFilter`-style multi). Counts shown
+    next to the label when `count` is present.
+  - `kind: "date_hierarchy"` → preset ranges as buttons; "Custom
+    range" expands a from/to date-picker (v1 stretch — v0.1 ships
+    presets only).
+  - `kind: "boolean"` → tri-state ("Yes", "No", "Any").
+  - `kind: "search"` → handled by the existing search box, not
+    re-rendered as a sidebar filter.
+- "Clear all" link clears every applied filter and removes them
+  from the URL.
+- Active filter values appear as **chips** above the table so the
+  user can see what's applied without opening the sidebar; X on
+  the chip removes that one filter.
+- The chips and the sidebar stay in sync; both edit the same URL
+  query-string. The URL is the source of truth.
+
+### What we never do
+
+- Invent a "filter DSL" beyond `ModelAdmin.list_filter`. If a
+  consumer needs a custom filter, they subclass
+  `SimpleListFilter` exactly as Django docs describe — no new
+  base class.
+- Accept a filter that isn't in `ModelAdmin.get_list_filter(request)`.
+  The server rejects unknown filter names with 400.
+- Run a filter through `ModelAdmin.get_queryset(request)` —
+  Django already does that; the SPA never reaches into the ORM
+  directly.
+- Persist filter state outside the URL (no localStorage for
+  filters in v0.1 — the URL is enough and shareable).
+
+### Acceptance
+
+New criterion **E-10** in `ACCEPTANCE.md` §2.9:
+
+> Adding `list_filter = ("status", "created_at")` (or a
+> `SimpleListFilter` subclass) to an existing `ModelAdmin`
+> causes the SPA list page to show the filter sidebar, with no
+> frontend change. Applying a filter updates the URL and the
+> table.
 
 ---
 

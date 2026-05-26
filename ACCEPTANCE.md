@@ -159,6 +159,7 @@ called out per row).
 | E-8b | A block of an unrecognised `type` is silently dropped client-side and logged server-side. (X-5.) | Push a fake `type` in an example; observe console + server log. |
 | E-8c | A block whose server-side computation fails renders an `ErrorState` scoped to that block; sibling blocks keep rendering. (X-5.) | Force a block to raise; observe. |
 | E-9  | A `type: "html"` block runs through the configured server-side sanitiser (`nh3`) before reaching the SPA; `<script>` tags and inline event handlers never survive the round-trip. (X-6.) | Try to slip a `<script>` through; observe stripped output. **Security signed off (2026-05-26) conditional on C-1..C-10 in [`forum/REVIEW-security-pr-ux-extensibility-contract.md`](forum/REVIEW-security-pr-ux-extensibility-contract.md) §3.X-6.2** — the original `allow_unsafe_html=True` boolean was rejected, replaced with the constrained `trusted_html` block-type path (v1.x at earliest; PM/UX recommends no escape hatch in v1). E-9 stays **drafted, not live, until the Security follow-up PRs land** (sanitiser spec + implementation + CSP defaults). v0.1 ships with X-1..X-5 + X-7; X-6 is post-v0.1. |
+| E-10 | Adding `list_filter = ("status", "created_at")` (or a `SimpleListFilter` subclass) to an existing `ModelAdmin` causes the SPA list page to render the filter sidebar, with no frontend change. (X-8.) | Add `list_filter` to `Book` in `examples/library`; reload list. Applying a filter updates the URL `?status=…` and the table. |
 
 ### 2.10 v1 non-goals
 
