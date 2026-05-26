@@ -152,13 +152,16 @@ class UpdateView(View):
                     if inline_errors is not None:
                         # Roll back by raising; convert to a 400 below.
                         raise _InlineValidationError(inline_errors)
-        except InlinePermissionDenied as exc:
+        except InlinePermissionDenied:
             return forbidden_response(request)
         except _InlineValidationError as exc:
             return validation_failed({"inlines": exc.errors})
-        except ValueError as exc:
-            # Malformed ``inlines`` payload shape (not a 500).
-            return bad_request(str(exc))
+        except ValueError:
+            # Malformed ``inlines`` payload shape (not a 500). Return a
+            # fixed, generic message — never echo the exception text into
+            # the response (CodeQL ``py/stack-trace-exposure``). The
+            # precise shape rules are in api-contract §5.2.1.
+            return bad_request("Malformed 'inlines' payload.")
 
         response = JsonResponse(
             _build_payload(model, model_admin, instance, request),

@@ -10,6 +10,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from unittest import mock
+from urllib.parse import parse_qs
+from urllib.parse import urlsplit
 
 import pytest
 from django.test import Client
@@ -58,9 +60,13 @@ def test_anonymous_user_redirected_to_login(anon_client: Client) -> None:
     assert response.status_code == 302
     # The package leaves LOGIN_URL up to the consumer's settings — only
     # assert that the redirect carries the SPA path as the ``next``
-    # parameter so the user lands back here after login.
-    assert "next=" in response["Location"]
-    assert ROOT_URL in response["Location"]
+    # parameter so the user lands back here after login. The ``next``
+    # value is percent-encoded (CodeQL py/url-redirection fix), so the
+    # raw path appears encoded in Location; decode the query to compare.
+    location = response["Location"]
+    assert "next=" in location
+    query = parse_qs(urlsplit(location).query)
+    assert query["next"][0].startswith(ROOT_URL)
 
 
 @pytest.mark.django_db

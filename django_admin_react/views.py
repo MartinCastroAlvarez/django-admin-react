@@ -42,6 +42,7 @@ from django.shortcuts import render
 from django.urls import NoReverseMatch
 from django.urls import reverse
 from django.urls import reverse_lazy
+from django.utils.http import urlencode
 from django.views.generic import View
 
 from django_admin_react import conf as dar_conf
@@ -290,4 +291,12 @@ def _redirect_to_login(request: HttpRequest) -> HttpResponse:
         except NoReverseMatch:
             login_url = "/accounts/login/"
 
-    return redirect(f"{login_url}?next={request.path}")
+    # Percent-encode the ``next`` value (``urlencode``) so a crafted
+    # request path can't break out of the query parameter and rewrite
+    # the redirect target. The redirect *target* (``login_url``) is
+    # always a trusted, package-/settings-derived URL; ``next`` is
+    # consumer-facing and re-validated by Django's login view via
+    # ``url_has_allowed_host_and_scheme`` before any post-login bounce.
+    # (Clears CodeQL ``py/url-redirection``.)
+    next_param = urlencode({"next": request.get_full_path()})
+    return redirect(f"{login_url}?{next_param}")
