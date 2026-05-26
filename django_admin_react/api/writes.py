@@ -294,9 +294,7 @@ def coerce_fk_values(
             continue
         if isinstance(model_field, ManyToManyField) and isinstance(value, list):
             # Each entry may be a bare pk or a ``{id, label}`` envelope.
-            out[key] = [
-                v["id"] if isinstance(v, dict) and "id" in v else v for v in value
-            ]
+            out[key] = [v["id"] if isinstance(v, dict) and "id" in v else v for v in value]
             continue
         out[key] = value
     return out
@@ -352,10 +350,62 @@ def merged_initial_for_update(
             # existing related row during a PATCH that didn't touch the
             # M2M. Silent data loss > a visible 500. If the descriptor
             # ever raises in production, ops must see it.
-            merged[name] = list(
-                getattr(obj, name).all().values_list("pk", flat=True)
-            )
+            merged[name] = list(getattr(obj, name).all().values_list("pk", flat=True))
         else:
             merged[name] = getattr(obj, name, None)
     merged.update(coerce_fk_values(payload, model))
     return merged
+
+
+def log_addition(
+    model_admin: ModelAdmin,
+    request: HttpRequest,
+    obj: Model,
+    form: Any,
+) -> None:
+    """Emit a ``LogEntry`` ADDITION row, matching the HTML admin.
+
+    Reuses ``ModelAdmin.log_addition`` + ``construct_change_message`` so
+    the entry is byte-identical to what ``django.contrib.admin`` writes
+    on a create through its own views. Parity: a Django dev's audit
+    trail (the per-object History view) must not have holes just because
+    the write came through the SPA instead of the legacy admin.
+
+    Not wrapped in try/except: if ``LogEntry`` cannot be written (e.g.
+    the admin app's migrations are absent), that is a real
+    misconfiguration the operator should see — and it rolls back the
+    enclosing ``transaction.atomic()`` exactly as the HTML admin would.
+    """
+    message = model_admin.construct_change_message(request, form, [], add=True)
+    model_admin.log_addition(request, obj, message)
+
+
+def log_change(
+    model_admin: ModelAdmin,
+    request: HttpRequest,
+    obj: Model,
+    form: Any,
+) -> None:
+    """Emit a ``LogEntry`` CHANGE row, matching the HTML admin.
+
+    ``construct_change_message`` produces the "Changed X and Y." text
+    from ``form.changed_data`` — the same human-readable summary the
+    legacy admin shows. See :func:`log_addition` for the no-swallow
+    rationale.
+    """
+    message = model_admin.construct_change_message(request, form, [], add=False)
+    model_admin.log_change(request, obj, message)
+
+
+def log_deletion(
+    model_admin: ModelAdmin,
+    request: HttpRequest,
+    obj: Model,
+) -> None:
+    """Emit a ``LogEntry`` DELETION row, matching the HTML admin.
+
+    Must be called **before** ``delete_model`` while the object still
+    has a ``pk`` — ``LogEntry`` stores ``object_id`` + a string repr.
+    See :func:`log_addition` for the no-swallow rationale.
+    """
+    model_admin.log_deletion(request, obj, str(obj))

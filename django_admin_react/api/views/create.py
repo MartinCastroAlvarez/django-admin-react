@@ -30,6 +30,7 @@ from django_admin_react.api.registry import resolve_model
 from django_admin_react.api.serializers import label_for
 from django_admin_react.api.writes import coerce_fk_values
 from django_admin_react.api.writes import form_errors_to_envelope
+from django_admin_react.api.writes import log_addition
 from django_admin_react.api.writes import not_found_response
 from django_admin_react.api.writes import parse_json_body
 from django_admin_react.api.writes import readonly_or_excluded_names
@@ -104,6 +105,7 @@ class CreateView(View):
             instance = form.save(commit=False)
             model_admin.save_model(request, instance, form, change=False)
             form.save_m2m()
+            log_addition(model_admin, request, instance, form)
 
         body = {
             "pk": instance.pk,

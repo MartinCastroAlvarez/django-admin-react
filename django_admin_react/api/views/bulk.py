@@ -44,9 +44,9 @@ from django_admin_react.api.permissions import is_admin_user
 from django_admin_react.api.registry import get_admin_site
 from django_admin_react.api.registry import resolve_model
 from django_admin_react.api.writes import bad_request
-from django_admin_react.api.writes import coerce_fk_values
 from django_admin_react.api.writes import form_errors_to_envelope
 from django_admin_react.api.writes import load_object_or_none
+from django_admin_react.api.writes import log_change
 from django_admin_react.api.writes import merged_initial_for_update
 from django_admin_react.api.writes import not_found_response
 from django_admin_react.api.writes import parse_json_body
@@ -92,9 +92,7 @@ class BulkUpdateView(View):
         if not isinstance(updates, list) or not updates:
             return bad_request("`updates` must be a non-empty list.")
         if len(updates) > _BULK_MAX_UPDATES:
-            return bad_request(
-                f"`updates` exceeds the bulk cap of {_BULK_MAX_UPDATES}."
-            )
+            return bad_request(f"`updates` exceeds the bulk cap of {_BULK_MAX_UPDATES}.")
 
         results: list[dict[str, Any]] = []
         accepted = 0
@@ -119,8 +117,7 @@ class BulkUpdateView(View):
                 # Rebuild the result envelope so the caller knows the
                 # accepted rows were rolled back too.
                 results = [
-                    {**r, "ok": False, "rolled_back": True} if r.get("ok") else r
-                    for r in results
+                    {**r, "ok": False, "rolled_back": True} if r.get("ok") else r for r in results
                 ]
                 accepted = 0
                 rejected = len(updates)
@@ -152,25 +149,36 @@ def _apply_one(
     inspect ``ok`` to decide whether to roll back.
     """
     if not isinstance(entry, dict):
-        return {"pk": None, "ok": False, "error": {"code": "bad_request",
-                                                    "message": "Entry must be an object."}}
+        return {
+            "pk": None,
+            "ok": False,
+            "error": {"code": "bad_request", "message": "Entry must be an object."},
+        }
     pk = entry.get("pk")
     fields = entry.get("fields")
     if pk is None:
-        return {"pk": None, "ok": False, "error": {"code": "bad_request",
-                                                    "message": "`pk` is required."}}
+        return {
+            "pk": None,
+            "ok": False,
+            "error": {"code": "bad_request", "message": "`pk` is required."},
+        }
     if not isinstance(fields, dict) or not fields:
-        return {"pk": pk, "ok": False, "error": {"code": "bad_request",
-                                                  "message": "`fields` must be a non-empty object."}}
+        return {
+            "pk": pk,
+            "ok": False,
+            "error": {"code": "bad_request", "message": "`fields` must be a non-empty object."},
+        }
 
     obj = load_object_or_none(model, model_admin, request, pk)
     if obj is None:
-        return {"pk": pk, "ok": False, "error": {"code": "not_found",
-                                                  "message": "Not found."}}
+        return {"pk": pk, "ok": False, "error": {"code": "not_found", "message": "Not found."}}
 
     if not model_admin.has_change_permission(request, obj):
-        return {"pk": pk, "ok": False, "error": {"code": "forbidden",
-                                                  "message": "You do not have permission."}}
+        return {
+            "pk": pk,
+            "ok": False,
+            "error": {"code": "forbidden", "message": "You do not have permission."},
+        }
 
     writable = writable_field_names(model, model_admin, request, obj)
     forbidden = readonly_or_excluded_names(model_admin, request, obj)
@@ -202,4 +210,5 @@ def _apply_one(
     instance = form.save(commit=False)
     model_admin.save_model(request, instance, form, change=True)
     form.save_m2m()
+    log_change(model_admin, request, instance, form)
     return {"pk": pk, "ok": True}
