@@ -201,8 +201,8 @@ def test_s37_no_committed_token_patterns_in_head() -> None:
         "-nIE",
         "--",
         r"ghp_[A-Za-z0-9]{30,}|gho_[A-Za-z0-9]{30,}|ghs_[A-Za-z0-9]{30,}|"
-        r"github_pat_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16}|"
-        r"BEGIN (RSA|EC|OPENSSH) PRIVATE",
+        + r"github_pat_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{16}|"
+        + r"BEGIN (RSA|EC|OPENSSH) PRIVATE",
     ]
     result = subprocess.run(  # noqa: S603
         args,
