@@ -256,3 +256,59 @@ def test_save_options_no_change_permission_hides_save(superuser_client: Client) 
         opts = superuser_client.get(_url(g.pk)).json()["save_options"]
     assert opts["show_save"] is False
     assert opts["show_save_and_continue"] is False
+
+
+@pytest.mark.django_db
+def test_readonly_method_on_admin_resolves_in_detail(superuser_client: Client) -> None:
+    """Closes #226: a readonly field that is a method defined on the
+    ModelAdmin (the `@admin.display def display_x(self, obj)` pattern,
+    called with `obj`) must resolve to the method's return value in the
+    detail response — not null. The list view already does this via
+    `lookup_field`; the detail view must match.
+    """
+    from django.contrib import admin as _admin
+
+    g = Group.objects.create(name="example")
+    group_admin = _admin.site._registry[Group]
+
+    def admin_method(obj):  # bound as an admin attribute; called with obj
+        return f"admin-says-{obj.name}"
+
+    # Attach a NEW display method on the admin instance (admin_override
+    # only swaps *existing* attributes).
+    group_admin.computed_label = admin_method
+    try:
+        with admin_override(
+            Group,
+            get_readonly_fields=lambda self, request, obj=None: ("computed_label",),
+            get_fields=lambda self, request, obj=None: ["name", "computed_label"],
+        ):
+            response = superuser_client.get(_url(g.pk))
+    finally:
+        del group_admin.computed_label
+
+    assert response.status_code == 200, response.content
+    field = response.json()["fields"].get("computed_label")
+    assert field is not None, "admin readonly method missing from fields"
+    assert field["value"] == "admin-says-example", (
+        f"admin-defined readonly method should resolve to its return value; got {field['value']!r}"
+    )
+
+
+@pytest.mark.django_db
+def test_readonly_method_on_model_still_resolves_in_detail(superuser_client: Client) -> None:
+    """Regression for #226: a readonly method defined on the MODEL
+    (resolved via getattr on the instance) keeps working."""
+    g = Group.objects.create(name="example")
+    # Group has a real method we can use: __str__ via "name". Use the
+    # model's natural `natural_key`? Simpler: patch a method onto the
+    # instance's class isn't clean; instead rely on a model attribute.
+    with admin_override(
+        Group,
+        get_readonly_fields=lambda self, request, obj=None: ("name",),
+        get_fields=lambda self, request, obj=None: ["name"],
+    ):
+        response = superuser_client.get(_url(g.pk))
+    assert response.status_code == 200
+    # `name` is a real field; resolves to the value (not null).
+    assert response.json()["fields"]["name"]["value"] == "example"
