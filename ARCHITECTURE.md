@@ -416,12 +416,35 @@ contract stays true as v1 nears.
 
 **Still out of scope for v1:**
 
+<<<<<<< Updated upstream
 - **Custom widgets** — would force a widget-registry contract between
   backend and frontend. Deferred to v1.x.
 - **Runtime theme / config swapping** — theming is build-time via
   Tailwind / CSS variables (§5.3); live swap is v1.x.
 - **Concurrent-edit conflict resolution** — owned by the `@dar/data`
   debounce buffer in v1.x (§5.2a).
+=======
+> **Reconciled (2026-05-27).** Several features once listed here have
+> since shipped and are **no longer out of scope** — **inlines**
+> (read + write), **custom admin actions**, **bulk actions**,
+> **autocomplete**, and a deliberately-narrow **React-side extension
+> surface** (a panel-hook contract — *not* ad-hoc extensibility; the
+> rule is still that behaviour comes from `ModelAdmin`). See the v1.0
+> readiness tracker (issue #234) for the current parity status.
+
+Genuinely out of scope for **v1**:
+
+- **A generic custom-widget registry.** Structured-field editors
+  (JSON / Array / range / Duration) and M2M / file widgets are being
+  added case-by-case, but a *general* backend↔frontend widget-registry
+  contract is not a v1 goal.
+- **Real-time / collaborative concurrent-edit conflict resolution.**
+  v1 is last-write-wins; richer conflict handling is v1.x (see §5.1).
+- **Open-ended React extensibility beyond the panel-hook contract.**
+  Extending the admin should still happen by editing `ModelAdmin` on the
+  Django side; any broader React extension API will be designed
+  deliberately rather than ad-hoc.
+>>>>>>> Stashed changes
 
 See the
 [Project board](https://github.com/users/MartinCastroAlvarez/projects/3)
