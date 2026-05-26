@@ -254,9 +254,7 @@ def _components() -> dict[str, Any]:
                         "type": "array",
                         "items": {"$ref": "#/components/schemas/ActionSpec"},
                     },
-                    "date_hierarchy": {
-                        "$ref": "#/components/schemas/DateHierarchy"
-                    },
+                    "date_hierarchy": {"$ref": "#/components/schemas/DateHierarchy"},
                     "page": {"type": "integer"},
                     "page_size": {"type": "integer"},
                     "total": {"type": "integer"},
@@ -337,9 +335,7 @@ def _components() -> dict[str, Any]:
                     },
                     "fields": {
                         "type": "object",
-                        "additionalProperties": {
-                            "$ref": "#/components/schemas/FieldDescriptor"
-                        },
+                        "additionalProperties": {"$ref": "#/components/schemas/FieldDescriptor"},
                     },
                 },
             },
@@ -365,11 +361,7 @@ def _components() -> dict[str, Any]:
         "responses": {
             "Error": {
                 "description": "Error envelope.",
-                "content": {
-                    "application/json": {
-                        "schema": {"$ref": "#/components/schemas/Error"}
-                    }
-                },
+                "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}},
             }
         },
     }
@@ -462,9 +454,7 @@ def _ok_response(schema_ref: str) -> dict[str, Any]:
         "200": {
             "description": "OK.",
             "content": {
-                "application/json": {
-                    "schema": {"$ref": f"#/components/schemas/{schema_ref}"}
-                }
+                "application/json": {"schema": {"$ref": f"#/components/schemas/{schema_ref}"}}
             },
         },
         "403": {"$ref": "#/components/responses/Error"},

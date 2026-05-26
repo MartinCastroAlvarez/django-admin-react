@@ -44,31 +44,31 @@ export function HomePage() {
             // may be a consumer get_app_list grouping that 404s.
             const routeApp = model.real_app_label || app.app_label;
             return (
-            <Link
-              key={`${routeApp}.${model.model_name}`}
-              to={`/${routeApp}/${model.model_name}`}
-              className="block hover:no-underline"
-            >
-              <Card title={model.verbose_name_plural || model.model_name}>
-                <div className="text-xs text-gray-500">
-                  {app.verbose_name} · {model.object_name}
-                </div>
-                <div className="mt-2 flex gap-2 text-xs">
-                  {model.permissions.view ? (
-                    <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-700">view</span>
-                  ) : null}
-                  {model.permissions.add ? (
-                    <span className="px-2 py-0.5 rounded bg-green-50 text-green-700">add</span>
-                  ) : null}
-                  {model.permissions.change ? (
-                    <span className="px-2 py-0.5 rounded bg-amber-50 text-amber-700">change</span>
-                  ) : null}
-                  {model.permissions.delete ? (
-                    <span className="px-2 py-0.5 rounded bg-red-50 text-red-700">delete</span>
-                  ) : null}
-                </div>
-              </Card>
-            </Link>
+              <Link
+                key={`${routeApp}.${model.model_name}`}
+                to={`/${routeApp}/${model.model_name}`}
+                className="block hover:no-underline"
+              >
+                <Card title={model.verbose_name_plural || model.model_name}>
+                  <div className="text-xs text-gray-500">
+                    {app.verbose_name} · {model.object_name}
+                  </div>
+                  <div className="mt-2 flex gap-2 text-xs">
+                    {model.permissions.view ? (
+                      <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-700">view</span>
+                    ) : null}
+                    {model.permissions.add ? (
+                      <span className="px-2 py-0.5 rounded bg-green-50 text-green-700">add</span>
+                    ) : null}
+                    {model.permissions.change ? (
+                      <span className="px-2 py-0.5 rounded bg-amber-50 text-amber-700">change</span>
+                    ) : null}
+                    {model.permissions.delete ? (
+                      <span className="px-2 py-0.5 rounded bg-red-50 text-red-700">delete</span>
+                    ) : null}
+                  </div>
+                </Card>
+              </Link>
             );
           }),
         )}

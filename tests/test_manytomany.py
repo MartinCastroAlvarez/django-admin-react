@@ -94,10 +94,12 @@ def test_patch_accepts_envelope_form_too(superuser_client: Client) -> None:
     response = superuser_client.patch(
         f"/admin-react/api/v1/auth/group/{g.pk}/",
         data=json.dumps(
-            {"permissions": [
-                {"id": p1.pk, "label": "p1"},
-                {"id": p2.pk, "label": "p2"},
-            ]}
+            {
+                "permissions": [
+                    {"id": p1.pk, "label": "p1"},
+                    {"id": p2.pk, "label": "p2"},
+                ]
+            }
         ),
         content_type="application/json",
     )
@@ -157,7 +159,6 @@ def test_merged_initial_raises_on_broken_m2m_descriptor() -> None:
     This test simulates a raising descriptor and asserts the
     exception is not swallowed.
     """
-    from unittest.mock import PropertyMock
     from unittest.mock import patch as mock_patch
 
     from django_admin_react.api.writes import merged_initial_for_update
@@ -173,18 +174,20 @@ def test_merged_initial_raises_on_broken_m2m_descriptor() -> None:
     class _Boom(Exception):
         pass
 
-    with mock_patch.object(
-        type(g.permissions),
-        "all",
-        side_effect=_Boom("simulated descriptor failure"),
+    with (
+        mock_patch.object(
+            type(g.permissions),
+            "all",
+            side_effect=_Boom("simulated descriptor failure"),
+        ),
+        pytest.raises(_Boom),
     ):
-        with pytest.raises(_Boom):
-            merged_initial_for_update(
-                obj=g,
-                writable=["name", "permissions"],
-                payload={"name": "alpha-renamed"},
-                model=Group,
-            )
+        merged_initial_for_update(
+            obj=g,
+            writable=["name", "permissions"],
+            payload={"name": "alpha-renamed"},
+            model=Group,
+        )
 
     # Belt-and-braces: the descriptor failure must not have wiped
     # the existing M2M as a side effect of the failed read.

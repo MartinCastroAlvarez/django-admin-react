@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import json
 from contextlib import contextmanager
+from contextlib import suppress
 
 import pytest
 from django.contrib import admin
@@ -43,10 +44,8 @@ def admin_attr(model_cls, **values):
     finally:
         for name, original in originals.items():
             if original is sentinel:
-                try:
+                with suppress(AttributeError):
                     delattr(model_admin, name)
-                except AttributeError:
-                    pass
             else:
                 setattr(model_admin, name, original)
 
@@ -79,17 +78,13 @@ def test_columns_editable_reflects_list_editable(superuser_client: Client) -> No
 # --------------------------------------------------------------------------- #
 @pytest.mark.django_db
 def test_anonymous_bulk_forbidden(anon_client: Client) -> None:
-    response = anon_client.patch(
-        BULK_URL, data="{}", content_type="application/json"
-    )
+    response = anon_client.patch(BULK_URL, data="{}", content_type="application/json")
     assert response.status_code == 403
 
 
 @pytest.mark.django_db
 def test_non_staff_bulk_forbidden(user_client: Client) -> None:
-    response = user_client.patch(
-        BULK_URL, data="{}", content_type="application/json"
-    )
+    response = user_client.patch(BULK_URL, data="{}", content_type="application/json")
     assert response.status_code == 403
 
 
@@ -105,9 +100,7 @@ def test_unregistered_model_returns_404(superuser_client: Client) -> None:
 
 @pytest.mark.django_db
 def test_missing_updates_returns_400(superuser_client: Client) -> None:
-    response = superuser_client.patch(
-        BULK_URL, data="{}", content_type="application/json"
-    )
+    response = superuser_client.patch(BULK_URL, data="{}", content_type="application/json")
     assert response.status_code == 400
 
 

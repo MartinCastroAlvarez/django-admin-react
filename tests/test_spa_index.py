@@ -7,6 +7,7 @@ the API uses (rule 1 in ``SECURITY.md`` §3).
 
 from __future__ import annotations
 
+import importlib
 import json
 from pathlib import Path
 from unittest import mock
@@ -14,10 +15,13 @@ from urllib.parse import parse_qs
 from urllib.parse import urlsplit
 
 import pytest
+from django.contrib.admin import site as default_admin_site
 from django.test import Client
+from django.test import override_settings
 
 import django_admin_react.views as views_module
 from django_admin_react import views
+from django_admin_react import views as spa_views
 
 ROOT_URL = "/admin-react/"
 
@@ -136,15 +140,6 @@ def test_without_manifest_renders_helpful_fallback(
 # --------------------------------------------------------------------------- #
 # Branding (BRAND_TITLE + BRAND_LOGO_URL)                                     #
 # --------------------------------------------------------------------------- #
-import importlib
-
-import pytest
-from django.contrib.admin import site as default_admin_site
-from django.test import override_settings
-
-from django_admin_react import views as spa_views
-
-
 def _reload_conf() -> None:
     """Force `django_admin_react.conf` to re-read settings."""
     import django_admin_react.conf as _conf

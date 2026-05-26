@@ -18,6 +18,7 @@ Covered:
 from __future__ import annotations
 
 from contextlib import contextmanager
+from contextlib import suppress
 
 import pytest
 from django.contrib import admin
@@ -43,10 +44,8 @@ def admin_attr(model_cls, **values):
     finally:
         for name, original in originals.items():
             if original is sentinel:
-                try:
+                with suppress(AttributeError):
                     delattr(model_admin, name)
-                except AttributeError:
-                    pass
             else:
                 setattr(model_admin, name, original)
 
@@ -108,9 +107,7 @@ def test_staff_without_view_permission_returns_404(staff_client: Client) -> None
     """
     User = get_user_model()
     User.objects.create_user(username="a", password="x")  # noqa: S106
-    with admin_override(
-        User, has_view_permission=lambda self, request, obj=None: False
-    ):
+    with admin_override(User, has_view_permission=lambda self, request, obj=None: False):
         response = staff_client.post(
             ACTIONS_BASE + "delete_selected/",
             data='{"pks": [1]}',
@@ -192,20 +189,21 @@ def test_custom_action_runs_over_narrowed_queryset(superuser_client: Client) -> 
 def test_action_respects_get_queryset(superuser_client: Client) -> None:
     """Action cannot reach a row the admin's get_queryset excludes."""
     User = get_user_model()
-    visible = User.objects.create_user(username="visible", password="x", is_active=True)  # noqa: S106
+    visible = User.objects.create_user(
+        username="visible", password="x", is_active=True
+    )  # noqa: S106
     hidden = User.objects.create_user(username="hidden", password="x", is_active=True)  # noqa: S106
 
     # Pin get_queryset to exclude ``hidden`` by pk.
     def _qs(self, request):
         return User.objects.exclude(pk=hidden.pk)
 
-    with admin_attr(User, actions=[_mark_inactive]):
-        with admin_override(User, get_queryset=_qs):
-            response = superuser_client.post(
-                ACTIONS_BASE + "_mark_inactive/",
-                data=f'{{"pks": [{visible.pk}, {hidden.pk}]}}',
-                content_type="application/json",
-            )
+    with admin_attr(User, actions=[_mark_inactive]), admin_override(User, get_queryset=_qs):
+        response = superuser_client.post(
+            ACTIONS_BASE + "_mark_inactive/",
+            data=f'{{"pks": [{visible.pk}, {hidden.pk}]}}',
+            content_type="application/json",
+        )
     assert response.status_code == 200
 
     visible.refresh_from_db()
@@ -213,7 +211,7 @@ def test_action_respects_get_queryset(superuser_client: Client) -> None:
     # The action ran on `visible`, NOT on `hidden` (despite hidden's
     # pk being in the request body).
     assert visible.is_active is False
-    assert hidden.is_active is True   # The crucial assertion (Rule 10).
+    assert hidden.is_active is True  # The crucial assertion (Rule 10).
 
 
 @pytest.mark.django_db

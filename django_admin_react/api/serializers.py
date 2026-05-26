@@ -153,8 +153,7 @@ def _looks_like_range(value: Any) -> bool:
     dependency.
     """
     return all(
-        hasattr(value, attr)
-        for attr in ("lower", "upper", "lower_inc", "upper_inc", "isempty")
+        hasattr(value, attr) for attr in ("lower", "upper", "lower_inc", "upper_inc", "isempty")
     )
 
 

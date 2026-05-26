@@ -124,9 +124,7 @@ def _spec_for_inline(
 
     rows: list[dict[str, Any]] = []
     if can_view:
-        rows = _rows_for_inline(
-            inline, parent, fk_name, visible_fields, request
-        )
+        rows = _rows_for_inline(inline, parent, fk_name, visible_fields, request)
 
     return {
         "name": fk_name + "_set" if not hasattr(child_model, fk_name + "_set") else fk_name,
@@ -183,9 +181,7 @@ def _visible_inline_fields(
     visible = [
         name
         for name in declared
-        if name not in excluded
-        and name != fk_back
-        and not is_sensitive_field_name(name)
+        if name not in excluded and name != fk_back and not is_sensitive_field_name(name)
     ]
     return filter_sensitive(visible)
 
@@ -246,7 +242,5 @@ def _rows_for_inline(
                 fields_payload[name] = [serialize_fk_value(r) for r in related]
             else:
                 fields_payload[name] = serialize_value(value, field=model_field)
-        rows.append(
-            {"pk": obj.pk, "label": label_for(obj), "fields": fields_payload}
-        )
+        rows.append({"pk": obj.pk, "label": label_for(obj), "fields": fields_payload})
     return rows

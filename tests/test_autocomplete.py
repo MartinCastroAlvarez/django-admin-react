@@ -16,6 +16,7 @@ Plus feature-specific tests: search delegation, page pagination,
 from __future__ import annotations
 
 from contextlib import contextmanager
+from contextlib import suppress
 
 import pytest
 from django.contrib import admin
@@ -41,10 +42,8 @@ def admin_attr(model_cls, **values):
     finally:
         for name, original in originals.items():
             if original is sentinel:
-                try:
+                with suppress(AttributeError):
                     delattr(model_admin, name)
-                except AttributeError:
-                    pass
             else:
                 setattr(model_admin, name, original)
 
@@ -71,18 +70,14 @@ def test_staff_without_view_permission_returns_404(staff_client: Client) -> None
     """Same posture as the list endpoint — unviewable model is 404, not 403,
     so the endpoint doesn't reveal "this model exists but you can't see it"."""
     User = get_user_model()
-    with admin_override(
-        User, has_view_permission=lambda self, request, obj=None: False
-    ):
+    with admin_override(User, has_view_permission=lambda self, request, obj=None: False):
         response = staff_client.get(AUTOCOMPLETE_URL)
     assert response.status_code == 404
 
 
 @pytest.mark.django_db
 def test_unregistered_model_404(superuser_client: Client) -> None:
-    response = superuser_client.get(
-        "/admin-react/api/v1/unknown/nothing/autocomplete/"
-    )
+    response = superuser_client.get("/admin-react/api/v1/unknown/nothing/autocomplete/")
     assert response.status_code == 404
 
 

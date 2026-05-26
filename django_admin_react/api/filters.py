@@ -34,6 +34,7 @@ Hard rules (`SECURITY.md` §3):
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from django.contrib.admin import SimpleListFilter
@@ -48,6 +49,8 @@ from django.db.models import QuerySet
 from django.http import HttpRequest
 
 from django_admin_react.api.serializers import is_sensitive_field_name
+
+logger = logging.getLogger(__name__)
 
 # PM ruling (Q-PM-03): FK filters in v1 surface up to ≤ 25 options
 # inline; larger target tables defer to a follow-up that combines
@@ -273,7 +276,8 @@ def apply_filters(queryset: QuerySet, model_admin: ModelAdmin, request: HttpRequ
         if filter_cls is not None and issubclass(filter_cls, SimpleListFilter):
             try:
                 instance = filter_cls(request, request.GET.copy(), model_admin.model, model_admin)
-            except Exception:  # pragma: no cover
+            except Exception:  # pragma: no cover - skip a misbehaving consumer filter
+                logger.debug("Skipping list_filter %r: instantiation failed", entry, exc_info=True)
                 continue
             try:
                 narrowed = instance.queryset(request, queryset)

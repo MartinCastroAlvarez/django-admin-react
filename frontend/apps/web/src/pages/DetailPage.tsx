@@ -185,10 +185,7 @@ function EditForm({ data, onCancel, onSave }: EditFormProps) {
         </div>
       )}
       {data.fieldsets.map((fieldset, idx) => (
-        <Card
-          key={`efs-${idx}-${fieldset.title ?? 'default'}`}
-          title={fieldset.title ?? undefined}
-        >
+        <Card key={`efs-${idx}-${fieldset.title ?? 'default'}`} title={fieldset.title ?? undefined}>
           <div className="divide-y divide-gray-100">
             {fieldset.fields.map((name) => {
               const field = data.fields[name];
