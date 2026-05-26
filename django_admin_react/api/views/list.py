@@ -34,7 +34,6 @@ from django_admin_react.api.dates import date_hierarchy_payload
 from django_admin_react.api.dates import parse_active as _parse_date_active
 from django_admin_react.api.filters import apply_filters as _apply_list_filters
 from django_admin_react.api.filters import filters_payload
-from django_admin_react.api.views.actions import actions_payload
 from django_admin_react.api.permissions import forbidden_response
 from django_admin_react.api.permissions import is_admin_user
 from django_admin_react.api.registry import get_admin_site
@@ -44,6 +43,7 @@ from django_admin_react.api.serializers import label_for
 from django_admin_react.api.serializers import safe_get_field
 from django_admin_react.api.serializers import serialize_fk_value
 from django_admin_react.api.serializers import serialize_value
+from django_admin_react.api.views.actions import actions_payload
 from django_admin_react.api.writes import not_found_response
 
 
@@ -98,9 +98,7 @@ class ListView(View):
         queryset_before_date_filter = queryset
         date_field = getattr(model_admin, "date_hierarchy", None)
         if date_field:
-            queryset = _apply_date_filter(
-                queryset, date_field, _parse_date_active(request)
-            )
+            queryset = _apply_date_filter(queryset, date_field, _parse_date_active(request))
 
         queryset = _apply_ordering(queryset, model_admin, request)
 
@@ -122,7 +120,7 @@ class ListView(View):
             "permissions": model_permissions(model_admin, request),
             "columns": columns,
             "search_fields": list(model_admin.search_fields or ()),
-            "filters": filters_payload(model_admin, request),
+            "filters": filters_payload(model_admin, request, admin_site=admin_site),
             "actions": actions_payload(model_admin, request),
             "page": page,
             "page_size": page_size,
