@@ -163,11 +163,13 @@ _TYPE_BY_INTERNAL: Final[dict[str, str]] = {
     "DecimalField": "decimal",
     "DurationField": "duration",
     "EmailField": "email",
+    "FileField": "file",
     "FilePathField": "filepath",
     "FloatField": "float",
     "ForeignKey": "foreignkey",
     "GenericIPAddressField": "ip",
     "IPAddressField": "ip",
+    "ImageField": "image",
     "IntegerField": "integer",
     "JSONField": "json",
     "OneToOneField": "foreignkey",
@@ -259,12 +261,22 @@ def field_type_for(field: Field) -> str:
     Resolution order:
 
     1. ``ManyToManyField`` → ``"manytomany"`` (Issue #55).
-    2. The closed vocabulary in ``_TYPE_BY_INTERNAL``.
-    3. Custom types registered via ``register_field_type``.
-    4. ``"unsupported"`` — the SPA renders a read-only label.
+    2. ``ImageField`` → ``"image"`` (subclass of FileField; Django
+       reports ``get_internal_type()`` as ``"FileField"`` so the
+       isinstance check is the only way to distinguish).
+    3. The closed vocabulary in ``_TYPE_BY_INTERNAL``.
+    4. Custom types registered via ``register_field_type``.
+    5. ``"unsupported"`` — the SPA renders a read-only label.
     """
     if isinstance(field, ManyToManyField):
         return "manytomany"
+    # ImageField check must precede the internal_type lookup.
+    # Import locally to avoid a hard Pillow dependency at module
+    # load time.
+    from django.db.models import ImageField as _ImageField
+
+    if isinstance(field, _ImageField):
+        return "image"
     internal = field.get_internal_type()
     if internal in _TYPE_BY_INTERNAL:
         return _TYPE_BY_INTERNAL[internal]

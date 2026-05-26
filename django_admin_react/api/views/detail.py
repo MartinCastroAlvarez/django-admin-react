@@ -21,6 +21,7 @@ from typing import Any
 
 from django.contrib.admin.options import ModelAdmin
 from django.contrib.admin.utils import label_for_field
+from django.db.models import FileField
 from django.db.models import ForeignKey
 from django.db.models import Model
 from django.http import HttpRequest
@@ -232,6 +233,14 @@ def _descriptor_for(
         except (ValueError, AttributeError):
             related = []
         value = [serialize_fk_value(r) for r in related]
+    elif isinstance(model_field, FileField):
+        # FileField / ImageField (Issue #57): serialise as a
+        # ``{name, url, size}`` envelope. ``None`` when the field is
+        # empty. ``url`` defers to the consumer's storage backend so
+        # signed-URL backends (S3, GCS) work without package
+        # changes; ``size`` is best-effort (some storage backends
+        # don't expose it cheaply, so we swallow exceptions).
+        value = _serialize_file_value(getattr(obj, name, None))
     else:
         # Forward the model_field so consumer-registered custom
         # serializers (see #60 / ``register_field_type``) take
@@ -285,6 +294,33 @@ def _readonly_callable_descriptor(
 # --------------------------------------------------------------------------- #
 # Internals                                                                   #
 # --------------------------------------------------------------------------- #
+def _serialize_file_value(value: Any) -> dict[str, Any] | None:
+    """Serialize a ``FileField``/``ImageField`` value as ``{name, url, size}``.
+
+    Returns ``None`` for empty fields. ``url`` defers to the
+    consumer's storage backend (``value.url``) so signed-URL
+    backends (S3, GCS, custom) work without package changes —
+    we never construct a URL ourselves. ``size`` is best-effort:
+    some backends don't expose it cheaply (a HEAD request to S3),
+    so we swallow exceptions and return ``None`` for size when
+    unavailable.
+    """
+    if not value:
+        return None
+    name = getattr(value, "name", "") or ""
+    if not name:
+        return None
+    try:
+        url = value.url
+    except Exception:
+        url = None
+    try:
+        size = value.size
+    except Exception:
+        size = None
+    return {"name": name, "url": url, "size": size}
+
+
 def _field_label(model_admin: ModelAdmin, model: type[Model], name: str) -> str:
     """Human-readable label for a field (Django's own helper, with fallback)."""
     try:
