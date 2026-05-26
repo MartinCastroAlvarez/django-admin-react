@@ -19,6 +19,7 @@ from django.http import HttpResponse
 from django.urls import path
 from django.views.generic import View
 
+from django_admin_react.api.panels import PanelView
 from django_admin_react.api.views.actions import ActionView
 from django_admin_react.api.views.autocomplete import AutocompleteView
 from django_admin_react.api.views.bulk import BulkUpdateView
@@ -102,6 +103,14 @@ urlpatterns: list = [
         "<str:app_label>/<str:model_name>/",
         CollectionView.as_view(),
         name="collection",
+    ),
+    # Panel endpoint (Issue #65) — opt-in via PanelEndpointsMixin on
+    # the ModelAdmin. Must precede the instance pattern below so the
+    # ``/panel/<name>/`` segment isn't swallowed.
+    path(
+        "<str:app_label>/<str:model_name>/<str:pk>/panel/<str:panel_name>/",
+        PanelView.as_view(),
+        name="panel",
     ),
     path(
         "<str:app_label>/<str:model_name>/<str:pk>/",
