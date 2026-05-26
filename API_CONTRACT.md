@@ -36,7 +36,7 @@ root finds the contract without having to dig.
 ## Who owns this
 
 - **Specification** — Software Architect agent
-  ([`agents/software-architect/`](agents/software-architect/)).
+  ([`docs/agents/software-architect/`](docs/agents/software-architect/)).
 - **Implementation** — Architect, with Security review for
   permission and serialization paths.
 - **Consumer expectations** — Product Manager agent verifies the

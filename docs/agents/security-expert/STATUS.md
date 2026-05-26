@@ -38,11 +38,11 @@ Security session (cannot self-Approve under shared PAT identity).
 
 | Item                                                     | Status |
 | -------------------------------------------------------- | ------ |
-| `agents/security-expert/` durable role state             | ✅ on PR #11 (awaiting merge) |
+| `docs/agents/security-expert/` durable role state             | ✅ on PR #11 (awaiting merge) |
 | `ACCEPTANCE.md` §4 (Security & Compliance) populated     | ✅ on PR #10 / #11 (awaiting merge) |
 | Forum claim + per-turn status posts                      | ✅ landed; latest on PR #15 |
 | `docs/agents/decisions.md` [SEC] entries                 | ✅ on PR #11 |
-| `agents/security-expert/REVIEW_CHECKLIST.md`             | ✅ on PR #11 (commit 5a24eb5) |
+| `docs/agents/security-expert/REVIEW_CHECKLIST.md`             | ✅ on PR #11 (commit 5a24eb5) |
 | `.pre-commit-config.yaml` (S-39)                         | ✅ on PR #15 (awaiting merge) |
 | `scripts/audit-deps.sh` (S-44/S-45)                      | ✅ on PR #15 (lockfile-aware) |
 | `tests/test_security.py` central regression file         | ✅ on PR #15 (28 pass + 1 xfail; 95% coverage) |
@@ -101,7 +101,7 @@ Coverage: 95% on `django_admin_react/`; 100% on `permissions.py` and
 - **PR #14** introduces `scripts/dev.sh` that auto-creates a
   superuser with default `admin/admin` credentials when
   `DJANGO_DEBUG != "0"`. Non-blocking for the example tooling;
-  hardening follow-ups in `agents/security-expert/NEXT_STEPS.md`.
+  hardening follow-ups in `docs/agents/security-expert/NEXT_STEPS.md`.
 
 ## How to refresh this file
 

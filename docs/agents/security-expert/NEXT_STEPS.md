@@ -13,7 +13,7 @@ check it, append a new one, and update `STATUS.md`.
       Non-blocking follow-ups: rename xfail scaffold to
       `SENSITIVE_NAME_SUBSTRINGS`, add S-23 excluded-field test,
       add `Cache-Control: no-store` header assertion.
-- [x] `agents/security-expert/REVIEW_CHECKLIST.md` (PR #11 commit 5a24eb5).
+- [x] `docs/agents/security-expert/REVIEW_CHECKLIST.md` (PR #11 commit 5a24eb5).
 - [x] `.pre-commit-config.yaml` — gitleaks + ruff + black + isort +
       bandit + 5 local pygrep hooks (PR #15).
 - [x] `scripts/audit-deps.sh` — `pip-audit` + `pnpm audit`,
@@ -88,7 +88,7 @@ check it, append a new one, and update `STATUS.md`.
    - Post-release GitHub Release notes.
 
 7. **Open questions to chase down** (mirror in
-   `agents/security-expert/OPEN_QUESTIONS.md`):
+   `docs/agents/security-expert/OPEN_QUESTIONS.md`):
    - QSEC-01 rate limiting recommendation (waiting on Architect).
    - QSEC-02 audit logging via `LogEntry` (codify on write-PR).
    - QSEC-03 CSP defaults snippet (frontend PR).

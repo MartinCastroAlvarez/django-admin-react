@@ -1,12 +1,12 @@
 # PM open questions — resolutions (2026-05-26)
 
 The four PM open questions tracked in
-`agents/product-manager/OPEN_QUESTIONS.md` are resolved below.
+`docs/agents/product-manager/OPEN_QUESTIONS.md` are resolved below.
 Promoting from "tentative" to "decided" reduces open-question debt
 and gives engineering agents a stable target to build against.
 
 Each resolution will also be appended to
-`agents/product-manager/DECISIONS.md` on the next durable-state
+`docs/agents/product-manager/DECISIONS.md` on the next durable-state
 update.
 
 ---
@@ -60,7 +60,7 @@ types in v0.2".
 Backend handoff: the list endpoint response in
 `docs/api-contract.md` §3 needs a new field
 `filters: [{name, label, type, choices?}]`. Filed as
-`agents/HANDOFF.md` H-2026-05-26-01 to Architect.
+`docs/agents/handoff.md` H-2026-05-26-01 to Architect.
 
 ---
 
@@ -87,7 +87,7 @@ confirms that doc's tentative direction).
 ## What this changes
 
 - All four open questions move from `OPEN_QUESTIONS.md` to
-  `DECISIONS.md` on the next agents/ folder update.
+  `DECISIONS.md` on the next docs/agents/ folder update.
 - Q-PM-03 adds a new cross-role handoff to the Architect for the
   filter-options endpoint field.
 - `ROADMAP.md` v0.2 row gets a clarification about the command

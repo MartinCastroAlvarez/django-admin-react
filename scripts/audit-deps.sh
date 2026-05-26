@@ -14,7 +14,7 @@
 #
 # Run on demand or as part of release prep. Linked from
 # `scripts/lint.sh` once it's been stable for a release cycle. See
-# `agents/security-expert/NEXT_STEPS.md`.
+# `docs/agents/security-expert/NEXT_STEPS.md`.
 
 set -euo pipefail
 

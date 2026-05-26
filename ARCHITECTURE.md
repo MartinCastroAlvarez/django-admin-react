@@ -115,7 +115,7 @@ django-admin-react/
 ├── docs/                        # Long-form documentation
 │   ├── api-contract.md
 │   ├── installation.md
-│   └── agents/
+│   └── docs/agents/
 │       ├── decisions.md
 │       ├── open-questions.md
 │       └── changelog.md

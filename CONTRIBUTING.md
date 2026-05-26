@@ -53,7 +53,7 @@ pre-commit install
 
 Every `git commit` now runs these hooks. If anything `[BLOCK]`s your
 commit, fix the violation rather than disabling the hook. (See
-`agents/security-expert/REVIEW_CHECKLIST.md` for the rationale.)
+`docs/agents/security-expert/REVIEW_CHECKLIST.md` for the rationale.)
 
 If you skip pre-commit locally, `scripts/lint.sh` still runs the same
 tools when the Merger gates your PR.

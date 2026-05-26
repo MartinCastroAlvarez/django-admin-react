@@ -1,4 +1,4 @@
-# agents/security-expert/AGENT.md
+# docs/agents/security-expert/AGENT.md
 
 > **You are taking over the Security & Compliance Lead role for
 > `django-admin-react`.** This file is the single entry point. Read
@@ -67,7 +67,7 @@ The React layer must never bypass:
 
 Read in this order:
 
-1. This file (`agents/security-expert/AGENT.md`).
+1. This file (`docs/agents/security-expert/AGENT.md`).
 2. [`STATUS.md`](STATUS.md) — what's been done, what's in flight.
 3. [`DECISIONS.md`](DECISIONS.md) — durable security decisions.
 4. [`OPEN_QUESTIONS.md`](OPEN_QUESTIONS.md) — unresolved security
@@ -86,7 +86,7 @@ Read in this order:
 | `SECURITY.md`                                    | Threat model + guarantees + reporting           |
 | `ACCEPTANCE.md` — "Security & Compliance" section | Release gates (security side)                  |
 | `docs/threat-model.md` (planned)                 | Detailed STRIDE pass per endpoint               |
-| `agents/security-expert/*`                       | This durable-memory folder                      |
+| `docs/agents/security-expert/*`                       | This durable-memory folder                      |
 
 ## Files this role may **read and review** (but not edit primary)
 
@@ -137,7 +137,7 @@ See [`DECISIONS.md`](DECISIONS.md). Mirror durable decisions to
   durable decision.
 - Append to `docs/agents/open-questions.md` for anything that needs
   a human or another agent.
-- Update `agents/HANDOFF.md` if you leave anything dangling.
+- Update `docs/agents/handoff.md` if you leave anything dangling.
 - Never paste a token, secret, or `.env` content into any file in
   this repo.
 

@@ -389,7 +389,7 @@ deliverables. The Architect does **not** sign these off alone.
 ## 4. Security / Compliance acceptance criteria
 
 Owner: Security & Compliance Lead. See
-[`agents/security-expert/AGENT.md`](agents/security-expert/AGENT.md).
+[`docs/agents/security-expert/AGENT.md`](docs/agents/security-expert/AGENT.md).
 Source: [`SECURITY.md`](SECURITY.md), [`docs/api-contract.md`](docs/api-contract.md),
 the threat model (`docs/threat-model.md`, planned).
 
@@ -541,7 +541,7 @@ behavior.
 | S-63 | `SECURE_HSTS_SECONDS ≥ 31536000`, `SECURE_HSTS_INCLUDE_SUBDOMAINS = True`, `SECURE_HSTS_PRELOAD = True` (with caveats). | Forces HTTPS at the browser. |
 | S-64 | `X_FRAME_OPTIONS = "DENY"`. | Clickjacking. |
 | S-65 | `SECURE_CONTENT_TYPE_NOSNIFF = True`, `SECURE_BROWSER_XSS_FILTER = True`. | Content-type and legacy XSS protections. |
-| S-66 | Recommended CSP snippet for `django-csp` or middleware in `docs/installation.md` once frontend lands; CSP does not break the bundled SPA. | Defense in depth; tracked at [QSEC-2026-05-25-03](agents/security-expert/OPEN_QUESTIONS.md). |
+| S-66 | Recommended CSP snippet for `django-csp` or middleware in `docs/installation.md` once frontend lands; CSP does not break the bundled SPA. | Defense in depth; tracked at [QSEC-2026-05-25-03](docs/agents/security-expert/OPEN_QUESTIONS.md). |
 
 ### 4.15 Mandatory test matrix
 
@@ -591,7 +591,7 @@ true, regardless of how green the rest of `ACCEPTANCE.md` looks:
   documentation; the actual token and trigger remain human-only.
 
 Cross-team handoffs are tracked in
-[`agents/HANDOFF.md`](agents/HANDOFF.md) (entry H-2026-05-25-02
+[`docs/agents/handoff.md`](docs/agents/handoff.md) (entry H-2026-05-25-02
 acknowledges this section is now populated).
 
 ---

@@ -3,7 +3,7 @@
 Screenshot inventory + naming contract for the README and product
 docs.
 
-Owner: PM/UX role ([`agents/product-manager/AGENT.md`](../../agents/product-manager/AGENT.md)).
+Owner: PM/UX role ([`docs/agents/product-manager/AGENT.md`](../../docs/agents/product-manager/AGENT.md)).
 Producing role: Frontend Engineer (PR #6 / #7 in
 [`PLAN.md`](../../PLAN.md)).
 

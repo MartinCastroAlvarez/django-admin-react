@@ -170,7 +170,7 @@ these, open an issue with concrete use cases.
 
 - The PM/UX role owns this file.
 - Every milestone-level decision is reflected here and in
-  [`agents/product-manager/DECISIONS.md`](agents/product-manager/DECISIONS.md).
+  [`docs/agents/product-manager/DECISIONS.md`](docs/agents/product-manager/DECISIONS.md).
 - Engineering scope sequencing for the **current** milestone lives
   in [`PLAN.md`](PLAN.md). When the two disagree, this file is
   product-authoritative and `PLAN.md` is engineering-authoritative;

@@ -1,7 +1,7 @@
 # docs/ux/
 
 UX rules for `django-admin-react`. Owned by the PM/UX role (see
-[`agents/product-manager/AGENT.md`](../../agents/product-manager/AGENT.md)).
+[`docs/agents/product-manager/AGENT.md`](../../docs/agents/product-manager/AGENT.md)).
 
 These docs are the long-form companion to [`DESIGN_SYSTEM.md`](../../DESIGN_SYSTEM.md)
 and [`ACCEPTANCE.md`](../../ACCEPTANCE.md) §2. Every rule here is

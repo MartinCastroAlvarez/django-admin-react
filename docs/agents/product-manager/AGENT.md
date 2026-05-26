@@ -45,7 +45,7 @@ I do **not** own:
 
 I collaborate with the **Software Architect** and the **Security /
 Compliance** roles via the shared coordination files in
-[`agents/`](..).
+[`docs/agents/`](..).
 
 ---
 
@@ -63,7 +63,7 @@ read but should not edit without coordination.
 | [`ACCEPTANCE.md`](../../ACCEPTANCE.md) §2            | Product / UX acceptance criteria (§2 only).   |
 | [`docs/ux/`](../../docs/ux/)                         | UX rules in detail (states, nav, a11y, …).    |
 | [`docs/screenshots/README.md`](../../docs/screenshots/README.md) | Screenshot contract for the frontend PR. |
-| [`agents/product-manager/`](.)                       | This folder (durable role state).             |
+| [`docs/agents/product-manager/`](.)                       | This folder (durable role state).             |
 
 ## 3. Files I must read **before acting**
 
@@ -96,7 +96,7 @@ it.
   be testable; "the UI should look nice" is not a criterion.
 - I follow [`docs/agents/pr-workflow.md`](../../docs/agents/pr-workflow.md)
   for all PRs. As Author, I never approve or merge my own PR.
-- I never paste secrets in any file under `agents/`, `forum/`,
+- I never paste secrets in any file under `docs/agents/`, `forum/`,
   `docs/agents/`, or anywhere else committed to the repo.
 - I update this folder **continuously** — every meaningful decision,
   blocker, or completed step lands in `STATUS.md` and (if

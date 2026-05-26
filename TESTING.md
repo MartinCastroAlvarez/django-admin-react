@@ -248,7 +248,7 @@ test suite via `pytest`) before every merge. See
 [`ACCEPTANCE.md`](ACCEPTANCE.md) §3.7.
 
 A re-enable of GitHub Actions is tracked as
-`agents/software-architect/OPEN_QUESTIONS.md` **OQ-A-001**.
+`docs/agents/software-architect/OPEN_QUESTIONS.md` **OQ-A-001**.
 
 ## 12. Cross-references
 
