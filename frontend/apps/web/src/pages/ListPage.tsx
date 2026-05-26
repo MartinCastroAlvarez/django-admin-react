@@ -18,7 +18,7 @@ import {
   type FilterOption,
   type ListRow,
 } from '@dar/data';
-import { Card, EmptyState, Input, Spinner, Table } from '@dar/ui';
+import { Button, Card, EmptyState, Input, Modal, Spinner, Table } from '@dar/ui';
 
 import { FieldValueView } from '../components/FieldValueView';
 
@@ -66,6 +66,9 @@ export function ListPage() {
   const [selected, setSelected] = useState<Set<string | number>>(new Set());
   const [actionsOpen, setActionsOpen] = useState(false);
   const [runningAction, setRunningAction] = useState(false);
+  // The action awaiting confirmation (#206) — drives the styled
+  // confirm modal instead of the native window.confirm.
+  const [pendingAction, setPendingAction] = useState<ActionDescriptor | null>(null);
 
   // Debounced search: commit `q` to the URL ~300ms after the user
   // stops typing, so the list refetches without a keystroke flood
@@ -128,17 +131,23 @@ export function ListPage() {
     setSelected(() => (checked ? new Set(pageRows.map((r) => r.pk)) : new Set()));
   }
 
-  async function runAction(action: ActionDescriptor): Promise<void> {
+  // Dropdown click: actions that declare requires_confirmation open the
+  // styled confirm modal (#206); the rest run immediately.
+  function requestAction(action: ActionDescriptor): void {
+    if (runningAction || selected.size === 0) return;
+    setActionsOpen(false);
+    if (action.requires_confirmation) {
+      setPendingAction(action);
+    } else {
+      void performAction(action);
+    }
+  }
+
+  async function performAction(action: ActionDescriptor): Promise<void> {
     const pks = Array.from(selected);
     if (pks.length === 0 || runningAction) return;
-    if (
-      action.requires_confirmation &&
-      !window.confirm(`Run “${action.label}” on ${pks.length} selected item(s)?`)
-    ) {
-      return;
-    }
     setRunningAction(true);
-    setActionsOpen(false);
+    setPendingAction(null);
     try {
       const res = await client.runAction(appLabel, modelName, action.name, pks);
       if (res.redirect) {
@@ -191,8 +200,7 @@ export function ListPage() {
             to={`/${appLabel}/${modelName}/add`}
             className="shrink-0 rounded-md border border-blue-600 bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
           >
-            + Add{' '}
-            {data.verbose_name ? capitalize(data.verbose_name) : modelName}
+            + Add {data.verbose_name ? capitalize(data.verbose_name) : modelName}
           </Link>
         )}
       </header>
@@ -223,7 +231,7 @@ export function ListPage() {
                     key={a.name}
                     type="button"
                     role="menuitem"
-                    onClick={() => void runAction(a)}
+                    onClick={() => requestAction(a)}
                     className="block w-full px-3 py-2 text-left text-sm hover:bg-gray-100"
                     title={a.description}
                   >
@@ -359,6 +367,28 @@ export function ListPage() {
           onClose={() => setFilterOpen(false)}
         />
       )}
+
+      {pendingAction && (
+        <Modal
+          title="Confirm action"
+          onClose={() => setPendingAction(null)}
+          footer={
+            <>
+              <Button variant="secondary" onClick={() => setPendingAction(null)}>
+                Cancel
+              </Button>
+              <Button variant="primary" onClick={() => void performAction(pendingAction)}>
+                Run
+              </Button>
+            </>
+          }
+        >
+          <p className="text-sm text-gray-700">
+            Run <span className="font-medium">{pendingAction.label}</span> on {selected.size}{' '}
+            selected item{selected.size === 1 ? '' : 's'}?
+          </p>
+        </Modal>
+      )}
     </div>
   );
 }
@@ -371,47 +401,16 @@ interface FilterModalProps {
   onClose: () => void;
 }
 
-// Modal on desktop, bottom-sheet on mobile. Closes on backdrop tap,
-// the Done button, OR the Escape key.
+// Filter modal — shares the generic @dar/ui `Modal` (overlay, card,
+// Esc + backdrop close) with the action-confirm so both look identical
+// (#206). Only the body (filter controls) + footer are bespoke.
 function FilterModal({ filters, active, onChange, onClearAll, onClose }: FilterModalProps) {
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Filters"
-    >
-      <div className="absolute inset-0 bg-black/50" onClick={onClose} aria-hidden="true" />
-      <div className="relative z-10 max-h-[85vh] w-full overflow-y-auto rounded-t-xl bg-white p-5 shadow-xl sm:max-w-md sm:rounded-xl">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-lg font-semibold">Filters</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close filters"
-            className="rounded p-1 text-gray-500 hover:bg-gray-100"
-          >
-            ✕
-          </button>
-        </div>
-        <div className="space-y-4">
-          {filters.map((f) => (
-            <FilterControl
-              key={f.name}
-              filter={f}
-              value={active[f.name] ?? ''}
-              onChange={(v) => onChange(f.name, v)}
-            />
-          ))}
-        </div>
-        <div className="mt-5 flex justify-between">
+    <Modal
+      title="Filters"
+      onClose={onClose}
+      footer={
+        <div className="flex w-full items-center justify-between">
           <button
             type="button"
             onClick={onClearAll}
@@ -419,16 +418,23 @@ function FilterModal({ filters, active, onChange, onClearAll, onClose }: FilterM
           >
             Clear all
           </button>
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
-          >
+          <Button variant="primary" onClick={onClose}>
             Done
-          </button>
+          </Button>
         </div>
+      }
+    >
+      <div className="space-y-4">
+        {filters.map((f) => (
+          <FilterControl
+            key={f.name}
+            filter={f}
+            value={active[f.name] ?? ''}
+            onChange={(v) => onChange(f.name, v)}
+          />
+        ))}
       </div>
-    </div>
+    </Modal>
   );
 }
 
@@ -553,8 +559,7 @@ interface DateHierarchyStripProps {
 function DateHierarchyStrip({ dh, onDrill, onUp }: DateHierarchyStripProps) {
   const { year, month, day } = dh.active;
   // The next drill level is the first granularity not yet pinned.
-  const level: 'year' | 'month' | 'day' =
-    year == null ? 'year' : month == null ? 'month' : 'day';
+  const level: 'year' | 'month' | 'day' = year == null ? 'year' : month == null ? 'month' : 'day';
 
   const bucketLabel = (value: number): string => {
     if (level === 'month') return MONTH_NAMES[value - 1] ?? String(value);
