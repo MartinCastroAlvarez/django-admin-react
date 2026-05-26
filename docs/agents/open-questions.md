@@ -90,51 +90,6 @@ Tentative direction: documentation-only recommendation in
 
 ---
 
-## Q-2026-05-25-01 — Should we hard-depend on `djangorestframework`?
-
-Context: the v1 API does CRUD over JSON. DRF would give us serializers,
-exception handling, content negotiation, throttling, and a familiar idiom
-for consumers. But DRF is a heavy dependency, has its own permission
-system that we explicitly *don't* want to use, and adds a security
-surface area.
-
-Options:
-
-- **A.** Build on Django's stock class-based views; write small,
-  conservative serialization helpers ourselves. Smaller surface. More
-  custom code.
-- **B.** Depend on DRF; reuse its serializers and views. Bigger
-  dependency. Risk of agents drifting to "use DRF permissions" out of
-  habit.
-
-Tentative direction: **A.** Reasons: smaller install surface, fewer
-"don't use this DRF feature" rules to enforce. Recorded as a working
-assumption. Revisit if hand-rolled serialization becomes a maintenance
-burden.
-
-— claude-foundation-opus47
-
----
-
-## Q-2026-05-25-02 — How should we handle a custom `AdminSite`?
-
-Context: a consumer may register a subclass of `AdminSite` with
-overridden `has_permission`, a different `_registry`, or a custom URL
-namespace. v1 supports one admin site via
-`DJANGO_ADMIN_REACT["ADMIN_SITE"]` dotted path.
-
-Options:
-
-- **A.** Single-site v1. Multi-site is a v1.x feature. Documented in
-  `ARCHITECTURE.md` §4.6.
-- **B.** Multi-site in v1 with a list of dotted paths.
-
-Tentative direction: **A.** Smaller v1; clear path to B later.
-
-— claude-foundation-opus47
-
----
-
 ## Q-2026-05-25-03 — Frontend test runner
 
 Context: PR #6 introduces the frontend monorepo. We need to pick a test
@@ -146,49 +101,23 @@ Options:
 - **B.** Jest + Testing Library.
 
 Tentative direction: **A** (Vitest), because Vite is already the build
-tool — no separate transform pipeline. Pending confirmation in PR #6.
-
-— claude-foundation-opus47
-
----
-
-## Q-2026-05-25-04 — Bundle delivery: WhiteNoise vs Django staticfiles
-
-Context: the React bundle ships in
-`django_admin_react/static/admin_react/`. Consumers serve static files
-in different ways (collectstatic + nginx, WhiteNoise, etc.).
-
-Options:
-
-- **A.** Document that the bundle is a normal `static/` directory.
-  Consumers wire it in like any other static. No new dependency.
-- **B.** Ship with WhiteNoise as a recommended add-on.
-
-Tentative direction: **A** for v1. No new runtime dep.
-
-— claude-foundation-opus47
-
----
-
-## Q-2026-05-25-05 — Are M2M fields read-only or hidden in v1?
-
-Context: the spec defers M2M editing. The API doc currently exposes M2M
-as `type: "unsupported"` (read-only label, no edit control).
-
-Options:
-
-- **A.** Show as read-only "unsupported" field with a clear label.
-  Surfaces presence without breaking editing.
-- **B.** Hide entirely.
-
-Tentative direction: **A.** Hiding silently is worse UX than honestly
-saying "this isn't editable here yet."
+tool — no separate transform pipeline. **Still pending — frontend
+packages do not yet declare a test runner in `package.json`. The first
+frontend test PR confirms the direction.**
 
 — claude-foundation-opus47
 
 ---
 
 > Add new questions above this line, newest on top.
+
+> **Resolved 2026-05-26** — Q-2026-05-25-01 (DRF: A — no DRF dep
+> confirmed in `pyproject.toml`), Q-2026-05-25-02 (single AdminSite:
+> A — `conf.py` `ADMIN_SITE` is a single dotted-path string),
+> Q-2026-05-25-04 (bundle delivery: A — no WhiteNoise dep),
+> Q-2026-05-25-05 (M2M visibility: obsoleted by [PR #107](https://github.com/MartinCastroAlvarez/django-admin-react/pull/107) which
+> shipped M2M read+write — the "unsupported stub" framing no longer
+> applies). Moved to [`decisions.md`](decisions.md).
 
 ---
 
@@ -221,3 +150,5 @@ Tentative direction (PM): **A** for v1; document in
 this.
 
 — `claude-pm-ux-opus47`
+
+**Resolved 2026-05-26 (A — request-derived).** `django_admin_react/views.py:109` reconstructs the mount from `request.path` and embeds it in the SPA template via the `dar-mount` meta tag; PR #120 hardened the SPA-side `detectMount()` to honour it. Consumers behind path-stripping proxies set `FORCE_SCRIPT_NAME` per the standard Django pattern. Moved to [`decisions.md`](decisions.md).

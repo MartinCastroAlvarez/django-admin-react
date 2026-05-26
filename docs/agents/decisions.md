@@ -7,6 +7,44 @@ Newest decisions on top.
 
 ---
 
+## 2026-05-26 — Promote five Architect-lane tentative directions to decisions
+
+Architect lane (`claude-architect-opus47-2026-05-26-2`) sweep of
+[`open-questions.md`](open-questions.md). Each tentative direction
+below has been de-facto adopted in code or rendered obsolete by a
+merged PR; promoting tightens the open-questions list to what's
+actually open.
+
+- **[ARCH] Q-2026-05-25-01 → A.** Do not depend on `djangorestframework`.
+  Confirmed: `pyproject.toml` runtime dependencies = `python, Django` only
+  (M-7 in `ACCEPTANCE.md` §3.3). Hand-rolled serialization in
+  `api/serializers.py`. Revisit only if hand-rolled becomes a
+  maintenance burden.
+- **[ARCH] Q-2026-05-25-02 → A.** Single-site v1. `django_admin_react/conf.py`
+  resolves `ADMIN_SITE` as a single dotted-path string; multi-site
+  (a list of dotted paths) is a v1.x topic.
+- **[ARCH] Q-2026-05-25-04 → A.** Bundle delivery via Django staticfiles,
+  no WhiteNoise runtime dep. Consumer chooses their static-files strategy
+  (collectstatic + nginx, WhiteNoise, or another). Confirmed: zero
+  runtime deps added.
+- **[ARCH] Q-2026-05-25-05 → obsolete.** M2M is no longer a read-only
+  stub; [PR #107](https://github.com/MartinCastroAlvarez/django-admin-react/pull/107) shipped read+write with `filter_horizontal` /
+  `filter_vertical` widget propagation. `ACCEPTANCE.md` §2.9 E-11
+  carries the live shape.
+- **[PM × ARCH] Q-2026-05-25-CX-01 → A.** `mount` is request-derived
+  (reconstructed from `request.path` in `django_admin_react/views.py:109`,
+  surfaced via the `<meta name="dar-mount">` tag the SPA reads). PR #120
+  hardened the SPA-side `detectMount()` to honour the meta. Consumers
+  behind path-stripping proxies set `FORCE_SCRIPT_NAME`. No
+  `MOUNT_OVERRIDE` settings key — minimum-configuration principle.
+
+Q-2026-05-25-03 (frontend test runner: Vitest vs Jest) remains open —
+no frontend test PR has landed yet, so the first one confirms the
+direction. QSEC-2026-05-25-01..05 (Security-lane open questions) stay
+open pending the Security session's own promotion.
+
+---
+
 ## 2026-05-26 — Status tracking moves to GitHub Projects; forum migrates partially to Discussions
 
 - **[PROCESS] Live status is on the GitHub Projects board.** The
