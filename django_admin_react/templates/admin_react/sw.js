@@ -46,6 +46,15 @@ self.addEventListener('activate', (event) => {
 
 // --- cache purge on logout (contract §5) ----------------------------------
 self.addEventListener('message', (event) => {
+  // Origin check (CodeQL js/missing-origin-check): only honour messages
+  // from our own origin — the SPA pages this worker controls. A
+  // cross-origin frame must never be able to drive the cache. When the
+  // message comes from a same-origin client, `event.origin` is our
+  // origin; for some internal client.postMessage paths it can be the
+  // empty string — both are accepted, anything else is dropped.
+  if (event.origin && event.origin !== self.location.origin) {
+    return;
+  }
   if (event.data && event.data.type === 'dar:purge') {
     event.waitUntil(
       (async () => {

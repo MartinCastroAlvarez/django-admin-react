@@ -121,6 +121,9 @@ def test_sw_embeds_mount_and_security_guards(anon_client: Client) -> None:
     assert "request.method !== 'GET'" in js
     # Cache-purge-on-logout message handler.
     assert "dar:purge" in js
+    # Origin check on the message handler (CodeQL js/missing-origin-check):
+    # a cross-origin frame must not be able to drive the SW cache.
+    assert "event.origin" in js and "self.location.origin" in js
 
 
 @pytest.mark.django_db
