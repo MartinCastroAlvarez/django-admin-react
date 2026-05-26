@@ -14,7 +14,6 @@ from contextlib import contextmanager
 import pytest
 from django.contrib import admin
 from django.contrib.auth.models import Group
-from django.contrib.auth.models import User
 from django.test import Client
 
 # Use auth.Group as the test target — it's always registered in admin,
@@ -83,9 +82,7 @@ def test_user_without_view_permission_forbidden(superuser_client: Client) -> Non
 def test_unregistered_model_not_found(superuser_client: Client) -> None:
     response = superuser_client.get("/admin-react/api/v1/auth/nope/")
     assert response.status_code == 404
-    assert response.json() == {
-        "error": {"code": "not_found", "message": "Not found."}
-    }
+    assert response.json() == {"error": {"code": "not_found", "message": "Not found."}}
 
 
 @pytest.mark.django_db

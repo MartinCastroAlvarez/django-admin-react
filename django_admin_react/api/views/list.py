@@ -36,7 +36,6 @@ from django_admin_react.api.registry import resolve_model
 from django_admin_react.api.serializers import serialize_fk_value
 from django_admin_react.api.serializers import serialize_value
 
-
 _NOT_FOUND_BODY: dict[str, dict[str, str]] = {
     "error": {"code": "not_found", "message": "Not found."}
 }
@@ -74,9 +73,7 @@ class ListView(View):
 
         q = request.GET.get("q", "") or ""
         if q and model_admin.search_fields:
-            queryset, may_have_duplicates = model_admin.get_search_results(
-                request, queryset, q
-            )
+            queryset, may_have_duplicates = model_admin.get_search_results(request, queryset, q)
             if may_have_duplicates:
                 queryset = queryset.distinct()
 
@@ -92,10 +89,7 @@ class ListView(View):
         list_display = list(model_admin.get_list_display(request))
         columns = _columns_payload(model_admin, list_display)
 
-        results = [
-            _row_for(obj, model_admin, list_display, request)
-            for obj in queryset[start:end]
-        ]
+        results = [_row_for(obj, model_admin, list_display, request) for obj in queryset[start:end]]
 
         body: dict[str, Any] = {
             "app_label": model._meta.app_label,
@@ -174,9 +168,7 @@ def _columns_payload(
     model_admin: ModelAdmin,
     list_display: list[str],
 ) -> list[dict[str, Any]]:
-    sortable = set(
-        getattr(model_admin, "get_sortable_by", lambda r: ())(None) or ()
-    )
+    sortable = set(getattr(model_admin, "get_sortable_by", lambda r: ())(None) or ())
     payload = []
     for name in list_display:
         try:
@@ -218,20 +210,12 @@ def _serialize_list_value(obj: Model, name: str, value: Any) -> Any:
     list_display values (e.g., ``@admin.display``) are already resolved
     by ``lookup_field`` into a plain value.
     """
-    # If the attribute is a real model FK, prefer the {id, label} shape.
-    try:
-        descriptor = type(obj).__dict__.get(name)
-    except Exception:  # pragma: no cover — defensive
-        descriptor = None
-    if descriptor is not None:
-        # Resolve "X_id" implicit FK references too.
-        field = getattr(obj._meta.get_field(name) if _has_model_field(obj, name) else None, "field", None)  # type: ignore[arg-type]
-        if _has_model_field(obj, name):
-            model_field = obj._meta.get_field(name)
-            from django.db.models import ForeignKey
+    from django.db.models import ForeignKey
 
-            if isinstance(model_field, ForeignKey):
-                return serialize_fk_value(value)
+    if _has_model_field(obj, name):
+        model_field = obj._meta.get_field(name)
+        if isinstance(model_field, ForeignKey):
+            return serialize_fk_value(value)
     return serialize_value(value)
 
 

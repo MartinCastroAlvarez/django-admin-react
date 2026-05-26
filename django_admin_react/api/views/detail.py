@@ -39,7 +39,6 @@ from django_admin_react.api.serializers import is_sensitive_field_name
 from django_admin_react.api.serializers import serialize_fk_value
 from django_admin_react.api.serializers import serialize_value
 
-
 _NOT_FOUND_BODY: dict[str, dict[str, str]] = {
     "error": {"code": "not_found", "message": "Not found."}
 }
@@ -146,7 +145,7 @@ def _fieldsets_payload(
     for title, opts in raw:
         fields = []
         for entry in opts.get("fields", ()):
-            if isinstance(entry, (list, tuple)):
+            if isinstance(entry, list | tuple):
                 for sub in entry:
                     if sub in visible_set:
                         fields.append(sub)

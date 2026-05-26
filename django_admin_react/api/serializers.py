@@ -58,7 +58,7 @@ def filter_sensitive(names: Iterable[str]) -> list[str]:
 
 def serialize_value(value: Any) -> Any:
     """Convert a Python value to its JSON-compatible wire form."""
-    if value is None or isinstance(value, (bool, int, float, str)):
+    if value is None or isinstance(value, bool | int | float | str):
         return value
     if isinstance(value, decimal.Decimal):
         return str(value)
@@ -127,7 +127,7 @@ def field_choices(field: Field) -> list[dict[str, Any]] | None:
     choices = getattr(field, "choices", None)
     if not choices:
         return None
-    return [{"value": v, "label": str(l)} for v, l in choices]
+    return [{"value": v, "label": str(lbl)} for v, lbl in choices]
 
 
 def field_metadata(

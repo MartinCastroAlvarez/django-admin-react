@@ -69,9 +69,7 @@ def test_user_without_view_permission_for_object_forbidden(
     superuser_client: Client,
 ) -> None:
     g = Group.objects.create(name="example")
-    with _admin_override(
-        Group, has_view_permission=lambda self, request, obj=None: False
-    ):
+    with _admin_override(Group, has_view_permission=lambda self, request, obj=None: False):
         response = superuser_client.get(_url(g.pk))
     assert response.status_code in (403, 404)
 
@@ -114,8 +112,6 @@ def test_fields_include_required_help_text_and_type(superuser_client: Client) ->
 def test_starts_from_admin_get_queryset(superuser_client: Client) -> None:
     """Detail view must use ModelAdmin.get_queryset, not Model.objects.all."""
     g = Group.objects.create(name="invisible")
-    with _admin_override(
-        Group, get_queryset=lambda self, request: Group.objects.none()
-    ):
+    with _admin_override(Group, get_queryset=lambda self, request: Group.objects.none()):
         response = superuser_client.get(_url(g.pk))
     assert response.status_code == 404
