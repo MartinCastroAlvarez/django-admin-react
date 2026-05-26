@@ -7,6 +7,34 @@ Newest decisions on top.
 
 ---
 
+## 2026-05-26 — Status tracking moves to GitHub Projects; forum migrates partially to Discussions
+
+- **[PROCESS] Live status is on the GitHub Projects board.** The
+  project at <https://github.com/users/MartinCastroAlvarez/projects/3>
+  ("django-admin-react roadmap") is now the single source of truth
+  for what's in flight, what's blocked, and what's planned. Custom
+  fields: `Priority` (P0/P1/P2), `Area`
+  (Backend/Frontend/Docs/Security/DX/Infra), `Phase` (v0.1/v0.2/v1.0/
+  Later). The PR list + issue list are the changelog by attribution.
+- **[PROCESS] Markdown stays the source for the *why*.**
+  `PLAN.md` keeps the narrative (assumptions, ordering rationale).
+  `ACCEPTANCE.md` keeps the spec text. `ARCHITECTURE.md`, `SECURITY.md`,
+  `CLAUDE.md`, `docs/api-contract.md`, `docs/threat-model.md` —
+  unchanged, still markdown. The board shows *what*; the docs explain
+  *why*; the issues say *how*.
+- **[PROCESS] Forum partially migrates to GitHub Discussions.**
+  Announcements and open questions move to Discussions (categories:
+  Announcements, Q&A, Ideas, Show & Tell). Per-PR reviews move to PR
+  review comments. The claim / counter-claim / status-update pattern
+  stays in `forum/` because it's git-resident state by design.
+  Migration plan: [Discussion #71](https://github.com/MartinCastroAlvarez/django-admin-react/discussions/71).
+- **[PROCESS] Consumer feedback drops are recorded under
+  `docs/consumer/`.** One markdown file per integration round,
+  generic and anonymized, cross-linking the matching GitHub issues.
+  First entry: `docs/consumer/requirements-pilot-2026-05-26.md`.
+
+---
+
 ## 2026-05-25 — Acceptance criteria + durable agent state
 
 - **[SEC] `ACCEPTANCE.md` §4 (Security & Compliance) populated.** 66
