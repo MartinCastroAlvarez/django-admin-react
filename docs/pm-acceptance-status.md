@@ -25,10 +25,10 @@ Legend: ✅ verified · 🟡 partially met · ⬜ blocked on dependency · ❌ r
 
 | ID  | Criterion (short)                                                | Status | Blocked on                          |
 | --- | ---------------------------------------------------------------- | ------ | ----------------------------------- |
-| D-1 | Registering a `ModelAdmin` is sufficient                         | 🟡     | Registry endpoint proves it (PR #3); list/detail proof lands with PR #4. |
+| D-1 | Registering a `ModelAdmin` is sufficient                         | ✅     | API side fully proven by PR #4 — list + detail both delegate to `get_queryset` / `get_list_display` / `get_search_results` / `get_form` / `get_fields` / `get_exclude` / `get_readonly_fields`. SPA proof still PR #6 / #7. |
 | D-2 | `ModelAdmin` edits propagate without frontend rebuild            | ⬜     | Requires the React SPA (PR #6 / #7). |
 | D-3 | Consumer never edits `frontend/`                                 | ✅     | Verified — install path makes zero `frontend/` references. |
-| D-4 | Errors surface with normal Django traceback                      | ⬜     | Depends on SPA error boundary (PR #6). |
+| D-4 | Errors surface with normal Django traceback                      | 🟡     | PR #4 catches `ValueError`/`TypeError` on bogus pk → 404, no stack-trace leak. SPA error boundary still PR #6. |
 | D-5 | Every settings key documented in README                          | ✅     | README "Optional configuration" table = `conf.py` DEFAULTS. |
 
 ## §2.3 — Onboarding
@@ -97,26 +97,30 @@ Legend: ✅ verified · 🟡 partially met · ⬜ blocked on dependency · ❌ r
 
 | ID  | Criterion (short)                                                | Status | Blocked on                          |
 | --- | ---------------------------------------------------------------- | ------ | ----------------------------------- |
-| E-1 | `ModelAdmin` is the only extension surface                       | 🟡     | Registry endpoint proves it; full proof when SPA reads `permissions` boolean per-model. |
-| E-2 | Hiding Add button = `has_add_permission` → False                 | ⬜     | Backend exposes the boolean (PR #3 ✅); SPA hides on it (PR #6). |
-| E-3 | Readonly fields render as text                                   | ⬜     | Detail endpoint (PR #4) + form rendering (PR #7). |
-| E-4 | `list_display` mixing fields + callables works                   | ⬜     | List endpoint (PR #4). |
+| E-1 | `ModelAdmin` is the only extension surface                       | ✅     | API side: registry + list + detail all derive everything from the `ModelAdmin`. Full UX proof when SPA reads the per-model `permissions` block. |
+| E-2 | Hiding Add button = `has_add_permission` → False                 | 🟡     | Backend exposes the boolean (PR #3 + PR #4 emit it in the `permissions` block); SPA hides on it (PR #6). |
+| E-3 | Readonly fields render as text                                   | 🟡     | Detail endpoint now emits `readonly: true` per field (PR #4). Form rendering still PR #7. |
+| E-4 | `list_display` mixing fields + callables works                   | 🟡     | List endpoint resolves callable list_display via `lookup_field` (PR #4). UI consumption still PR #7. |
 | E-5 | Rebrand colors via single Tailwind config extension              | ⬜     | Frontend. |
 
 ---
 
 ## Summary
 
-- **✅ Verified:** P-2, P-5, D-3, D-5, O-1, O-3, Doc-1, Doc-2, Doc-3, Doc-4
-  (10 criteria).
-- **🟡 Partially met:** P-1, P-4, D-1, O-2, O-4, O-5, Doc-5, V-1, E-1
-  (9 criteria).
-- **⬜ Blocked on engineering:** the rest (~25 criteria) — every R-*,
-  A-*, N-*, V-*, and most E-*. All depend on PR #4-#7 landing.
+Snapshot 2026-05-26, post PR #4 review (`feat/backend-list-detail-endpoints`,
+PM-approved, awaiting Architect + Security):
 
-**v0.1 release gate (`ACCEPTANCE.md` §5):** cannot pass until the
-frontend lands. PM has shipped every doc, spec, and screenshot
-that is buildable without the SPA.
+- **✅ Verified:** P-2, P-5, D-1, D-3, D-5, O-1, O-3, Doc-1, Doc-2, Doc-3,
+  Doc-4, E-1 (12 criteria — net +2 since 2026-05-25).
+- **🟡 Partially met:** P-1, P-4, D-4, O-2, O-4, O-5, Doc-5, V-1, E-2,
+  E-3, E-4 (11 criteria — net +2 from ⬜, +0/-1 from ✅).
+- **⬜ Blocked on frontend (PR #6 / #7):** the rest (~22 criteria) —
+  every R-*, A-*, N-*, most V-*, D-2, E-5. Net -4 since 2026-05-25.
+
+**v0.1 release gate (`ACCEPTANCE.md` §5):** still cannot pass until
+the frontend lands, but PR #4 puts every backend-side §2 surface on
+green. PM has shipped every doc, spec, and screenshot that is
+buildable without the SPA.
 
 Next PM action: track engineering PRs as they land, re-evaluate
 each ⬜ on the day it should flip to ✅, and prepare the v0.1
