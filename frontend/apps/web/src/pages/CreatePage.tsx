@@ -58,7 +58,9 @@ export function CreatePage() {
         <Link to={`/${appLabel}/${modelName}`} className="text-sm text-blue-600 hover:underline">
           ← Back to list
         </Link>
-        <h1 className="mt-1 text-2xl font-semibold">Add {appLabel} · {modelName}</h1>
+        <h1 className="mt-1 text-2xl font-semibold">
+          Add {appLabel} · {modelName}
+        </h1>
       </header>
       <CreateForm
         schema={schema}
@@ -124,10 +126,7 @@ function CreateForm({ schema, onCreate, onCancel }: CreateFormProps) {
         </div>
       )}
       {schema.fieldsets.map((fieldset, idx) => (
-        <Card
-          key={`cfs-${idx}-${fieldset.title ?? 'default'}`}
-          title={fieldset.title ?? undefined}
-        >
+        <Card key={`cfs-${idx}-${fieldset.title ?? 'default'}`} title={fieldset.title ?? undefined}>
           <div className="divide-y divide-gray-100">
             {fieldset.fields.map((name) => {
               const field = schema.fields[name];

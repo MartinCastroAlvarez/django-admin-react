@@ -114,10 +114,7 @@ export function Table<Row>({
                   </td>
                 )}
                 {columns.map((col) => (
-                  <td
-                    key={col.key}
-                    className={`px-4 py-2 ${ALIGN_CLASSES[col.align ?? 'left']}`}
-                  >
+                  <td key={col.key} className={`px-4 py-2 ${ALIGN_CLASSES[col.align ?? 'left']}`}>
                     {/* Cap very wide cells (e.g. UUID `id` columns) and
                         truncate with an ellipsis so one long column
                         doesn't dominate the table; full value is on the
