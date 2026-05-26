@@ -6,6 +6,7 @@
 // the data layer's job.
 
 import { useMemo, useState } from 'react';
+import { ListFilter } from 'lucide-react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import {
@@ -141,11 +142,12 @@ export function ListPage() {
               type="button"
               onClick={() => setFilterOpen(true)}
               aria-haspopup="dialog"
-              className="shrink-0 rounded border border-gray-300 px-3 py-2 text-sm hover:bg-gray-100"
+              className="inline-flex shrink-0 items-center gap-1.5 rounded border border-gray-300 px-3 py-2 text-sm hover:bg-gray-100"
             >
+              <ListFilter className="h-4 w-4" aria-hidden />
               Filters
               {chips.length > 0 && (
-                <span className="ml-1 rounded-full bg-blue-600 px-1.5 py-0.5 text-xs text-white">
+                <span className="ml-0.5 rounded-full bg-blue-600 px-1.5 py-0.5 text-xs text-white">
                   {chips.length}
                 </span>
               )}

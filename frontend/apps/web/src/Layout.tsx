@@ -1,5 +1,6 @@
 import type { PropsWithChildren } from 'react';
 import { useEffect, useMemo, useState } from 'react';
+import { Menu } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import { useRegistry } from '@dar/data';
@@ -116,9 +117,7 @@ export function Layout({ children }: PropsWithChildren) {
           onClick={() => setDrawerOpen(true)}
           className="-ml-2 rounded p-2 hover:bg-gray-800"
         >
-          <span className="mb-1 block h-0.5 w-5 bg-current" />
-          <span className="mb-1 block h-0.5 w-5 bg-current" />
-          <span className="block h-0.5 w-5 bg-current" />
+          <Menu className="h-5 w-5" aria-hidden />
         </button>
         <Link to="/" onClick={closeDrawer} className="flex items-center gap-2 font-semibold">
           {BRAND_LOGO_URL && <img src={BRAND_LOGO_URL} alt="" className="h-5 w-5 rounded" />}

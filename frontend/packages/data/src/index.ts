@@ -27,6 +27,7 @@ export type {
   HtmlValue,
   ListResponse,
   ListRow,
+  LoginResponse,
   Permissions,
   RegistryAppEntry,
   RegistryModelEntry,
@@ -47,7 +48,7 @@ export type { DetailState } from './detail-context';
 export { createObject, updateObject, deleteObject } from './mutations';
 export type { CreateArgs, UpdateArgs, DeleteArgs } from './mutations';
 
-export { renderValue, isHtmlValue } from './format';
+export { renderValue, isHtmlValue, isForeignKeyValue } from './format';
 
 export { useSwrCache } from './swr-cache';
 export type { SwrState, UseSwrCacheArgs } from './swr-cache';

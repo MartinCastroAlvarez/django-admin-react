@@ -54,7 +54,7 @@ export function Table<Row>({
                 <th
                   key={col.key}
                   scope="col"
-                  className={`px-4 py-2 font-medium ${align} ${sortable ? 'cursor-pointer hover:bg-gray-100' : ''}`}
+                  className={`whitespace-nowrap px-4 py-2 font-medium ${align} ${sortable ? 'cursor-pointer hover:bg-gray-100' : ''}`}
                   onClick={sortable ? () => onSort(col.key) : undefined}
                 >
                   <span className="inline-flex items-center gap-1">
@@ -78,7 +78,10 @@ export function Table<Row>({
                 className={onRowClick ? 'cursor-pointer hover:bg-gray-50' : ''}
               >
                 {columns.map((col) => (
-                  <td key={col.key} className={`px-4 py-2 ${ALIGN_CLASSES[col.align ?? 'left']}`}>
+                  <td
+                    key={col.key}
+                    className={`whitespace-nowrap px-4 py-2 ${ALIGN_CLASSES[col.align ?? 'left']}`}
+                  >
                     {col.render(row)}
                   </td>
                 ))}
