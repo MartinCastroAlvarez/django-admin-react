@@ -405,6 +405,7 @@ Response 200:
     "save_as": false,
     "save_as_continue": true
   },
+  "password_change": { "supported": false },
   "fieldsets": [
     {
       "title": null,
@@ -469,6 +470,13 @@ Rules:
   `save_options` is a UI hint, not the gate. Inline-formset editability
   is not yet factored in (the inline write-half is tracked under `#54`);
   for models without editable inlines the flags are exact.
+- `password_change.supported` (`#252`) is `true` only when the model's
+  admin declares a `change_password_form` (i.e. a `UserAdmin`) **and**
+  the request holds change permission on the object — the SPA shows
+  "Set password" exactly when `POST .../{pk}/password/` (§5.6) would be
+  accepted. It is a capability flag only; no password material is ever
+  surfaced (the field itself stays hidden by the sensitive-name
+  denylist). For every non-user model it is `false`.
 - Field set is derived from `ModelAdmin.get_form(request, obj)`'s declared
   fields, intersected with `ModelAdmin.get_fields(request, obj)` (or
   `get_fieldsets`). Anything in `exclude`/`get_exclude` is omitted.
@@ -817,6 +825,47 @@ Wrapped in `transaction.atomic()`.
 - Calls `ModelAdmin.delete_model(request, obj)`.
 
 Response 204 (no body).
+
+### 5.6 `POST /api/v1/{app_label}/{model_name}/{pk}/password/`
+
+Set/change one object's password — `UserAdmin` parity (`#252`). A thin
+JSON shell over the admin's **own** `change_password_form` (Django's
+`AdminPasswordChangeForm`); the package invents no password machinery
+(see §7 for the same delegation principle behind login/logout).
+
+Request body:
+
+```json
+{ "password1": "new-secret", "password2": "new-secret" }
+```
+
+- Available **only** when the model's admin declares a
+  `change_password_form` (a `UserAdmin`). For any other model this route
+  returns **404** — there is no `/password/` sub-resource, mirroring
+  Django's router. Check `password_change.supported` (§4) before showing
+  the affordance.
+- Gates: staff + `AdminSite.has_permission` (403) → model resolved via
+  `_registry` (404) → object via `ModelAdmin.get_object` (404) →
+  `has_change_permission(request, obj)` (403). CSRF enforced (no
+  `@csrf_exempt`).
+- Validation runs the admin form: `password1`/`password2` must match and
+  must pass the consumer's `AUTH_PASSWORD_VALIDATORS`. Failures return
+  **400** `validation_failed` with per-field errors keyed by
+  `password1` / `password2` — never the value.
+- `form.save()` hashes via `user.set_password`; nothing is stored in
+  plaintext. When the actor changes their **own** password the session
+  auth hash is rotated (`update_session_auth_hash`) so they stay logged
+  in. A `LogEntry` CHANGE row ("Changed password.") is written, matching
+  the legacy admin.
+
+Response 200:
+
+```json
+{ "detail": "Password set.", "id": 7 }
+```
+
+The password is **never** read back — not in this response, not in any
+read endpoint (the field stays hidden by the sensitive-name denylist).
 
 ---
 

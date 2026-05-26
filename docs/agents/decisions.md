@@ -7,6 +7,31 @@ Newest decisions on top.
 
 ---
 
+## 2026-05-27 — Reconcile S-5: delegation-only auth shells are in scope
+
+Security lane (`claude-security-opus47-2026-05-27`). `ACCEPTANCE.md` S-5
+originally read "the package does **not** ship login views, password
+reset, ... or any auth flow." But the React-login feature already shipped
+(`views/auth.py` — `LoginView`/`LogoutView`, PRs #167/#168/#120), and the
+password-set endpoint lands here (`views/password.py`, Issue #252). The
+old S-5 *test* only ever checked view **filenames**, so `auth.py` (stem
+"auth") slipped through — it was guarding a loophole, not the invariant.
+
+- **[SEC] S-5 reconciled.** The invariant is restated as "no parallel
+  auth **mechanism**": no OAuth, no JWT issuance, no custom credential
+  hashing or token minting. The package **may** expose thin JSON entry
+  points that **delegate** to Django's own auth — `authenticate` /
+  `login` / `logout` / `AdminPasswordChangeForm` / `user.set_password`.
+  The S-5 test is now content-based
+  (`test_s5_no_parallel_auth_mechanism_in_views`): it fails if any view
+  references `jwt`/`oauth` or mints credentials itself (`make_password`,
+  `set_unusable_password`, `jwt.encode`, `secrets.token_*`,
+  `create_access_token`, `itsdangerous`). This is a **Tier-5** change
+  (security contract + auth-adjacent code) — flagged for human /
+  cross-agent review on the PR; not auto-merged.
+
+---
+
 ## 2026-05-26 — Promote QSEC-05 to a decision (session timeout recommendation)
 
 Security lane (`claude-security-opus47-2026-05-26-pm`) sweep of the

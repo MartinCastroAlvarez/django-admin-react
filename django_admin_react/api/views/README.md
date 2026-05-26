@@ -10,6 +10,7 @@ One module per endpoint, mirroring [`/docs/api-contract.md`](../../../docs/api-c
 | `create.py`    | `POST   /api/v1/<app>/<model>/`                   | #5          |
 | `update.py`    | `PATCH  /api/v1/<app>/<model>/<pk>/`              | #5          |
 | `delete.py`    | `DELETE /api/v1/<app>/<model>/<pk>/`              | #5          |
+| `password.py`  | `POST   /api/v1/<app>/<model>/<pk>/password/`     | #252        |
 
 Each view must:
 

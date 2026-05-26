@@ -162,17 +162,46 @@ def test_s54_no_debug_or_introspection_endpoint() -> None:
     assert hits == [], f"Debug/introspection endpoint reference: {hits}"
 
 
-def test_s5_no_login_password_jwt_oauth_in_views() -> None:
-    """S-5: the package does not ship login views, JWT issuance, OAuth, etc.
+def test_s5_no_parallel_auth_mechanism_in_views() -> None:
+    """S-5 (revised): the package ships no parallel auth *mechanism*.
 
-    Match is case-insensitive on view-file names only — strings like
-    "password" appearing in docstrings or denylist constants are fine
-    elsewhere; here we check the views directory does not host auth flows.
+    History: the original S-5 forbade *any* login/password view by
+    filename. The project has since deliberately shipped thin JSON entry
+    points that **delegate** to Django's own auth — a React login/logout
+    (``auth.py``, PRs #167/#168/#120) and an admin password-set shell
+    (``password.py``, Issue #252). Those are UI shells over
+    ``authenticate`` / ``login`` / ``logout`` / ``AdminPasswordChangeForm``
+    / ``user.set_password``; they invent no credential machinery. The
+    original filename check never actually caught ``auth.py`` (its stem is
+    "auth"), so it was enforcing a loophole, not the invariant.
+
+    The invariant that actually matters — and that this test enforces — is
+    that no view implements its own auth *mechanism*. Forbidden in any
+    view file:
+
+    - **JWT / OAuth** of any kind (a parallel token/identity system).
+    - **Credential minting / hashing done here** instead of delegating to
+      Django: ``make_password``, ``set_unusable_password``,
+      ``jwt.encode``, ``secrets.token_*``, ``create_access_token``,
+      ``itsdangerous``. The only password path allowed is the delegation
+      in ``password.py`` (``ModelAdmin.change_password_form`` →
+      ``user.set_password`` via the admin's own form).
+
+    See ``ACCEPTANCE.md`` §4 S-5 for the criterion text and the ADR in
+    ``docs/agents/decisions.md`` recording the React-auth reconciliation.
     """
     views_dir = API_ROOT / "views"
-    auth_rx = re.compile(r"(login|logout|password|jwt|oauth)", re.IGNORECASE)
-    bad_names = [p for p in _files_under(views_dir) if auth_rx.search(p.stem)]
-    assert bad_names == [], f"Auth-flow view files found: {bad_names}"
+    jwt_oauth_rx = re.compile(r"\b(jwt|oauth)\b", re.IGNORECASE)
+    minting_rx = re.compile(
+        r"\b(make_password|set_unusable_password|jwt\.encode|"
+        r"secrets\.token_\w+|create_access_token|itsdangerous)\b"
+    )
+    offenders: list[str] = []
+    for path in _files_under(views_dir):
+        text = path.read_text(encoding="utf-8")
+        if jwt_oauth_rx.search(text) or minting_rx.search(text):
+            offenders.append(path.name)
+    assert offenders == [], f"Parallel-auth mechanism found in views: {offenders}"
 
 
 def test_s38_gitignore_blocks_secret_paths() -> None:

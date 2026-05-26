@@ -36,6 +36,7 @@ from django_admin_react.api.permissions import forbidden_response
 from django_admin_react.api.permissions import is_admin_user
 from django_admin_react.api.registry import get_admin_site
 from django_admin_react.api.registry import model_permissions
+from django_admin_react.api.registry import password_change_meta
 from django_admin_react.api.registry import resolve_model
 from django_admin_react.api.registry import save_options
 from django_admin_react.api.serializers import field_metadata
@@ -124,6 +125,7 @@ def _build_payload(
         "label": label_for(obj),
         "permissions": model_permissions(model_admin, request),
         "save_options": save_options(model_admin, request, obj),
+        "password_change": password_change_meta(model_admin, request, obj),
         "fieldsets": _fieldsets_payload(model_admin, request, obj, visible_names),
         "fields": _fields_payload(model, model_admin, obj, request, visible_names),
         "inlines": inlines_payload(model_admin, obj, request),
