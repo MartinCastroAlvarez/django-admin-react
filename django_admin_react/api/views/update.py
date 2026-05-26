@@ -164,7 +164,7 @@ class UpdateView(View):
             return bad_request("Malformed 'inlines' payload.")
 
         response = JsonResponse(
-            _build_payload(model, model_admin, instance, request),
+            _build_payload(model, model_admin, instance, request, admin_site),
             status=200,
         )
         response["Cache-Control"] = "no-store"

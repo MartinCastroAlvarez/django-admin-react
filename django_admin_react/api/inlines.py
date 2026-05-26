@@ -43,7 +43,10 @@ from django_admin_react.api.serializers import serialize_value
 
 
 def inlines_payload(
-    model_admin: ModelAdmin, parent: Model, request: HttpRequest
+    model_admin: ModelAdmin,
+    parent: Model,
+    request: HttpRequest,
+    admin_site: Any = None,
 ) -> list[dict[str, Any]]:
     """Build the ``inlines`` block of the detail response.
 
@@ -75,7 +78,7 @@ def inlines_payload(
     out: list[dict[str, Any]] = []
     inline_instances = _get_inline_instances(model_admin, parent, request)
     for inline in inline_instances:
-        entry = _spec_for_inline(inline, parent, request)
+        entry = _spec_for_inline(inline, parent, request, admin_site)
         if entry is not None:
             out.append(entry)
     return out
@@ -98,7 +101,10 @@ def _get_inline_instances(
 
 
 def _spec_for_inline(
-    inline: InlineModelAdmin, parent: Model, request: HttpRequest
+    inline: InlineModelAdmin,
+    parent: Model,
+    request: HttpRequest,
+    admin_site: Any = None,
 ) -> dict[str, Any] | None:
     """Build one inline's metadata + rows payload.
 
@@ -127,7 +133,7 @@ def _spec_for_inline(
 
     rows: list[dict[str, Any]] = []
     if can_view:
-        rows = _rows_for_inline(inline, parent, fk_name, visible_fields, request)
+        rows = _rows_for_inline(inline, parent, fk_name, visible_fields, request, admin_site)
 
     return {
         "name": fk_name + "_set" if not hasattr(child_model, fk_name + "_set") else fk_name,
@@ -243,6 +249,7 @@ def _rows_for_inline(
     fk_name: str,
     visible_fields: list[str],
     request: HttpRequest,
+    admin_site: Any = None,
 ) -> list[dict[str, Any]]:
     """Fetch + serialize the child rows attached to ``parent``."""
     try:
@@ -280,13 +287,15 @@ def _rows_for_inline(
                 continue
             value = getattr(obj, name, None)
             if isinstance(model_field, ForeignKey):
-                fields_payload[name] = serialize_fk_value(value)
+                fields_payload[name] = serialize_fk_value(value, admin_site=admin_site)
             elif isinstance(model_field, ManyToManyField):
                 try:
                     related = list(value.all()) if value is not None else []
                 except Exception:
                     related = []
-                fields_payload[name] = [serialize_fk_value(r) for r in related]
+                fields_payload[name] = [
+                    serialize_fk_value(r, admin_site=admin_site) for r in related
+                ]
             else:
                 fields_payload[name] = serialize_value(value, field=model_field)
         rows.append({"pk": obj.pk, "label": label_for(obj), "fields": fields_payload})

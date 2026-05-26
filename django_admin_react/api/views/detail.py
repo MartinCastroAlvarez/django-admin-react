@@ -98,7 +98,7 @@ class DetailView(View):
         if not model_admin.has_view_permission(request, obj):
             return forbidden_response(request)
 
-        payload = _build_payload(model, model_admin, obj, request)
+        payload = _build_payload(model, model_admin, obj, request, admin_site)
         response = JsonResponse(payload, status=200)
         # No-store: per-user, permission-gated payload must never be
         # cached by intermediate proxies or the browser. Extends
@@ -115,6 +115,7 @@ def _build_payload(
     model_admin: ModelAdmin,
     obj: Model,
     request: HttpRequest,
+    admin_site: Any,
 ) -> dict[str, Any]:
     """Compose the full detail response body (contract §4)."""
     visible_names = _visible_field_names(model_admin, request, obj)
@@ -127,8 +128,8 @@ def _build_payload(
         "save_options": save_options(model_admin, request, obj),
         "password_change": password_change_meta(model_admin, request, obj),
         "fieldsets": _fieldsets_payload(model_admin, request, obj, visible_names),
-        "fields": _fields_payload(model, model_admin, obj, request, visible_names),
-        "inlines": inlines_payload(model_admin, obj, request),
+        "fields": _fields_payload(model, model_admin, obj, request, visible_names, admin_site),
+        "inlines": inlines_payload(model_admin, obj, request, admin_site),
     }
 
 
@@ -195,6 +196,7 @@ def _fields_payload(
     obj: Model,
     request: HttpRequest,
     visible_names: list[str],
+    admin_site: Any,
 ) -> dict[str, dict[str, Any]]:
     """Build the per-field descriptor mapping (contract §4 ``fields``)."""
     readonly = set(model_admin.get_readonly_fields(request, obj) or ())
@@ -218,6 +220,7 @@ def _fields_payload(
             name=name,
             form=form,
             is_readonly=name in readonly,
+            admin_site=admin_site,
         )
     return out
 
@@ -230,6 +233,7 @@ def _descriptor_for(
     name: str,
     form: Any,
     is_readonly: bool,
+    admin_site: Any,
 ) -> dict[str, Any]:
     """Per-field descriptor for one ``visible_names`` entry."""
     model_field = safe_get_field(model, name)
@@ -237,7 +241,7 @@ def _descriptor_for(
         return _readonly_callable_descriptor(model_admin, model, obj, name)
 
     if isinstance(model_field, ForeignKey):
-        value: Any = serialize_fk_value(getattr(obj, name, None))
+        value: Any = serialize_fk_value(getattr(obj, name, None), admin_site=admin_site)
     elif isinstance(model_field, ManyToManyField):
         # M2M (Issue #55): serialise as a list of ``{id, label}``
         # envelopes. The related manager is iterable on a saved row;
@@ -247,7 +251,7 @@ def _descriptor_for(
             related = list(getattr(obj, name).all())
         except (ValueError, AttributeError):
             related = []
-        value = [serialize_fk_value(r) for r in related]
+        value = [serialize_fk_value(r, admin_site=admin_site) for r in related]
     elif isinstance(model_field, FileField):
         # FileField / ImageField (Issue #57): serialise as a
         # ``{name, url, size}`` envelope. ``None`` when the field is
