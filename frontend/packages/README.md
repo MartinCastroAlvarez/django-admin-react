@@ -11,7 +11,7 @@ depend on each other in this order (low → high):
                          mutations; the single data source for UI
 @dar/list, @dar/details, @dar/models
                        ← compose @dar/ui + @dar/data into pages
-@dar/shell             ← composes everything; builds with Vite
+@dar/web             ← composes everything; builds with Vite
 ```
 
 ## The data layering rule
@@ -23,7 +23,7 @@ There is **one** data path inside the SPA, enforced by lint in PR #6:
    ▲
    │  (only @dar/data may import @dar/api)
    ▼
-@dar/data  ◄── React Context ──►  @dar/list, @dar/details, @dar/models, @dar/shell
+@dar/data  ◄── React Context ──►  @dar/list, @dar/details, @dar/models, @dar/web
 ```
 
 UI packages (`list`, `details`, `models`, `shell`) **must not**
@@ -39,7 +39,7 @@ UI packages (`list`, `details`, `models`, `shell`) **must not**
 | `@dar/list`      | `@dar/ui`, `@dar/data`                         | `@dar/api`; model-specific names                                   |
 | `@dar/details`   | `@dar/ui`, `@dar/data`                         | `@dar/api`; model-specific names                                   |
 | `@dar/models`    | `@dar/ui`, `@dar/data`                         | `@dar/api`; model-specific names                                   |
-| `@dar/shell`     | `@dar/ui`, `@dar/data`, list/details/models + React Router | `@dar/api`; nothing model-specific                      |
+| `@dar/web`     | `@dar/ui`, `@dar/data`, list/details/models + React Router | `@dar/api`; nothing model-specific                      |
 
 Anything model-specific lives in `examples/` (consumer projects) or
 `tests/test_project/`.

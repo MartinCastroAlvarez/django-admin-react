@@ -1,0 +1,46 @@
+{
+  "name": "django-admin-react-monorepo",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Repo-root pnpm script runner for django-admin-react. The Python package is published under the distribution name django-admin-react; this package.json is never published.",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "workspaces": [
+    "frontend/packages/*",
+    "frontend/apps/*"
+  ],
+  "scripts": {
+    "dev:fintech": "EXAMPLE_APP=fintech bash scripts/dev.sh",
+    "dev:library": "EXAMPLE_APP=library bash scripts/dev.sh",
+    "dev:blog": "EXAMPLE_APP=blog bash scripts/dev.sh",
+    "dev:ecommerce": "EXAMPLE_APP=ecommerce bash scripts/dev.sh",
+    "dev:hr": "EXAMPLE_APP=hr bash scripts/dev.sh",
+    "dev": "EXAMPLE_APP= bash scripts/dev.sh",
+    "build:ruff-check": "poetry run ruff check django_admin_react tests",
+    "build:ruff-format": "poetry run ruff format --check django_admin_react tests",
+    "build:black": "poetry run black --check django_admin_react tests",
+    "build:isort": "poetry run isort --check-only django_admin_react tests",
+    "build:flake8": "poetry run flake8 django_admin_react tests",
+    "build:pylint": "poetry run pylint --errors-only django_admin_react tests",
+    "build:mypy": "poetry run mypy django_admin_react tests",
+    "build:bandit": "poetry run bandit -q -r django_admin_react",
+    "build:pytest": "poetry run pytest -q",
+    "build:prettier": "pnpm exec prettier --check \"frontend/packages/**/*.{ts,tsx,js,jsx,json,md}\"",
+    "build:typecheck": "pnpm --filter \"./frontend/packages/*\" -r typecheck",
+    "build:eslint": "pnpm --filter \"./frontend/packages/*\" -r lint",
+    "build:vite": "pnpm --filter @dar/web build",
+    "build:py-package": "poetry build",
+    "build:lint-py": "pnpm run build:ruff-check && pnpm run build:ruff-format && pnpm run build:black && pnpm run build:isort && pnpm run build:flake8 && pnpm run build:pylint && pnpm run build:mypy && pnpm run build:bandit",
+    "build:lint-fe": "pnpm run build:prettier && pnpm run build:typecheck && pnpm run build:eslint",
+    "build:lint": "pnpm run build:lint-py && pnpm run build:lint-fe",
+    "build:test": "pnpm run build:pytest",
+    "build:pre-package": "pnpm run build:vite",
+    "build": "pnpm run build:lint && pnpm run build:test && pnpm run build:pre-package && pnpm run build:py-package",
+    "deploy": "bash scripts/deploy.sh",
+    "lint": "pnpm run build:lint",
+    "test": "pnpm run build:pytest"
+  }
+}

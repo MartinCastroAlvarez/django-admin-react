@@ -6,7 +6,7 @@ in to git except this README and `.gitkeep`.
 The build step (run from `frontend/`):
 
 ```bash
-pnpm --filter @dar/shell build
+pnpm --filter @dar/web build
 poetry run dar-build-frontend  # (script lands in PR #6)
 ```
 

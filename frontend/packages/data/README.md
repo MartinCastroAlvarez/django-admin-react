@@ -8,7 +8,7 @@ instant first paint and debounced writes.
 ## Contract
 
 Every page-level package (`@dar/list`, `@dar/details`, `@dar/models`,
-`@dar/shell`) must read and write through `@dar/data` only. **No
+`@dar/web`) must read and write through `@dar/data` only. **No
 page-level package may import `@dar/api` directly.** This keeps the
 caching and persistence strategy in one place and makes the rest of
 the app side-effect free.
@@ -16,7 +16,7 @@ the app side-effect free.
 ```
         ┌──────────────────────────────────────────────┐
         │ pages: @dar/list, @dar/details, @dar/models  │
-        │ shell:  @dar/shell                           │
+        │ shell:  @dar/web                           │
         └─────────────────────▲────────────────────────┘
                               │ read/write context
                               │

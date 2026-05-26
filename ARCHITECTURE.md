@@ -285,7 +285,7 @@ single-purpose:
   from the field metadata returned by `@dar/data`.
 - **`@dar/models`** — Sidebar/registry navigation. Lists apps and models the
   current user can view, sourced from `@dar/data`.
-- **`@dar/shell`** — App entry point, router, auth boundary, layout, theme
+- **`@dar/web`** — App entry point, router, auth boundary, layout, theme
   bootstrap. This is what gets built into the Django package's `static/`.
 
 ### 5.2 Genericity rule
@@ -304,7 +304,7 @@ There is exactly one data path inside the SPA:
    ▲
    │ (only @dar/data may import @dar/api)
    ▼
-@dar/data  ◄── React Context ──►  @dar/list, @dar/details, @dar/models, @dar/shell
+@dar/data  ◄── React Context ──►  @dar/list, @dar/details, @dar/models, @dar/web
 ```
 
 - UI packages must read from `@dar/data` hooks (`useRegistry`,
@@ -331,7 +331,7 @@ There is exactly one data path inside the SPA:
 
 ### 5.4 Build & ship
 
-- `pnpm --filter @dar/shell build` produces a `dist/` with `index.html`,
+- `pnpm --filter @dar/web build` produces a `dist/` with `index.html`,
   hashed JS, and hashed CSS.
 - A `make build-frontend` (or `poetry run dar-build`) command copies the
   artifact into `django_admin_react/static/admin_react/` and

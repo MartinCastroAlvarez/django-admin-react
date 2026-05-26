@@ -142,7 +142,7 @@ For every PR:
       `has_*_permission` weakening, or "TODO add auth" left in the
       diff.
 - [ ] **[S]** No frontend imports of `@dar/api` from page packages
-      (`@dar/list`, `@dar/details`, `@dar/models`, `@dar/shell`).
+      (`@dar/list`, `@dar/details`, `@dar/models`, `@dar/web`).
 - [ ] **[S]** No model-specific names (`Account`, `Book`, …) in
       `django_admin_react/` or `frontend/packages/`.
 - [ ] No `# noqa` on a security-relevant rule.
