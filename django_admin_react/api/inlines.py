@@ -277,12 +277,16 @@ def _rows_for_inline(
                 try:
                     _f, _attr, value = lookup_field(name, obj, inline)
                 except Exception:
-                    value = getattr(obj, name, None)
-                    if callable(value):
-                        try:
+                    # Guard the whole fallback: a readonly property can
+                    # *raise* (not just be missing), and getattr's default
+                    # only swallows AttributeError, so any other exception
+                    # from the getter would 500 the parent detail (#275).
+                    try:
+                        value = getattr(obj, name, None)
+                        if callable(value):
                             value = value()
-                        except Exception:
-                            value = None
+                    except Exception:
+                        value = None
                 fields_payload[name] = serialize_value(value)
                 continue
             value = getattr(obj, name, None)
