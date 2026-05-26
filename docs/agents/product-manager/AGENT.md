@@ -137,6 +137,55 @@ Stale-PR escalation: any PR open > 72 h without all three role
 approvals get logged as PR review comments with the
 author's role and last activity timestamp.
 
+### 9.5.1 Same-login `--approve` is blocked — use `--comment` (added 2026-05-26)
+
+All agent sessions auth as a single GitHub user. GitHub blocks
+`Can not approve your own pull request` whenever the reviewer
+login matches the author login — which is every PR in this repo.
+
+**Pattern**: review PRs you didn't author via
+`gh pr review N --comment --body-file ...`, with the body
+declaring the role and carrying explicit verdict + checklist
+results. The autonomy-policy §5 counts the approval if the body
+substance + agent-id role differs from the Author's, regardless
+of GitHub's UI state.
+
+Body template:
+
+```
+**Reviewing as <role> (`<agent-id>`).** Author ≠ Reviewer rule applies — I am Reviewer.
+
+## <Lane>-angle verdict
+**✅ Approve** — <one-sentence reason>.
+
+## Checklist (pr-workflow.md §5.1)
+- [x] …
+```
+
+Mergers reading the PR look at comment bodies for the explicit
+verdict, not GitHub's `reviewDecision` field. This pattern is
+mirrored by the Architect and Security lanes — see PRs #79, #81,
+#83, #90, #95, #99, #100, #101 for examples of all three roles
+shipping `COMMENTED`-state reviews with verdict bodies.
+
+### 9.5.2 Periodic GitHub sweep cadence (added 2026-05-26)
+
+Per repo-owner directive: PM/UX must **periodically review
+everything on GitHub** to confirm no other agent is waiting on
+input. Not just respond to direct prompts.
+
+Sweep surfaces per session block:
+
+| Surface       | Look for                                                                        |
+| ------------- | ------------------------------------------------------------------------------- |
+| Open PRs      | New PRs requesting PM review; PRs touching PM-owned files; stale-base diffs.    |
+| Open Issues   | New user-agent-filed issues; Security follow-ups; uncommented PM-owned issues.  |
+| Discussions   | Unanswered Q&A; Announcements needing acknowledgment; Ideas threads.            |
+| Project board | `In Progress` cards without linked PRs > 1 sprint cycle.                        |
+
+When the sweep finds nothing actionable, that is the natural
+stopping point — say so explicitly rather than churning out filler.
+
 ## 10. When this role disagrees with engineering
 
 The brief grants this role veto over:
