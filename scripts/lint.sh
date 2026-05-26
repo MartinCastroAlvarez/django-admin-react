@@ -23,6 +23,27 @@ step() {
 }
 
 # --------------------------------------------------------------------------- #
+# pre-commit (secret + security hooks)                                        #
+# --------------------------------------------------------------------------- #
+# `.pre-commit-config.yaml` carries gitleaks + bandit + the custom
+# pygrep security hooks (no-objects-all-in-api, no-csrf-exempt,
+# no-user-has-perm, no-dar-api-from-pages, no-partial-tokens). A fresh
+# checkout has them INACTIVE until a contributor runs `pre-commit
+# install`, so run them here as part of the lint sweep too — that way
+# the security patterns are enforced even on a checkout where the git
+# hook was never installed. Graceful skip with a loud hint when the
+# `pre-commit` binary is absent rather than a hard failure (#144).
+if command -v pre-commit >/dev/null 2>&1; then
+  step "pre-commit run --all-files (gitleaks + bandit + security pygrep)"
+  pre-commit run --all-files
+else
+  step "pre-commit (SKIPPED — binary not found)"
+  echo "  ⚠ pre-commit is not installed; the gitleaks + security hooks did NOT run."
+  echo "    Install it:  pipx install pre-commit  (then: pre-commit install)"
+  echo "    Until then, the secret-scan + security pygrep gates are unenforced locally."
+fi
+
+# --------------------------------------------------------------------------- #
 # Python                                                                      #
 # --------------------------------------------------------------------------- #
 if [[ "$FE_ONLY" != "1" ]]; then
