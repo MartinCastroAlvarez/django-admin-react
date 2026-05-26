@@ -191,7 +191,8 @@ def _apply_one(
 
         return {"pk": pk, "ok": False, "error": _json.loads(body)["error"]}
 
-    form = model_admin.get_form(request, obj=obj)(
+    # change=True — bulk PATCH targets existing rows (see detail.py).
+    form = model_admin.get_form(request, obj=obj, change=True)(
         data=merged_initial_for_update(obj, writable, fields, model),
         files=None,
         instance=obj,

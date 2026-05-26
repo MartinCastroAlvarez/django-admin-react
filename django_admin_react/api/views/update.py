@@ -101,7 +101,11 @@ class UpdateView(View):
         if rejection is not None:
             return rejection
 
-        form = model_admin.get_form(request, obj=obj)(
+        # change=True — PATCH targets an existing object, so mirror
+        # Django's change view (see detail.py for the rationale; a
+        # consumer get_form override that branches on `change` must hit
+        # its change-form path, not the default factory).
+        form = model_admin.get_form(request, obj=obj, change=True)(
             data=merged_initial_for_update(obj, writable, payload, model),
             files=None,
             instance=obj,

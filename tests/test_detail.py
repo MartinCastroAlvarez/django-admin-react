@@ -18,6 +18,50 @@ def _url(pk: object) -> str:
     return f"/admin-react/api/v1/auth/group/{pk}/"
 
 
+@pytest.mark.django_db
+def test_detail_calls_get_form_with_change_true(superuser_client: Client) -> None:
+    """Regression: the detail view must call ``get_form(..., change=True)``
+    for an existing object — exactly how Django's change view invokes it.
+
+    A consumer ``get_form`` commonly branches on ``change`` and returns a
+    change-specific form whose ``Meta`` omits a *form-only* field (one
+    that isn't a model field, e.g. an ``admin_override`` toggle). If the
+    detail view calls ``get_form`` WITHOUT ``change=True``, that override
+    falls through to ``modelform_factory`` on the form-only field and
+    raises ``FieldError`` → 500. Observed in the laminr pilot on
+    ``package_reviews.UnderReviewStatus``.
+    """
+    from django import forms
+
+    g = Group.objects.create(name="example")
+    seen: dict[str, object] = {}
+    ok_form = forms.modelform_factory(Group, fields=["name"])
+
+    def branching_get_form(self, request, obj=None, change=False, **kwargs):  # noqa: ANN001
+        seen["change"] = change
+        if obj is not None and change:
+            return ok_form
+        # Mirror the consumer's failure mode: the non-change path would
+        # blow up building a form for a form-only field. Raise so the
+        # test fails loudly if the detail view didn't pass change=True.
+        raise AssertionError("get_form must be called with change=True for an existing object")
+
+    # Pin `get_fields` so Django's own get_fields → get_form(change=False)
+    # path is bypassed (laminr's admin sets `fields` via its @sections
+    # decorator, so only our explicit _fields_payload get_form call
+    # fires). This isolates the call path the fix targets.
+    with admin_override(
+        Group,
+        get_fields=lambda self, request, obj=None: ["name"],
+        get_fieldsets=lambda self, request, obj=None: [(None, {"fields": ["name"]})],
+        get_form=branching_get_form,
+    ):
+        response = superuser_client.get(_url(g.pk))
+
+    assert response.status_code == 200, response.content
+    assert seen.get("change") is True
+
+
 # --------------------------------------------------------------------------- #
 # Mandatory 8-row matrix                                                      #
 # --------------------------------------------------------------------------- #
