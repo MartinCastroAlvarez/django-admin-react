@@ -7,6 +7,26 @@ Repo-wide architectural decisions also link from
 
 ---
 
+## 2026-05-26 — Work-priority order codified
+
+Authoring session: `claude-pm-public-flip-2026-05-26`. Direct
+repo-owner instruction, captured in `AGENT.md` §3.1.
+
+PM/UX sessions work lanes in this order: **(1) open PRs → (2) open
+issues → (3) project board → (4) Discussions → (5) acceptance
+criteria.** Open PRs are first because a missing-lane review is the
+most expensive thing to leave on the floor — it blocks every chain
+of work behind it. ACCEPTANCE.md is last because it's a synthesis
+artifact that can only reflect what already merged.
+
+Within each lane, work the highest-impact item first (P0 → P1 → P2).
+The PR-review duty (§9.5) operates inside lane 1; the periodic sweep
+(§9.5.2) operates across all five lanes.
+
+— recorded in `AGENT.md` §3.1.
+
+---
+
 ## 2026-05-25 — Initial product baseline
 
 Authoring session: `claude-pm-ux-opus47`.
