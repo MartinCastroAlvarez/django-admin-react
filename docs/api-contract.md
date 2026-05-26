@@ -425,6 +425,60 @@ Rules:
 
 ---
 
+### 4.2 `inlines` (always-present array)
+
+When the `ModelAdmin` declares `inlines = [...]`, the detail response
+surfaces each `InlineModelAdmin` so the SPA can render the parent +
+children together. The key is always present (empty `[]` when no
+inlines declared).
+
+```json
+"inlines": [
+  {
+    "name": "comment_set",
+    "label": "comments",
+    "kind": "tabular",
+    "fk_name": "post",
+    "child": { "app_label": "blog", "model_name": "comment" },
+    "extra": 1,
+    "min_num": 0,
+    "max_num": null,
+    "can_view": true,
+    "can_add": true,
+    "can_change": true,
+    "can_delete": true,
+    "fields": [
+      { "name": "text",       "label": "Text",       "readonly": false },
+      { "name": "created_at", "label": "Created at", "readonly": true  }
+    ],
+    "rows": [
+      { "pk": 7, "label": "Comment object (7)",
+        "fields": { "text": "Hi!", "created_at": "2025-10-01T12:00:00+00:00" } }
+    ]
+  }
+]
+```
+
+- **`kind`** is `tabular` or `stacked`.
+- **`fk_name`** is the FK on the child that points back at the
+  parent (declared via `InlineModelAdmin.fk_name` or auto-detected
+  by scanning the child's FKs).
+- **`can_view` / `can_add` / `can_change` / `can_delete`** come from
+  the child's `has_*_permission(request, obj=parent)` — when the
+  child's `has_view_permission` is false, `rows` is `[]` (no
+  surface to a model the user can't see, per Rule 5).
+- **`fields`** is the inline's visible-fields set (`get_fields` minus
+  `get_exclude` minus the implicit parent FK minus the sensitive-name
+  denylist).
+- **`rows`** are the existing children gated by the inline's own
+  `get_queryset` (Rule 10).
+
+**Write support is deferred** to a follow-up — this v1 closes the read
+half so the SPA can show inlines today. The SPA can fall back to the
+child's own detail URL for edits in the interim.
+
+---
+
 ## 5. Write endpoints
 
 ### 5.1 `POST /api/v1/{app_label}/{model_name}/`

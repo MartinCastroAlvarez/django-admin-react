@@ -30,6 +30,7 @@ from django.views.generic import View
 
 from django.db.models import ManyToManyField
 
+from django_admin_react.api.inlines import inlines_payload
 from django_admin_react.api.permissions import forbidden_response
 from django_admin_react.api.permissions import is_admin_user
 from django_admin_react.api.registry import get_admin_site
@@ -122,6 +123,7 @@ def _build_payload(
         "permissions": model_permissions(model_admin, request),
         "fieldsets": _fieldsets_payload(model_admin, request, obj, visible_names),
         "fields": _fields_payload(model, model_admin, obj, request, visible_names),
+        "inlines": inlines_payload(model_admin, obj, request),
     }
 
 
