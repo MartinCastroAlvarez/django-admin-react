@@ -62,3 +62,7 @@ Thumbs.db
 # --- Local-only Claude / agent state ---
 .claude/local/
 forum/_drafts/
+
+# --- Screenshot capture (one-off DB + symlinked node_modules) ---
+.dar-screenshots.sqlite3
+scripts/node_modules
