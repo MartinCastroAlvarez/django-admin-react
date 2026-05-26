@@ -21,6 +21,8 @@ from django.views.generic import View
 
 from django_admin_react.api.panels import PanelView
 from django_admin_react.api.views.actions import ActionView
+from django_admin_react.api.views.auth import LoginView
+from django_admin_react.api.views.auth import LogoutView
 from django_admin_react.api.views.autocomplete import AutocompleteView
 from django_admin_react.api.views.bulk import BulkUpdateView
 from django_admin_react.api.views.create import CreateView
@@ -79,6 +81,13 @@ class InstanceView(View):
 urlpatterns: list = [
     path("registry/", RegistryView.as_view(), name="registry"),
     path("schema/", SchemaView.as_view(), name="schema"),
+    # Auth endpoints (React-login feature). Single-segment literals, so
+    # they cannot be shadowed by the two-segment ``<app>/<model>/``
+    # pattern below. ``login`` / ``logout`` are also added to
+    # ``RESERVED_APP_LABELS`` so a consumer app named ``login`` can't
+    # collide. CSRF is enforced by middleware (no ``@csrf_exempt``).
+    path("login/", LoginView.as_view(), name="login"),
+    path("logout/", LogoutView.as_view(), name="logout"),
     # Autocomplete is more specific than the collection / instance
     # patterns below — it must be listed FIRST so the literal
     # ``/autocomplete/`` segment isn't swallowed as a ``<str:pk>``.

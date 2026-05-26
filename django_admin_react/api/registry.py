@@ -236,7 +236,9 @@ def _app_verbose_name(app_label: str) -> str:
 # does) or, worse, surface a consumer model whose URL the SPA can
 # never reach. Treat the segment as reserved and 404 instead — same
 # posture as an unregistered model. Closes issue #93.
-RESERVED_APP_LABELS: frozenset[str] = frozenset({"registry", "schema", "session"})
+RESERVED_APP_LABELS: frozenset[str] = frozenset(
+    {"registry", "schema", "session", "login", "logout"}
+)
 
 
 def resolve_model(
