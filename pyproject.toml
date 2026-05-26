@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "django-admin-react"
-version = "0.1.0a1"
+version = "0.1.0a2"
 description = "A drop-in React single-page admin for Django, driven entirely by ModelAdmin."
 authors = ["django-admin-react contributors"]
 license = "MIT"
