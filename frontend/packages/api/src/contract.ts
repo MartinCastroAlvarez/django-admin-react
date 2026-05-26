@@ -152,6 +152,26 @@ export interface ActionRunResponse {
   redirect?: string;
 }
 
+/** One drill-down bucket at the current `date_hierarchy` level. */
+export interface DateHierarchyBucket {
+  /** Year (e.g. 2026), month (1-12), or day-of-month (1-31). */
+  value: number;
+  count: number;
+}
+
+/**
+ * `date_hierarchy` drill-down state (api-contract §3.1). Present only
+ * when the admin declares `date_hierarchy`. The SPA reads `active` for
+ * the current path and `buckets` for the next-level options; clicking a
+ * bucket sets `?year=`/`?month=`/`?day=` (hierarchical).
+ */
+export interface DateHierarchy {
+  field: string;
+  granularity_options: Array<'year' | 'month' | 'day'>;
+  active: { year: number | null; month: number | null; day: number | null };
+  buckets: DateHierarchyBucket[];
+}
+
 export interface ListResponse {
   app_label: string;
   /** Lowercase, no separators — used to build URLs. Do not display. */
@@ -169,6 +189,8 @@ export interface ListResponse {
   filters: FilterDescriptor[];
   /** Bulk actions from `ModelAdmin.actions`; always present. */
   actions: ActionDescriptor[];
+  /** Present only when the admin declares `date_hierarchy`. */
+  date_hierarchy?: DateHierarchy;
   page: number;
   page_size: number;
   total: number;
