@@ -134,6 +134,13 @@ owner only.
 
 ### 2.9 Extensibility UX
 
+The PM/UX contract for every row below is in
+[`docs/ux/extensibility.md`](docs/ux/extensibility.md). Rows
+E-6 / E-7 / E-8 / E-9 were promoted from §2.10 to §2.9 by the
+2026-05-26 extensibility directive (`forum/UX-DIRECTIVE-extensibility-contract.md`).
+Architect + Security co-sign before each row turns live (gates
+called out per row).
+
 | # | Criterion | How to verify |
 | - | --------- | ------------- |
 | E-1 | The extension surface is the `ModelAdmin` class; the SPA reflects the consumer's choices automatically. **No "register your model with the React app" step.** | Add a new `ModelAdmin` in an example; reload; appears. |
@@ -141,6 +148,17 @@ owner only.
 | E-3 | Marking a field readonly requires only adding it to `readonly_fields` / `get_readonly_fields`. The field renders as text. | Toggle on an example. |
 | E-4 | A `ModelAdmin` with `list_display = ("name", "balance", calc_total)` (mix of fields and callables) renders correctly without any client-side change. | Add to fintech `Account` example. |
 | E-5 | A consumer can rebrand colours via a single `tailwind.config.js` extension targeting CSS variables, without touching React source. | Rebuild against an extended config; verify. |
+| E-5a | Consumer can drop a `theme_css` file via `DJANGO_ADMIN_REACT["theme_css"]` and reload the SPA with no rebuild and no Django restart. (X-1, [`extensibility.md`](docs/ux/extensibility.md) §2.) | Edit the file, hit reload, see new colours. |
+| E-6a | Adding `actions = [my_action]` to an existing `ModelAdmin` causes the SPA list page to show the action dropdown + checkbox column, with no frontend change. (X-2.) | Add `make_published` to `Account`; reload list page. *Architect signed off (2026-05-26) on the action invocation endpoint shape.* |
+| E-6b | An action invocation respects `ModelAdmin.has_*_permission` server-side; the SPA does not even render the action if the user lacks the perm. (X-2.) | Toggle perm, observe. *Security signed off (2026-05-26) on the perm enforcement path; `len(pks) ≤ 1000` cap codified in the Security follow-up PR.* |
+| E-6c | An action whose `short_description` is set shows that label in the dropdown; an action that raises an exception renders a toast with the message and never crashes the SPA. (X-2.) | Two example actions covering both paths. |
+| E-7a | Adding `inlines = [BookInline]` to an existing `ModelAdmin` causes the SPA detail page to render the inline section, with no frontend change. (X-4.) | Add an inline to `Author`; open an author's detail. *Architect signed off (2026-05-26) on the inline payload shape.* |
+| E-7b | Saving parent + inline edits hits the server as one atomic PATCH; a validation error on a child rolls back the parent. (X-4.) | Force a child validation error; confirm parent unchanged. |
+| E-7c | A `StackedInline` renders as stacked, a `TabularInline` renders as tabular — the SPA respects the consumer's choice. (X-4.) | Two examples in `examples/library`. |
+| E-8a | Returning a non-empty `get_detail_blocks(request, obj)` from a `ModelAdmin` causes the SPA detail page to render the blocks in their declared `placement` slot. (X-5.) | Add a `stats` block; observe. *Architect signed off (2026-05-26) on the block schema enum.* |
+| E-8b | A block of an unrecognised `type` is silently dropped client-side and logged server-side. (X-5.) | Push a fake `type` in an example; observe console + server log. |
+| E-8c | A block whose server-side computation fails renders an `ErrorState` scoped to that block; sibling blocks keep rendering. (X-5.) | Force a block to raise; observe. |
+| E-9  | A `type: "html"` block runs through the configured server-side sanitiser (`nh3`) before reaching the SPA; `<script>` tags and inline event handlers never survive the round-trip. (X-6.) | Try to slip a `<script>` through; observe stripped output. **Security signed off (2026-05-26) conditional on C-1..C-10 in [`forum/REVIEW-security-pr-ux-extensibility-contract.md`](forum/REVIEW-security-pr-ux-extensibility-contract.md) §3.X-6.2** — the original `allow_unsafe_html=True` boolean was rejected, replaced with the constrained `trusted_html` block-type path (v1.x at earliest; PM/UX recommends no escape hatch in v1). E-9 stays **drafted, not live, until the Security follow-up PRs land** (sanitiser spec + implementation + CSP defaults). v0.1 ships with X-1..X-5 + X-7; X-6 is post-v0.1. |
 
 ### 2.10 v1 non-goals
 
@@ -148,14 +166,15 @@ These are **explicitly out of scope** for the v1 acceptance. Building
 any of them does not affect §2.x readiness, and shipping them on the
 side without an explicit v1.x roadmap entry is a regression.
 
-- Inlines (`InlineModelAdmin`).
-- Custom admin actions / bulk actions.
+> Edited 2026-05-26 by the extensibility directive: inlines, custom
+> admin actions, server-rendered HTML, and custom widgets moved into
+> §2.9 (rows E-6..E-9). The remaining items below stay out-of-scope.
+
 - Autocomplete / `raw_id_fields`.
-- Custom widgets beyond the v1 type vocabulary in [`docs/api-contract.md`](docs/api-contract.md) §4.
 - ManyToMany editing (read-only stub only).
 - React-side plugin / extension API.
-- Server-rendered HTML fallback pages.
-- Runtime Tailwind config swap (CSS-variable theming only).
+- Server-rendered HTML *fallback pages* (HTML lives inside the SPA's `html` block type, not as a server-rendered fallback page).
+- Runtime Tailwind config swap (CSS-variable theming only; `theme_css` per E-5a is opt-in but still file-based).
 - Multi-`AdminSite` support (single configured site in v1).
 - Internationalisation beyond `LANGUAGE_CODE` defaults (full i18n is v1.x).
 
