@@ -8,29 +8,14 @@ validation envelope, save_model is called (never ``obj.save()``).
 from __future__ import annotations
 
 import json
-from collections.abc import Iterator
-from contextlib import contextmanager
 
 import pytest
-from django.contrib import admin
 from django.contrib.auth.models import Group
 from django.test import Client
 
+from tests.helpers import admin_override
+
 COLLECTION_URL = "/admin-react/api/v1/auth/group/"
-
-
-@contextmanager
-def _admin_override(model_cls, **method_returns) -> Iterator[None]:
-    model_admin = admin.site._registry[model_cls]
-    originals = {}
-    try:
-        for name, fn in method_returns.items():
-            originals[name] = getattr(model_admin, name)
-            setattr(model_admin, name, fn.__get__(model_admin))
-        yield
-    finally:
-        for name, original in originals.items():
-            setattr(model_admin, name, original)
 
 
 def _post(client: Client, body: dict, url: str = COLLECTION_URL):
@@ -68,7 +53,7 @@ def test_superuser_can_create(superuser_client: Client) -> None:
 
 @pytest.mark.django_db
 def test_user_without_add_permission_forbidden(superuser_client: Client) -> None:
-    with _admin_override(Group, has_add_permission=lambda self, request: False):
+    with admin_override(Group, has_add_permission=lambda self, request: False):
         response = _post(superuser_client, {"name": "alpha"})
     assert response.status_code == 403
 
@@ -111,7 +96,7 @@ def test_csrf_missing_on_unsafe_method_forbidden() -> None:
 # --------------------------------------------------------------------------- #
 @pytest.mark.django_db
 def test_readonly_field_in_payload_is_bad_request(superuser_client: Client) -> None:
-    with _admin_override(Group, get_readonly_fields=lambda self, request, obj=None: ("name",)):
+    with admin_override(Group, get_readonly_fields=lambda self, request, obj=None: ("name",)):
         response = _post(superuser_client, {"name": "alpha"})
     assert response.status_code == 400
     body = response.json()
@@ -139,7 +124,7 @@ def test_save_model_is_called_not_obj_save(superuser_client: Client) -> None:
         obj.save()
         calls.append((obj.name, change))
 
-    with _admin_override(Group, save_model=fake_save_model):
+    with admin_override(Group, save_model=fake_save_model):
         response = _post(superuser_client, {"name": "beta"})
     assert response.status_code == 201
     assert calls == [("beta_via_admin", False)]

@@ -20,6 +20,7 @@ from typing import Any
 from django.contrib.admin.options import ModelAdmin
 from django.contrib.admin.utils import label_for_field
 from django.contrib.admin.utils import lookup_field
+from django.db.models import ForeignKey
 from django.db.models import Model
 from django.db.models import QuerySet
 from django.http import HttpRequest
@@ -33,18 +34,10 @@ from django_admin_react.api.permissions import is_admin_user
 from django_admin_react.api.registry import get_admin_site
 from django_admin_react.api.registry import model_permissions
 from django_admin_react.api.registry import resolve_model
+from django_admin_react.api.serializers import label_for
 from django_admin_react.api.serializers import serialize_fk_value
 from django_admin_react.api.serializers import serialize_value
-
-_NOT_FOUND_BODY: dict[str, dict[str, str]] = {
-    "error": {"code": "not_found", "message": "Not found."}
-}
-
-
-def _not_found_response() -> HttpResponse:
-    response = JsonResponse(_NOT_FOUND_BODY, status=404)
-    response["Cache-Control"] = "no-store"
-    return response
+from django_admin_react.api.writes import not_found_response
 
 
 class ListView(View):
@@ -66,7 +59,7 @@ class ListView(View):
 
         resolved = resolve_model(admin_site, request, app_label, model_name)
         if resolved is None:
-            return _not_found_response()
+            return not_found_response()
         model, model_admin = resolved
 
         queryset = model_admin.get_queryset(request)
@@ -203,37 +196,32 @@ def _row_for(
         except Exception:  # pragma: no cover — defensive
             value = ""
         fields[name] = _serialize_list_value(obj, name, value)
-    label = _label_for_obj(obj)
-    return {"pk": obj.pk, "label": label, "fields": fields}
+    return {"pk": obj.pk, "label": label_for(obj), "fields": fields}
 
 
 def _serialize_list_value(obj: Model, name: str, value: Any) -> Any:
-    """Serialize a single list_display cell.
+    """Serialize a single ``list_display`` cell.
 
-    FK fields go through the FK envelope; everything else goes through
-    the conservative serializer with ``str()`` fallback. Callable
-    list_display values (e.g., ``@admin.display``) are already resolved
-    by ``lookup_field`` into a plain value.
+    FK fields go through the FK envelope (``{"id", "label"}``);
+    everything else goes through the conservative serializer with
+    ``str()`` fallback. Callable list_display entries (e.g.
+    ``@admin.display``) have already been resolved to a plain value
+    by ``lookup_field``.
     """
-    from django.db.models import ForeignKey
-
-    if _has_model_field(obj, name):
-        model_field = obj._meta.get_field(name)
-        if isinstance(model_field, ForeignKey):
-            return serialize_fk_value(value)
+    model_field = _safe_get_field(obj, name)
+    if isinstance(model_field, ForeignKey):
+        return serialize_fk_value(value)
     return serialize_value(value)
 
 
-def _has_model_field(obj: Model, name: str) -> bool:
+def _safe_get_field(obj: Model, name: str):
+    """Return ``obj._meta.get_field(name)`` or ``None`` if not a real field.
+
+    ``list_display`` may contain method names or ``@admin.display``
+    properties; those have no model field. The caller (FK detection)
+    only cares about the case where a real field exists.
+    """
     try:
-        obj._meta.get_field(name)
+        return obj._meta.get_field(name)
     except Exception:
-        return False
-    return True
-
-
-def _label_for_obj(obj: Model) -> str:
-    try:
-        return str(obj)
-    except Exception:  # pragma: no cover — defensive
-        return f"<{obj.__class__.__name__}: {obj.pk}>"
+        return None

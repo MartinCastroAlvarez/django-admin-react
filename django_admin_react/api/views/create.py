@@ -1,4 +1,4 @@
-"""POST /api/v1/<app>/<model>/ — create endpoint.
+"""``POST /api/v1/<app>/<model>/`` — create endpoint.
 
 Wire contract: ``docs/api-contract.md`` §5.1.
 
@@ -6,8 +6,10 @@ Hard rules (`SECURITY.md` §3, `ACCEPTANCE.md` §3.1):
 
 - Rule 1:  Staff + ``AdminSite.has_permission`` gate.
 - Rule 3:  Model resolved through ``admin.site._registry`` (B-7).
-- Rule 6:  Writes go through ``ModelAdmin.get_form()`` (B-3).
-- Rule 12: Unknown / readonly / excluded keys → 400, never silent drop.
+- Rule 6:  Writes go through ``ModelAdmin.get_form()`` then
+           ``save_model(..., change=False)`` (B-3).
+- Rule 12: Unknown / readonly / excluded / sensitive payload keys → 400,
+           never a silent drop.
 - CSRF:    No ``@csrf_exempt`` — Django's middleware enforces.
 """
 
@@ -25,8 +27,10 @@ from django_admin_react.api.permissions import forbidden_response
 from django_admin_react.api.permissions import is_admin_user
 from django_admin_react.api.registry import get_admin_site
 from django_admin_react.api.registry import resolve_model
+from django_admin_react.api.serializers import label_for
 from django_admin_react.api.writes import coerce_fk_values
 from django_admin_react.api.writes import form_errors_to_envelope
+from django_admin_react.api.writes import not_found_response
 from django_admin_react.api.writes import parse_json_body
 from django_admin_react.api.writes import readonly_or_excluded_names
 from django_admin_react.api.writes import reject_forbidden_keys
@@ -53,7 +57,7 @@ class CreateView(View):
 
         resolved = resolve_model(admin_site, request, app_label, model_name)
         if resolved is None:
-            return _not_found()
+            return not_found_response()
         model, model_admin = resolved
 
         if not model_admin.has_add_permission(request):
@@ -70,10 +74,10 @@ class CreateView(View):
         if rejection is not None:
             return rejection
 
-        form_class = model_admin.get_form(request, obj=None)
-        data = coerce_fk_values(payload, model)
-        form = form_class(data=data, files=None)
-
+        form = model_admin.get_form(request, obj=None)(
+            data=coerce_fk_values(payload, model),
+            files=None,
+        )
         if not form.is_valid():
             return validation_failed(form_errors_to_envelope(form))
 
@@ -84,9 +88,12 @@ class CreateView(View):
 
         body = {
             "pk": instance.pk,
-            "label": _label_for(instance),
+            "label": label_for(instance),
             "redirect": _redirect_for(
-                request, model._meta.app_label, model._meta.model_name, instance.pk
+                request,
+                model._meta.app_label,
+                model._meta.model_name,
+                instance.pk,
             ),
         }
         response = JsonResponse(body, status=201)
@@ -94,28 +101,19 @@ class CreateView(View):
         return response
 
 
-def _not_found() -> HttpResponse:
-    response = JsonResponse(
-        {"error": {"code": "not_found", "message": "Not found."}},
-        status=404,
-    )
-    response["Cache-Control"] = "no-store"
-    return response
-
-
-def _label_for(obj: Any) -> str:
-    try:
-        return str(obj)
-    except Exception:  # pragma: no cover — defensive
-        return f"<{obj.__class__.__name__}: {obj.pk}>"
-
-
-def _redirect_for(request: HttpRequest, app_label: str, model_name: str, pk: Any) -> str:
+def _redirect_for(
+    request: HttpRequest,
+    app_label: str,
+    model_name: str,
+    pk: Any,
+) -> str:
     """Construct a SPA-relative redirect (``<mount>/<app>/<model>/<pk>/``).
 
-    The mount is reconstructed from the request path: the URL pattern is
-    fixed inside this package, so everything in front of ``api/v1/`` is
-    the consumer-chosen prefix (``ARCHITECTURE.md`` §4.5).
+    The mount is reconstructed from the request path. The URL pattern
+    is fixed inside this package, so everything in front of
+    ``api/v1/`` is the consumer-chosen prefix
+    (``ARCHITECTURE.md`` §4.5). Falls back to ``/`` if the pattern is
+    not present (should not happen — the URL router routed us here).
     """
     suffix = "api/v1/"
     path = request.path

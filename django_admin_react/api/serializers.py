@@ -71,7 +71,7 @@ def serialize_value(value: Any) -> Any:
     if isinstance(value, _dt.time):
         return value.isoformat()
     if isinstance(value, Model):
-        return {"id": value.pk, "label": _label_for(value)}
+        return {"id": value.pk, "label": label_for(value)}
     return str(value)
 
 
@@ -79,10 +79,21 @@ def serialize_fk_value(value: Model | None) -> dict[str, Any] | None:
     """Serialize an FK as ``{"id": pk, "label": str(obj)}`` or ``None``."""
     if value is None:
         return None
-    return {"id": value.pk, "label": _label_for(value)}
+    return {"id": value.pk, "label": label_for(value)}
 
 
-def _label_for(obj: Model) -> str:
+def label_for(obj: Model) -> str:
+    """Return a human-readable label for ``obj`` (``str(obj)`` with fallback).
+
+    Django models that raise on ``__str__`` (e.g. missing related rows
+    during a half-migrated state) would otherwise crash a list page.
+    The fallback ``<ClassName: pk>`` keeps the UI responsive and never
+    raises.
+
+    Centralized here so the views, the registry payload, and the
+    serializer label objects identically — a UX win and a single
+    point of defense for ``__str__`` exceptions.
+    """
     try:
         return str(obj)
     except Exception:
