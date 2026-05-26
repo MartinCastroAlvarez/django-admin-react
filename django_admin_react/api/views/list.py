@@ -75,7 +75,7 @@ class ListView(View):
         """
         admin_site = get_admin_site()
         if not is_admin_user(request, admin_site=admin_site):
-            return forbidden_response()
+            return forbidden_response(request)
 
         resolved = resolve_model(admin_site, request, app_label, model_name)
         if resolved is None:

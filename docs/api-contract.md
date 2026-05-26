@@ -376,13 +376,41 @@ v1 error codes:
 | 400  | `bad_request`           | Malformed JSON, unknown keys, write-to-readonly.  |
 | 400  | `validation_failed`     | Form `is_valid()` returned False.                 |
 | 401  | `not_authenticated`     | (Reserved; the package usually redirects to login.) |
-| 403  | `forbidden`             | CSRF or `has_*_permission` failure.               |
+| 403  | `forbidden`             | CSRF or `has_*_permission` failure on a request that was never authenticated, or an authenticated user that lacks the permission. |
+| 403  | `session_expired`       | Request carried a session cookie but the user resolved to anonymous. SPA should render a re-login modal and return the user to the same path after sign-in. |
 | 404  | `not_found`             | Model not in registry, or object not in queryset. |
 | 405  | `method_not_allowed`    | e.g., PUT or HEAD.                                |
 | 409  | `conflict`              | Reserved for optimistic concurrency in v1.x.      |
 | 500  | `internal_error`        | Anything else. Body never includes a stack trace. |
 
 Permission-related `403`s do **not** leak whether the object exists.
+
+### 6.1 Session-expiry contract
+
+The package detects a stale session by inspecting the request's
+session cookie *and* the resolved user:
+
+- **No session cookie** + anonymous user → `forbidden`. The SPA's
+  normal login-redirect path applies.
+- **Session cookie present** + anonymous user → `session_expired`.
+  The cookie was issued by a previous, now-invalid session (manual
+  logout from another device, server-side flush, session-age expiry,
+  …). The SPA shows a re-login modal whose post-login redirect
+  brings the user back to the same SPA URL.
+- **Session cookie present** + authenticated user (any permission
+  level) → `forbidden`. The user is signed in; they just lack the
+  required permission. SPA shows an inline access-denied message,
+  not a re-login modal.
+
+The detection is read-only: the package never touches the session
+backend to make this determination — it only inspects the cookie
+name (from `settings.SESSION_COOKIE_NAME`) and `request.user`.
+That keeps the check cheap and side-effect-free on every 403.
+
+Consumers using a non-default session backend (e.g. signed-cookie
+sessions, custom auth middleware) get the same envelope as long as
+their middleware populates `request.user` to an anonymous user when
+the session is invalid.
 
 ---
 
