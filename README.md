@@ -85,15 +85,22 @@ DJANGO_ADMIN_REACT = {
 
 | Login (the entry door)                            | Admin index (legacy)                                    |
 | ------------------------------------------------- | ------------------------------------------------------- |
-| ![Login](https://raw.githubusercontent.com/MartinCastroAlvarez/django-admin-react/main/docs/screenshots/01-admin-login.png)     | ![Admin index](https://raw.githubusercontent.com/MartinCastroAlvarez/django-admin-react/main/docs/screenshots/02-admin-index.png)     |
+| ![Login](docs/screenshots/01-admin-login.png)     | ![Admin index](docs/screenshots/02-admin-index.png)     |
 
 | Library / Authors — list view                                  | Library / Author — detail view                                  |
 | -------------------------------------------------------------- | --------------------------------------------------------------- |
-| ![Author list](https://raw.githubusercontent.com/MartinCastroAlvarez/django-admin-react/main/docs/screenshots/03-admin-library-list.png)     | ![Author detail](https://raw.githubusercontent.com/MartinCastroAlvarez/django-admin-react/main/docs/screenshots/05-admin-library-detail.png)  |
+| ![Author list](docs/screenshots/03-admin-library-list.png)     | ![Author detail](docs/screenshots/05-admin-library-detail.png)  |
 
 | Mobile (375 px)                                                       | API: `GET /api/v1/registry/` JSON                       |
 | --------------------------------------------------------------------- | ------------------------------------------------------- |
-| ![Mobile list](https://raw.githubusercontent.com/MartinCastroAlvarez/django-admin-react/main/docs/screenshots/04-admin-library-list-mobile.png)     | ![Registry JSON](https://raw.githubusercontent.com/MartinCastroAlvarez/django-admin-react/main/docs/screenshots/06-registry-api-json.png) |
+| ![Mobile list](docs/screenshots/04-admin-library-list-mobile.png)     | ![Registry JSON](docs/screenshots/06-registry-api-json.png) |
+
+> **Note for the next PyPI release:** these image refs need to be
+> absolute URLs (`https://raw.githubusercontent.com/.../main/docs/screenshots/...`)
+> for the PyPI page to render them. The switch happens in the
+> `0.1.0a2` release PR, which also requires the repo to be public so
+> `raw.githubusercontent.com` resolves without auth. Until then,
+> relative paths render correctly on the GitHub README.
 
 Every screenshot uses a deterministic synthetic seed (no real
 people, accounts, or PII).
