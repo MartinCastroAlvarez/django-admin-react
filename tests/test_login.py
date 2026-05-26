@@ -91,6 +91,18 @@ def test_next_param_round_trips(client: Client, make_user) -> None:
 
 
 @pytest.mark.django_db
+def test_authenticated_nonstaff_sees_form_not_loop(client: Client, make_user) -> None:
+    # Regression: with redirect_authenticated_user=True an authenticated
+    # non-staff user would loop login → SPA(403→login) → login → …
+    # The login page must simply RENDER (200) for them, not redirect.
+    make_user("peon", staff=False)
+    client.force_login(get_user_model().objects.get(username="peon"))
+    response = client.get(LOGIN_URL)
+    assert response.status_code == 200
+    assert 'name="password"' in response.content.decode()
+
+
+@pytest.mark.django_db
 def test_logout_returns_to_login(client: Client, make_user) -> None:
     make_user("boss", staff=True)
     client.post(LOGIN_URL, {"username": "boss", "password": "pw12345!"})

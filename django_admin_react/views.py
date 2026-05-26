@@ -135,7 +135,14 @@ class DarLoginView(LoginView):
 
     template_name = "admin_react/login.html"
     authentication_form = DarStaffAuthenticationForm
-    redirect_authenticated_user = True
+    # NOT ``redirect_authenticated_user = True``: an authenticated but
+    # non-staff user would be bounced login → SPA (which 403s non-staff
+    # and redirects back to login) → login → … in an infinite loop.
+    # Leaving it False makes the login page simply render for an
+    # already-authenticated user, breaking the loop. (Proper
+    # "you need staff access" messaging for that case is ACCEPTANCE
+    # §2.3 O-5 — a separate SpaIndexView follow-up.)
+    redirect_authenticated_user = False
 
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         """Add the brand title so the login page matches the SPA shell."""
