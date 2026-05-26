@@ -38,6 +38,13 @@ permission gate for the path; specific operations check their own
 
 ## 2. `GET /api/v1/registry/`
 
+The registry endpoint walks `admin_site.get_app_list(request)` to build
+the navigation tree. Django's default implementation groups by the real
+`app_label`; a consumer that subclasses `AdminSite` and overrides
+`get_app_list` to regroup or curate models (a very common pattern in
+production admins) has that grouping honoured by the SPA. This means
+the SPA navigation matches the HTML admin's navigation 1:1.
+
 Response 200:
 
 ```json
@@ -52,11 +59,14 @@ Response 200:
   },
   "apps": [
     {
+      "name": "Fintech",
       "app_label": "fintech",
       "verbose_name": "Fintech",
+      "is_group": false,
       "models": [
         {
           "app_label": "fintech",
+          "real_app_label": "fintech",
           "model_name": "account",
           "verbose_name": "account",
           "verbose_name_plural": "accounts",
@@ -74,14 +84,76 @@ Response 200:
 }
 ```
 
+When the consumer's `AdminSite.get_app_list` returns synthetic groups
+(e.g. `"Loans"` containing `packages.LoanPackage` + `documents.Document` +
+`statements.BankStatement`), the `apps[]` entry surfaces the group name
+and a synthetic `app_label`, while each model entry keeps the **real**
+`(real_app_label, model_name)` the SPA needs to construct API URLs:
+
+```json
+{
+  "apps": [
+    {
+      "name": "Loans",
+      "app_label": "loans",
+      "verbose_name": "Loans",
+      "is_group": true,
+      "models": [
+        {
+          "app_label": "loans",
+          "real_app_label": "packages",
+          "model_name": "loanpackage",
+          "object_name": "LoanPackage",
+          "verbose_name": "loan package",
+          "verbose_name_plural": "loan packages",
+          "permissions": { "view": true, "add": true, "change": true, "delete": false }
+        }
+      ]
+    }
+  ]
+}
+```
+
 Rules:
 
-- Only models registered in the configured admin site are included.
-- A model is included for a user only if
-  `ModelAdmin.has_module_permission(request)` and
-  `ModelAdmin.has_view_permission(request)` both return truthy.
+- The registry walks `admin_site.get_app_list(request)`. Consumer overrides
+  of that method are honoured as-is — both the grouping shape and the
+  per-model filtering Django already performs inside `get_app_list`
+  (`has_module_permission` + `has_view_permission`).
+- Only models registered in the configured admin site appear (Django's
+  `get_app_list` already enforces this — `_registry` is the only model
+  source).
+- `app_label` on an `apps[]` entry is the group's identifier — Django's
+  real app label when grouping is the default, or the consumer's synthetic
+  label when `get_app_list` was overridden.
+- `name` is the human-readable group name from `get_app_list` (Django's
+  default returns `apps.get_app_config(app_label).verbose_name`).
+- `is_group` is `true` when the entry's `app_label` does **not** appear in
+  `apps.get_app_configs()` — i.e., the consumer coined it inside their
+  `get_app_list` override. `false` otherwise. The SPA may use this hint to
+  style synthetic groups differently if it wants; functionally `is_group`
+  is informational.
+- Each model entry carries `real_app_label`, which is **always** the
+  `model._meta.app_label` of the underlying Django model. The SPA builds
+  list / detail URLs as `<mount>/api/v1/<real_app_label>/<model_name>/`.
+  In the default (no `get_app_list` override) case, `real_app_label ==`
+  the surrounding `app_label`; in synthetic-group cases they differ.
 - `mount` is the absolute URL path at which the package is mounted, so the
   SPA can construct links without hardcoding.
+
+Backwards compatibility: when the consumer has not overridden
+`get_app_list`, the only shape changes from earlier `0.1.0a*` versions are
+the new fields (`name`, `is_group`, `real_app_label`). All existing
+clients that key off `app_label` + `model_name` continue to work; the
+new fields are additive.
+
+Reserved-label note: synthetic groups whose `app_label` collides with
+`RESERVED_APP_LABELS` (`registry`, `schema`, `session`) are surfaced
+unchanged in the registry response but their per-model `real_app_label`
+must still resolve via the real Django app label. A consumer naming a
+synthetic group `session` does **not** collide with the optional session
+endpoints because the package's URL resolver matches `session/` to its
+own view before any `<app_label>/<model_name>/` pattern.
 
 ---
 
