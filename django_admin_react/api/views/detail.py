@@ -193,7 +193,16 @@ def _fields_payload(
 ) -> dict[str, dict[str, Any]]:
     """Build the per-field descriptor mapping (contract §4 ``fields``)."""
     readonly = set(model_admin.get_readonly_fields(request, obj) or ())
-    form = model_admin.get_form(request, obj=obj)(instance=obj)
+    # ``change=True`` — the detail view is always for an EXISTING object,
+    # so we mirror exactly how Django's change view calls ``get_form``
+    # (``ModelAdmin._changeform_view`` passes ``change=not add``). A
+    # consumer ``get_form`` override commonly branches on ``change`` to
+    # return a change-specific form (one whose Meta omits form-only
+    # fields like ``admin_override``). Calling without ``change=True``
+    # makes that override fall through to the default factory, which
+    # then raises ``FieldError`` on the form-only field and 500s the
+    # detail endpoint.
+    form = model_admin.get_form(request, obj=obj, change=True)(instance=obj)
 
     out: dict[str, dict[str, Any]] = {}
     for name in visible_names:
