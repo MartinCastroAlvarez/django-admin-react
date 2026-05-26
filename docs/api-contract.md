@@ -95,9 +95,10 @@ Query parameters:
 | `page`      | int     | `1`     | 1-indexed.                                                       |
 | `page_size` | int     | `DEFAULT_PAGE_SIZE` | Clamped to `MAX_PAGE_SIZE`.                          |
 | `ordering`  | string  | `""`    | Comma-separated list. Each entry must appear in `get_ordering(request)` or `ModelAdmin.ordering`. Unknown values are ignored. |
-| `year`      | int     | (none)  | Date-hierarchy drill-down. Active only when the `ModelAdmin` declares `date_hierarchy`. Garbage / out-of-range silently ignored. |
+| `year`      | int     | (none)  | Date-hierarchy drill-down. Active only when the `ModelAdmin` declares `date_hierarchy`. Garbage / out-of-range silently ignored. See [§3.1](#31-date_hierarchy-optional-block). |
 | `month`     | int     | (none)  | Requires `year` to be set; ignored otherwise.                    |
 | `day`       | int     | (none)  | Requires `year` and `month` to be set; ignored otherwise.        |
+| `<filter>`  | string  | (none)  | Admin-parity filter params (`?status__exact=…`, `?owner__id__exact=…`, `?<parameter_name>=…` for `SimpleListFilter`). See [§11](#11-list_filter-listsidebar-filters). Unknown keys silently ignored. |
 
 Response 200:
 
@@ -112,6 +113,11 @@ Response 200:
     { "name": "is_active","label": "Active",   "sortable": false }
   ],
   "search_fields": ["name", "iban"],
+  "filters": [
+    { "type": "boolean",    "name": "is_active",  "label": "Active" },
+    { "type": "foreignkey", "name": "owner",      "label": "Owner",
+      "to": { "app_label": "auth", "model_name": "user" } }
+  ],
   "page": 1,
   "page_size": 25,
   "total": 137,
@@ -137,8 +143,12 @@ Rules:
   can label the search box). Empty list means no search.
 - `results[*].fields` only contains values for `columns[*].name`.
 - `results[*].label` is `str(obj)` (the admin's display fallback).
-- `total` reflects the filtered queryset count **after** search **and
-  date-hierarchy drill-down** are applied.
+- `total` reflects the filtered queryset count **after** search, the
+  date-hierarchy drill-down (§3.1), and `list_filter` (§11) are all
+  applied.
+- `filters` is built from `ModelAdmin.get_list_filter(request)`. See
+  [§11](#11-list_filter-listsidebar-filters) for the closed
+  five-type vocabulary, URL grammar, and rules.
 
 ### 3.1 `date_hierarchy` (optional block)
 
@@ -184,6 +194,11 @@ Robustness: garbage query strings (`?year=abc`, `?year=-1`,
 bad query parameter. Out-of-range values are bounds-checked
 (`year ∈ [1, 9999]`, `month ∈ [1, 12]`, `day ∈ [1, 31]`) before
 reaching the ORM.
+
+Note: §3.1 (`date_hierarchy`) uses bare `?year=` / `?month=` / `?day=`
+params; §11 (`list_filter`) uses admin-parity `?<field>__year=` style.
+They coexist on the same response without conflict — different URL
+namespaces.
 
 ---
 
@@ -424,3 +439,92 @@ curl -H "Cookie: ..." -H "X-CSRFToken: ..." \
      -d '{"name":"Renamed"}' \
      https://example.com/admin-react/api/v1/fintech/account/17/
 ```
+
+---
+
+## 11. `list_filter` (list-sidebar filters)
+
+Closes consumer feedback issue
+[#56](https://github.com/MartinCastroAlvarez/django-admin-react/issues/56).
+
+The list endpoint surfaces `ModelAdmin.get_list_filter(request)` as the
+`filters: []` array (§3) so the SPA can render the legacy admin's
+left-sidebar filter bar. Filter application reuses Django's own
+`ChangeList` spec construction — never a parallel filter system, never
+hand-rolled `Q`-AND iteration (which would silently break every
+`SimpleListFilter` subclass a consumer ships).
+
+### 11.1 The five-type closed vocabulary
+
+Every descriptor in `filters[]` is one of five `type` values. The SPA
+only ever learns five layouts; anything Django returns outside this
+set is silently dropped.
+
+| `type`        | When                                                                                            | Extra fields |
+| ------------- | ----------------------------------------------------------------------------------------------- | ------------ |
+| `boolean`     | `BooleanField` filter.                                                                          | — |
+| `choices`     | Field with `choices=` declared on the model.                                                    | `choices: [{value, label}]` |
+| `foreignkey`  | `ForeignKey` / `OneToOneField` filter (or `RelatedFieldListFilter`).                            | `to: {app_label, model_name}` |
+| `date_range`  | `DateField` / `DateTimeField` filter.                                                           | — |
+| `custom`      | `SimpleListFilter` subclass.                                                                    | `lookups: [{value, label}]` |
+
+Every descriptor also carries `name` (a stable identifier the SPA uses)
+and `label` (the human-readable title from the admin or the model
+field's `verbose_name`).
+
+### 11.2 URL grammar — admin-parity
+
+Filter selections are passed as query params with the **same shape
+Django admin uses**. A URL copied from the legacy admin lands on the
+same row set in the SPA — operators can keep saved admin links
+working.
+
+| `type`        | Example query string                              |
+| ------------- | ------------------------------------------------- |
+| `boolean`     | `?is_active__exact=1` (1 = True, 0 = False)       |
+| `choices`     | `?status__exact=open`                             |
+| `foreignkey`  | `?owner__id__exact=42`                            |
+| `date_range`  | `?created_at__year=2026`, `?created_at__gte=2026-01-01`, `?created_at__lte=2026-12-31` |
+| `custom`      | `?<parameter_name>=<value>` (whatever the `SimpleListFilter` subclass declares) |
+
+Multiple filters in the same URL combine with **AND** — matching the
+admin's convention. Mutually exclusive options within one filter (e.g.
+choosing two values for the same `choices` filter) is **not** supported
+in v1.
+
+### 11.3 Robustness rules
+
+- **Unknown query params are silently ignored.** A hostile `?bogus=42`
+  is a no-op, never a 400. Django's filter machinery only consults the
+  params each spec declares in `expected_parameters()`.
+- **A misconfigured `list_filter` entry never 500s the endpoint.** A
+  non-existent field name, an exception in `SimpleListFilter.lookups()`,
+  or any other construction error is swallowed and the entry dropped
+  from the descriptor list. The valid entries on the same admin still
+  surface. (Rule 12 / S-11.)
+- **`SimpleListFilter.queryset(request, qs)` is honored.** This is the
+  architectural correctness rule that motivated using `ChangeList` spec
+  construction: a custom filter that joins through a related table,
+  applies a complex `Q`, or annotates the queryset will run exactly the
+  code the consumer wrote.
+
+### 11.4 Permission posture
+
+Filter application happens **after** `ModelAdmin.get_queryset(request)`
+has already narrowed the queryset to the rows this user may see (rule
+10). Filters can only narrow further — they never broaden, never
+escape `has_view_permission`. An attacker who crafts `?owner__id__exact=<other-user>`
+on a model they are not authorized to view does not get a permission
+oracle: the query simply returns the intersection of the allowed
+queryset and the filter, which may be empty.
+
+### 11.5 Out of scope for v1
+
+- Hierarchical filters / drill-down lists (see issue
+  [#62](https://github.com/MartinCastroAlvarez/django-admin-react/issues/62)
+  for `date_hierarchy`).
+- Saved filter sets per user.
+- Multi-value selection within a single filter (`?status__exact=open&status__exact=closed`
+  — accepted by Django via `?status__in=open,closed` in some setups,
+  but kept out of v1 to keep the SPA's rendering surface tight).
+

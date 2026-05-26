@@ -1,6 +1,6 @@
 """GET /api/v1/<app>/<model>/ — list view.
 
-Wire contract: ``docs/api-contract.md`` §3.
+Wire contract: ``docs/api-contract.md`` §3 and §11.
 
 Hard rules followed (`SECURITY.md` §3, `ACCEPTANCE.md` §3.1):
 
@@ -11,6 +11,8 @@ Hard rules followed (`SECURITY.md` §3, `ACCEPTANCE.md` §3.1):
            never ``Model.objects.all()`` (B-2).
 - Search:  ``ModelAdmin.get_search_results(request, qs, q)``.
 - Columns: ``ModelAdmin.get_list_display(request)``.
+- Filter: ``ModelAdmin.get_list_filter(request)`` → ``ChangeList``
+          spec construction (see ``api/filters.py``).
 """
 
 from __future__ import annotations
@@ -32,6 +34,8 @@ from django_admin_react import conf
 from django_admin_react.api.dates import apply_filter as _apply_date_filter
 from django_admin_react.api.dates import date_hierarchy_payload
 from django_admin_react.api.dates import parse_active as _parse_date_active
+from django_admin_react.api.filters import apply_filters
+from django_admin_react.api.filters import filters_payload
 from django_admin_react.api.permissions import forbidden_response
 from django_admin_react.api.permissions import is_admin_user
 from django_admin_react.api.registry import get_admin_site
@@ -93,10 +97,9 @@ class ListView(View):
         queryset_before_date_filter = queryset
         date_field = getattr(model_admin, "date_hierarchy", None)
         if date_field:
-            queryset = _apply_date_filter(
-                queryset, date_field, _parse_date_active(request)
-            )
+            queryset = _apply_date_filter(queryset, date_field, _parse_date_active(request))
 
+        queryset = apply_filters(queryset, model_admin, request)
         queryset = _apply_ordering(queryset, model_admin, request)
 
         total = queryset.count()
@@ -117,6 +120,7 @@ class ListView(View):
             "permissions": model_permissions(model_admin, request),
             "columns": columns,
             "search_fields": list(model_admin.search_fields or ()),
+            "filters": filters_payload(model_admin, request),
             "page": page,
             "page_size": page_size,
             "total": total,
