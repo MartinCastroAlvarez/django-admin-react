@@ -27,6 +27,7 @@ from typing import Any
 from django.contrib.admin.options import InlineModelAdmin
 from django.contrib.admin.options import ModelAdmin
 from django.contrib.admin.utils import label_for_field
+from django.contrib.admin.utils import lookup_field
 from django.db.models import ForeignKey
 from django.db.models import ManyToManyField
 from django.db.models import Model
@@ -251,6 +252,26 @@ def _rows_for_inline(
                 model_field = inline.model._meta.get_field(name)
             except Exception:
                 model_field = None
+            if model_field is None:
+                # No underlying model field: the inline lists a display
+                # method / callable (the `@admin.display def x(self, obj)`
+                # pattern, called with `obj`). Resolve via Django's own
+                # `lookup_field` (admin-first) so methods defined on the
+                # *inline admin* resolve, not just methods on the model
+                # instance. A naive `getattr(obj, name)` misses admin
+                # methods and returns None — the inline-row "—" bug
+                # (mirrors the detail-view fix in #232).
+                try:
+                    _f, _attr, value = lookup_field(name, obj, inline)
+                except Exception:
+                    value = getattr(obj, name, None)
+                    if callable(value):
+                        try:
+                            value = value()
+                        except Exception:
+                            value = None
+                fields_payload[name] = serialize_value(value)
+                continue
             value = getattr(obj, name, None)
             if isinstance(model_field, ForeignKey):
                 fields_payload[name] = serialize_fk_value(value)

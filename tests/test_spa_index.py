@@ -280,3 +280,18 @@ def test_shell_links_pwa_manifest(superuser_client: Client) -> None:
     assert 'rel="manifest"' in body
     assert 'href="/admin-react/web.manifest"' in body
     assert 'name="theme-color"' in body
+
+
+@pytest.mark.django_db
+def test_shell_does_not_leak_raw_template_syntax(superuser_client: Client) -> None:
+    """The rendered shell must never contain raw template syntax.
+
+    Regression: a multi-line ``{# ... #}`` comment in the template leaked
+    verbatim into the page head — the hash-comment form is single-line
+    only, so Django renders a multi-line one as literal text. Block-tag
+    ``{% comment %}`` comments are stripped; assert no comment/tag/var
+    delimiters survive into the served HTML.
+    """
+    body = superuser_client.get(ROOT_URL).content.decode("utf-8")
+    for token in ("{#", "#}", "{%", "%}", "{{", "}}"):
+        assert token not in body, f"raw template syntax {token!r} leaked into the shell"
