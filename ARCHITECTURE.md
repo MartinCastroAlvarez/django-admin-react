@@ -25,11 +25,13 @@ source of truth** for permissions, querysets, forms, and field configuration.
    is served (e.g., `/admin/`, `/admin-react/`, `/staff/`).
 6. **Open-source, PyPI-publishable**, security-audited.
 
-Explicit non-goals for v1: inlines, custom admin actions, bulk actions,
-custom admin widgets, complex filters, autocomplete fields, `raw_id_fields`,
-and a React-side extension API. The
+Explicit non-goals for v1: custom admin widgets (a backend↔frontend
+widget-registry contract) and runtime theme/config swapping. Several
+features deferred in early drafts — inlines, custom & bulk admin actions,
+autocomplete / `raw_id_fields`, `ManyToMany`, and a React-side panel
+extension surface — have since shipped; §8 carries the current split. The
 [Project board](https://github.com/users/MartinCastroAlvarez/projects/3)
-tracks each deferred item by Phase.
+tracks remaining work by Phase.
 
 ---
 
@@ -186,9 +188,12 @@ Conservative, list in [`SECURITY.md`](SECURITY.md) and codified in
   `Decimal` (as string), `UUID` (as string), `date` (ISO), `datetime` (ISO
   with timezone).
 - `ForeignKey` → `{ "id": ..., "label": str(obj) }`.
-- `ManyToMany` — out of scope for v1; surface as `null` with a flag
-  `"unsupported": true`. (Decision logged in
-  `docs/agents/decisions.md`.)
+- `ManyToMany` → list of `{ "id": ..., "label": str(obj) }` envelopes
+  (Issue #55; supersedes the earlier "unsupported" decision logged in
+  `docs/agents/decisions.md`).
+- `FileField` / `ImageField` → `{ "name", "url", "size" }`; `url` defers
+  to the consumer's storage backend so signed-URL backends work
+  unchanged (Issue #57).
 - Callable `list_display` values are invoked with the object and serialized
   via `str(value)`.
 - Anything else falls back to `str(value)` rather than crashing.
@@ -387,20 +392,37 @@ the gate.
 
 ---
 
-## 8. Out-of-scope (and why)
+## 8. Scope: shipped vs. still out-of-scope
 
-- **Inlines** — require a recursive form contract. Deferred to v1.x.
-- **Custom admin actions** — need a safe whitelist mechanism. Deferred.
-- **Bulk actions** — partially overlaps with custom actions. Deferred.
+Several features were deferred in early drafts and have since shipped.
+This section tracks the *current* split — not the original plan — so the
+contract stays true as v1 nears.
+
+**Shipped (now in v1 scope):**
+
+- **Inlines** — read + write via a formset round-trip, with per-row
+  permission gates (`api/inlines.py`, `api/inlines_write.py`; Issue #54).
+- **Custom admin actions** — run through `ModelAdmin.get_actions` behind
+  a per-action permission gate (`api/views/actions.py`; Issue #101).
+- **Bulk actions** — the same action surface applied to a selection
+  (Issue #103).
+- **Autocomplete / `raw_id`** — backed by `ModelAdmin.get_search_results`
+  (`api/views/autocomplete.py`; Issue #97).
+- **`ManyToMany`** — serialized as `{id, label}` envelopes (Issue #55),
+  superseding the original "unsupported" stub.
+- **React panel extension surface** — a metadata-driven panel hook
+  (`api/panels.py`; Issue #111). Extensions are still *declared* on the
+  Django side; the package never asks consumers to write React.
+
+**Still out of scope for v1:**
+
 - **Custom widgets** — would force a widget-registry contract between
-  backend and frontend. Deferred.
-- **Autocomplete / raw_id** — depend on cross-model permissions and
-  efficient search; deferred until basic flows are stable.
-- **A React-side extension API** — explicitly avoided: extending should
-  always happen by editing `ModelAdmin` on the Django side. If users need
-  React extensibility later, we will design the contract carefully rather
-  than ad-hoc.
+  backend and frontend. Deferred to v1.x.
+- **Runtime theme / config swapping** — theming is build-time via
+  Tailwind / CSS variables (§5.3); live swap is v1.x.
+- **Concurrent-edit conflict resolution** — owned by the `@dar/data`
+  debounce buffer in v1.x (§5.2a).
 
 See the
 [Project board](https://github.com/users/MartinCastroAlvarez/projects/3)
-for the sequencing of in-scope work.
+for the sequencing of remaining work.
