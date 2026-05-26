@@ -141,6 +141,41 @@ def _app_verbose_name(app_label: str) -> str:
     try:
         return str(apps.get_app_config(app_label).verbose_name)
     except LookupError:
-        # Model whose app isn't installed should never reach us, but
-        # don't crash if it does.
         return app_label
+
+
+def resolve_model(
+    admin_site: AdminSite,
+    request: HttpRequest,
+    app_label: str,
+    model_name: str,
+) -> tuple[type[Model], ModelAdmin] | None:
+    """Look up a registered ``(model, model_admin)`` by client-given strings.
+
+    Client-provided ``app_label`` and ``model_name`` are **never** trusted.
+    They are resolved through ``AdminSite._registry`` (rule 3 in
+    ``SECURITY.md`` §3) and the resolution is gated by
+    ``has_module_permission`` and ``has_view_permission``.
+
+    Returns ``None`` if the model is not registered or the request is not
+    permitted to view it. The caller must convert that to a 404, per
+    ``ACCEPTANCE.md`` §3.1 B-7 and §4.3 S-11/S-12.
+    """
+    if not isinstance(app_label, str) or not isinstance(model_name, str):
+        return None
+    target = (app_label.lower(), model_name.lower())
+    for model, model_admin in admin_site._registry.items():
+        meta = model._meta
+        if (meta.app_label, meta.model_name) != target:
+            continue
+        if not model_admin.has_module_permission(request):
+            return None
+        if not model_admin.has_view_permission(request):
+            return None
+        return model, model_admin
+    return None
+
+
+def model_permissions(model_admin: ModelAdmin, request: HttpRequest) -> dict[str, bool]:
+    """Public alias for the four ``has_*_permission`` booleans."""
+    return _model_permissions(model_admin, request)
