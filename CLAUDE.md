@@ -19,22 +19,27 @@ Read these files, in order, every session:
 
 1. [`CLAUDE.md`](CLAUDE.md) — this file. Check for updates since last
    session.
-2. [`PLAN.md`](PLAN.md) — current PR sequence, scope, assumptions.
-3. [`ARCHITECTURE.md`](ARCHITECTURE.md) — the architectural contract.
-4. [`SECURITY.md`](SECURITY.md) — non-negotiable security rules.
-5. [`docs/agents/decisions.md`](docs/agents/decisions.md) — accepted
+2. **Live status: the [GitHub Projects board](https://github.com/users/MartinCastroAlvarez/projects/3)**
+   ("django-admin-react roadmap"). What's in flight, what's blocked,
+   what's planned, by Priority / Area / Phase. Claim a card before
+   opening a PR. See `docs/agents/decisions.md` (2026-05-26 entry).
+3. [`PLAN.md`](PLAN.md) — current PR sequence, scope, assumptions.
+   The narrative *why*; the board carries the live *what*.
+4. [`ARCHITECTURE.md`](ARCHITECTURE.md) — the architectural contract.
+5. [`SECURITY.md`](SECURITY.md) — non-negotiable security rules.
+6. [`docs/agents/decisions.md`](docs/agents/decisions.md) — accepted
    decisions.
-6. [`docs/agents/open-questions.md`](docs/agents/open-questions.md) —
+7. [`docs/agents/open-questions.md`](docs/agents/open-questions.md) —
    open questions; do not re-decide things already answered in
    `decisions.md`.
-7. [`docs/agents/changelog.md`](docs/agents/changelog.md) — what other
+8. [`docs/agents/changelog.md`](docs/agents/changelog.md) — what other
    agents have shipped recently.
-8. [`docs/agents/pr-workflow.md`](docs/agents/pr-workflow.md) — the
+9. [`docs/agents/pr-workflow.md`](docs/agents/pr-workflow.md) — the
    author/reviewer/merger protocol for autonomous PR ops. **Pick your
    role for the session before any tool call.**
-9. [`docs/agents/autonomy-policy.md`](docs/agents/autonomy-policy.md)
-   — tier rules and kill switches. Before merging anything, classify
-   the PR by its highest-tier touched file.
+10. [`docs/agents/autonomy-policy.md`](docs/agents/autonomy-policy.md)
+    — tier rules and kill switches. Before merging anything, classify
+    the PR by its highest-tier touched file.
 
 If your session's task touches a specific folder, also read that folder's
 `README.md`.
