@@ -35,6 +35,42 @@ pnpm -r test
 We use **Poetry** for Python and **pnpm** for JavaScript. Do not mix in
 `pip install`, `npm`, or `yarn`.
 
+### 2.1 Pre-commit hooks (recommended)
+
+The repo ships a `.pre-commit-config.yaml` that runs `gitleaks` (secret
+scan), `ruff`, `black`, `isort`, `bandit`, and a handful of local
+`pygrep` rules that enforce `ACCEPTANCE.md` §4 invariants (no partial
+token redactions, no `Model.objects.all/filter` in
+`django_admin_react/api/`, no `@csrf_exempt` anywhere, no `user.has_perm`
+in api code, no `@dar/api` imports from page packages).
+
+To enable:
+
+```bash
+poetry run pip install pre-commit
+pre-commit install
+```
+
+Every `git commit` now runs these hooks. If anything `[BLOCK]`s your
+commit, fix the violation rather than disabling the hook. (See
+`agents/security-expert/REVIEW_CHECKLIST.md` for the rationale.)
+
+If you skip pre-commit locally, `scripts/lint.sh` still runs the same
+tools when the Merger gates your PR.
+
+### 2.2 Dependency audit (release prep)
+
+Run before any release tag:
+
+```bash
+./scripts/audit-deps.sh                 # default --fail-on=high
+./scripts/audit-deps.sh --fail-on=critical   # release mode
+```
+
+This calls `poetry run pip-audit` and `pnpm audit --prod`. Any finding
+at or above the threshold blocks the release per `ACCEPTANCE.md`
+§4.9 S-44 / S-45.
+
 ## 3. Branching and PRs
 
 - Branch from `main`.
