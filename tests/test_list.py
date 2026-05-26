@@ -8,32 +8,16 @@ not leaked.
 
 from __future__ import annotations
 
-from collections.abc import Iterator
-from contextlib import contextmanager
-
 import pytest
-from django.contrib import admin
 from django.contrib.auth.models import Group
 from django.test import Client
+
+from tests.helpers import admin_override
 
 # Use auth.Group as the test target — it's always registered in admin,
 # has a name field for list_display tests, and has search_fields.
 
 LIST_URL = "/admin-react/api/v1/auth/group/"
-
-
-@contextmanager
-def _admin_override(model_cls, **method_returns) -> Iterator[None]:
-    model_admin = admin.site._registry[model_cls]
-    originals = {}
-    try:
-        for name, fn in method_returns.items():
-            originals[name] = getattr(model_admin, name)
-            setattr(model_admin, name, fn.__get__(model_admin))
-        yield
-    finally:
-        for name, original in originals.items():
-            setattr(model_admin, name, original)
 
 
 # --------------------------------------------------------------------------- #
@@ -71,7 +55,7 @@ def test_superuser_with_permission_succeeds(superuser_client: Client) -> None:
 
 @pytest.mark.django_db
 def test_user_without_view_permission_forbidden(superuser_client: Client) -> None:
-    with _admin_override(Group, has_view_permission=lambda self, request, obj=None: False):
+    with admin_override(Group, has_view_permission=lambda self, request, obj=None: False):
         response = superuser_client.get(LIST_URL)
     # resolve_model returns None when has_view_permission is False, so a 404
     # is acceptable per the deny-by-default rule (S-11/S-12).
@@ -144,7 +128,7 @@ def test_starts_from_admin_get_queryset(superuser_client: Client) -> None:
     and confirming the response contains no rows even though objects exist.
     """
     Group.objects.create(name="hidden")
-    with _admin_override(
+    with admin_override(
         Group,
         get_queryset=lambda self, request: Group.objects.none(),
     ):

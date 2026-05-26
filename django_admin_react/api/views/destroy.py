@@ -1,12 +1,11 @@
-"""DELETE /api/v1/<app>/<model>/<pk>/ — delete endpoint.
+"""``DELETE /api/v1/<app>/<model>/<pk>/`` — destroy endpoint.
 
 Wire contract: ``docs/api-contract.md`` §5.3.
 
 Hard rules (`SECURITY.md` §3, `ACCEPTANCE.md` §3.1):
 
 - Rule 3:  Model resolved through ``admin.site._registry`` (B-7).
-- Rule 5:  ``has_view_permission(request, obj)`` per-object gate (to
-           avoid revealing existence).
+- Rule 5:  ``has_delete_permission(request, obj)`` per-object gate.
 - Rule 7:  Calls ``ModelAdmin.delete_model(request, obj)`` — **never**
            ``obj.delete()`` directly (B-4).
 - Rule 10: Queryset starts at ``ModelAdmin.get_queryset(request)`` —
@@ -21,21 +20,24 @@ from typing import Any
 from django.db import transaction
 from django.http import HttpRequest
 from django.http import HttpResponse
-from django.http import JsonResponse
 from django.views.generic import View
 
 from django_admin_react.api.permissions import forbidden_response
 from django_admin_react.api.permissions import is_admin_user
 from django_admin_react.api.registry import get_admin_site
 from django_admin_react.api.registry import resolve_model
+from django_admin_react.api.writes import load_object_or_none
+from django_admin_react.api.writes import not_found_response
 
 
 class DestroyView(View):
     """``DELETE /api/v1/<app_label>/<model_name>/<pk>/``.
 
-    Class name follows DRF's verb convention (``destroy``) to avoid
-    overloading ``delete`` on the module surface; the HTTP method
-    handler below must still be named ``delete`` per Django's CBV
+    The class name follows DRF's verb convention (``destroy``) to
+    avoid overloading the module surface — ``del`` is a Python
+    keyword and ``.delete()`` is a Django QuerySet/Model method, so
+    a *class* named ``DeleteView`` muddies imports. The HTTP-method
+    handler must still be named ``delete`` per Django's CBV
     contract.
     """
 
@@ -56,15 +58,12 @@ class DestroyView(View):
 
         resolved = resolve_model(admin_site, request, app_label, model_name)
         if resolved is None:
-            return _not_found()
+            return not_found_response()
         model, model_admin = resolved
 
-        try:
-            obj = model_admin.get_queryset(request).get(pk=pk)
-        except model.DoesNotExist:
-            return _not_found()
-        except (ValueError, TypeError):
-            return _not_found()
+        obj = load_object_or_none(model, model_admin, request, pk)
+        if obj is None:
+            return not_found_response()
 
         if not model_admin.has_delete_permission(request, obj):
             return forbidden_response()
@@ -75,12 +74,3 @@ class DestroyView(View):
         response = HttpResponse(status=204)
         response["Cache-Control"] = "no-store"
         return response
-
-
-def _not_found() -> HttpResponse:
-    response = JsonResponse(
-        {"error": {"code": "not_found", "message": "Not found."}},
-        status=404,
-    )
-    response["Cache-Control"] = "no-store"
-    return response

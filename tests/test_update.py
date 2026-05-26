@@ -8,31 +8,16 @@ bogus pk, save_model called with change=True.
 from __future__ import annotations
 
 import json
-from collections.abc import Iterator
-from contextlib import contextmanager
 
 import pytest
-from django.contrib import admin
 from django.contrib.auth.models import Group
 from django.test import Client
+
+from tests.helpers import admin_override
 
 
 def _url(pk: object) -> str:
     return f"/admin-react/api/v1/auth/group/{pk}/"
-
-
-@contextmanager
-def _admin_override(model_cls, **method_returns) -> Iterator[None]:
-    model_admin = admin.site._registry[model_cls]
-    originals = {}
-    try:
-        for name, fn in method_returns.items():
-            originals[name] = getattr(model_admin, name)
-            setattr(model_admin, name, fn.__get__(model_admin))
-        yield
-    finally:
-        for name, original in originals.items():
-            setattr(model_admin, name, original)
 
 
 def _patch(client: Client, pk: object, body: dict):
@@ -73,7 +58,7 @@ def test_superuser_can_patch(superuser_client: Client) -> None:
 @pytest.mark.django_db
 def test_user_without_change_permission_forbidden(superuser_client: Client) -> None:
     g = Group.objects.create(name="example")
-    with _admin_override(Group, has_change_permission=lambda self, request, obj=None: False):
+    with admin_override(Group, has_change_permission=lambda self, request, obj=None: False):
         response = _patch(superuser_client, g.pk, {"name": "x"})
     assert response.status_code == 403
 
@@ -133,7 +118,7 @@ def test_unknown_field_is_bad_request(superuser_client: Client) -> None:
 @pytest.mark.django_db
 def test_readonly_field_in_payload_is_bad_request(superuser_client: Client) -> None:
     g = Group.objects.create(name="example")
-    with _admin_override(Group, get_readonly_fields=lambda self, request, obj=None: ("name",)):
+    with admin_override(Group, get_readonly_fields=lambda self, request, obj=None: ("name",)):
         response = _patch(superuser_client, g.pk, {"name": "renamed"})
     assert response.status_code == 400
     assert "read-only" in response.json()["error"]["message"]
@@ -152,7 +137,7 @@ def test_partial_update_preserves_unspecified_fields(superuser_client: Client) -
 @pytest.mark.django_db
 def test_starts_from_admin_get_queryset(superuser_client: Client) -> None:
     g = Group.objects.create(name="hidden")
-    with _admin_override(Group, get_queryset=lambda self, request: Group.objects.none()):
+    with admin_override(Group, get_queryset=lambda self, request: Group.objects.none()):
         response = _patch(superuser_client, g.pk, {"name": "x"})
     assert response.status_code == 404
 
@@ -166,7 +151,7 @@ def test_save_model_is_called_with_change_true(superuser_client: Client) -> None
         calls.append(change)
         obj.save()
 
-    with _admin_override(Group, save_model=fake_save_model):
+    with admin_override(Group, save_model=fake_save_model):
         response = _patch(superuser_client, g.pk, {"name": "renamed"})
     assert response.status_code == 200
     assert calls == [True]

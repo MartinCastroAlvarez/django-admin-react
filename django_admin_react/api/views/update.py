@@ -1,4 +1,4 @@
-"""PATCH /api/v1/<app>/<model>/<pk>/ — partial update endpoint.
+"""``PATCH /api/v1/<app>/<model>/<pk>/`` — partial update endpoint.
 
 Wire contract: ``docs/api-contract.md`` §5.2.
 
@@ -30,7 +30,9 @@ from django_admin_react.api.registry import get_admin_site
 from django_admin_react.api.registry import resolve_model
 from django_admin_react.api.views.detail import _build_payload
 from django_admin_react.api.writes import form_errors_to_envelope
+from django_admin_react.api.writes import load_object_or_none
 from django_admin_react.api.writes import merged_initial_for_update
+from django_admin_react.api.writes import not_found_response
 from django_admin_react.api.writes import parse_json_body
 from django_admin_react.api.writes import readonly_or_excluded_names
 from django_admin_react.api.writes import reject_forbidden_keys
@@ -58,15 +60,12 @@ class UpdateView(View):
 
         resolved = resolve_model(admin_site, request, app_label, model_name)
         if resolved is None:
-            return _not_found()
+            return not_found_response()
         model, model_admin = resolved
 
-        try:
-            obj = model_admin.get_queryset(request).get(pk=pk)
-        except model.DoesNotExist:
-            return _not_found()
-        except (ValueError, TypeError):
-            return _not_found()
+        obj = load_object_or_none(model, model_admin, request, pk)
+        if obj is None:
+            return not_found_response()
 
         if not model_admin.has_change_permission(request, obj):
             return forbidden_response()
@@ -82,10 +81,11 @@ class UpdateView(View):
         if rejection is not None:
             return rejection
 
-        form_class = model_admin.get_form(request, obj=obj)
-        merged = merged_initial_for_update(obj, writable, payload, model)
-        form = form_class(data=merged, files=None, instance=obj)
-
+        form = model_admin.get_form(request, obj=obj)(
+            data=merged_initial_for_update(obj, writable, payload, model),
+            files=None,
+            instance=obj,
+        )
         if not form.is_valid():
             return validation_failed(form_errors_to_envelope(form))
 
@@ -94,16 +94,9 @@ class UpdateView(View):
             model_admin.save_model(request, instance, form, change=True)
             form.save_m2m()
 
-        payload_body = _build_payload(model, model_admin, instance, request)
-        response = JsonResponse(payload_body, status=200)
+        response = JsonResponse(
+            _build_payload(model, model_admin, instance, request),
+            status=200,
+        )
         response["Cache-Control"] = "no-store"
         return response
-
-
-def _not_found() -> HttpResponse:
-    response = JsonResponse(
-        {"error": {"code": "not_found", "message": "Not found."}},
-        status=404,
-    )
-    response["Cache-Control"] = "no-store"
-    return response

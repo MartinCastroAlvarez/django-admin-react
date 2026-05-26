@@ -7,31 +7,15 @@ Plus feature-specific: ``ModelAdmin.delete_model`` is called (never
 
 from __future__ import annotations
 
-from collections.abc import Iterator
-from contextlib import contextmanager
-
 import pytest
-from django.contrib import admin
 from django.contrib.auth.models import Group
 from django.test import Client
+
+from tests.helpers import admin_override
 
 
 def _url(pk: object) -> str:
     return f"/admin-react/api/v1/auth/group/{pk}/"
-
-
-@contextmanager
-def _admin_override(model_cls, **method_returns) -> Iterator[None]:
-    model_admin = admin.site._registry[model_cls]
-    originals = {}
-    try:
-        for name, fn in method_returns.items():
-            originals[name] = getattr(model_admin, name)
-            setattr(model_admin, name, fn.__get__(model_admin))
-        yield
-    finally:
-        for name, original in originals.items():
-            setattr(model_admin, name, original)
 
 
 # --------------------------------------------------------------------------- #
@@ -65,7 +49,7 @@ def test_superuser_can_delete(superuser_client: Client) -> None:
 @pytest.mark.django_db
 def test_user_without_delete_permission_forbidden(superuser_client: Client) -> None:
     g = Group.objects.create(name="example")
-    with _admin_override(Group, has_delete_permission=lambda self, request, obj=None: False):
+    with admin_override(Group, has_delete_permission=lambda self, request, obj=None: False):
         response = superuser_client.delete(_url(g.pk))
     assert response.status_code == 403
     assert Group.objects.filter(pk=g.pk).exists()
@@ -120,7 +104,7 @@ def test_delete_model_is_called_not_obj_delete(superuser_client: Client) -> None
         calls.append(obj.pk)
         obj.delete()
 
-    with _admin_override(Group, delete_model=fake_delete_model):
+    with admin_override(Group, delete_model=fake_delete_model):
         response = superuser_client.delete(_url(g.pk))
     assert response.status_code == 204
     assert calls == [g.pk]
@@ -130,7 +114,7 @@ def test_delete_model_is_called_not_obj_delete(superuser_client: Client) -> None
 @pytest.mark.django_db
 def test_starts_from_admin_get_queryset(superuser_client: Client) -> None:
     g = Group.objects.create(name="invisible")
-    with _admin_override(Group, get_queryset=lambda self, request: Group.objects.none()):
+    with admin_override(Group, get_queryset=lambda self, request: Group.objects.none()):
         response = superuser_client.delete(_url(g.pk))
     assert response.status_code == 404
     assert Group.objects.filter(pk=g.pk).exists()
