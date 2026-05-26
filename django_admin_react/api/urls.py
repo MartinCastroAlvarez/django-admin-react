@@ -21,6 +21,7 @@ from django.views.generic import View
 
 from django_admin_react.api.views.actions import ActionView
 from django_admin_react.api.views.autocomplete import AutocompleteView
+from django_admin_react.api.views.bulk import BulkUpdateView
 from django_admin_react.api.views.create import CreateView
 from django_admin_react.api.views.destroy import DestroyView
 from django_admin_react.api.views.detail import DetailView
@@ -87,6 +88,13 @@ urlpatterns: list = [
         "<str:app_label>/<str:model_name>/actions/<str:action_name>/",
         ActionView.as_view(),
         name="action",
+    ),
+    # Bulk PATCH endpoint — same ordering caveat (``bulk`` literal
+    # before the ``<pk>`` pattern below).
+    path(
+        "<str:app_label>/<str:model_name>/bulk/",
+        BulkUpdateView.as_view(),
+        name="bulk_update",
     ),
     path(
         "<str:app_label>/<str:model_name>/",

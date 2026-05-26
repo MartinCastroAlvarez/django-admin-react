@@ -461,6 +461,67 @@ Response 201:
 
 Response 200: same shape as `GET .../{pk}/`.
 
+### 5.5 `PATCH /api/v1/{app_label}/{model_name}/bulk/`
+
+Bulk update of multiple rows in one transaction. Powers
+``list_editable`` and any consumer-built bulk-edit flow.
+
+Request body:
+
+```json
+{
+  "updates": [
+    { "pk": 7,  "fields": { "is_active": false } },
+    { "pk": 12, "fields": { "is_active": false } }
+  ]
+}
+```
+
+- `updates` — non-empty list, ≤ 200 entries (bulk cap).
+- Each entry: `pk` required, `fields` non-empty object.
+
+Response 200:
+
+```json
+{
+  "results": [
+    { "pk": 7,  "ok": true },
+    { "pk": 12, "ok": true }
+  ],
+  "summary": { "accepted": 2, "rejected": 0 }
+}
+```
+
+On partial failure, the **entire batch rolls back** and each accepted
+row's entry gains `"rolled_back": true` so the SPA knows the update
+did not persist:
+
+```json
+{
+  "results": [
+    { "pk": 7,  "ok": false, "rolled_back": true },
+    { "pk": 12, "ok": false,
+      "error": { "code": "validation_failed", "message": "...",
+                 "fields": { "name": ["This field is required."] } } }
+  ],
+  "summary": { "accepted": 0, "rejected": 2 }
+}
+```
+
+Rules:
+
+- Each row goes through `ModelAdmin.get_form()` + `save_model(change=True)`
+  — same path as single-row PATCH (§5.2). Signals, audit hooks, and
+  custom `save_model` overrides all fire.
+- Each row is gated by `has_change_permission(request, obj)` — a row
+  the user can't edit fails the batch.
+- Each row's queryset starts at `ModelAdmin.get_queryset(request)`
+  (Rule 10) — a row the user can't see is `not_found`.
+- `readonly` / `exclude` / sensitive-named keys in any row payload
+  produce that row's `bad_request` error.
+- CSRF required (PATCH; no `@csrf_exempt`).
+- `Cache-Control: no-store`.
+
 ### 5.4 `POST /api/v1/{app_label}/{model_name}/actions/{action_name}/`
 
 Runs a `ModelAdmin` action over a selected set of rows. The action
