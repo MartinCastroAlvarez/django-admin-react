@@ -163,6 +163,16 @@ def _app_verbose_name(app_label: str) -> str:
         return app_label
 
 
+# Top-level URL segments mounted directly under ``/api/v1/`` by this
+# package. Resolving a per-app endpoint against any of these
+# ``app_label`` values would either shadow the package's own view
+# (if Django's URL resolver order favors the literal route, which it
+# does) or, worse, surface a consumer model whose URL the SPA can
+# never reach. Treat the segment as reserved and 404 instead — same
+# posture as an unregistered model. Closes issue #93.
+RESERVED_APP_LABELS: frozenset[str] = frozenset({"registry", "schema", "session"})
+
+
 def resolve_model(
     admin_site: AdminSite,
     request: HttpRequest,
@@ -176,11 +186,20 @@ def resolve_model(
     ``SECURITY.md`` §3) and the resolution is gated by
     ``has_module_permission`` and ``has_view_permission``.
 
+    Reserved-segment guard (issue #93): if ``app_label`` matches one of
+    the package's top-level URL segments (``registry``, ``schema``,
+    ``session``), the resolution returns ``None`` even when a
+    consumer happens to register a Django app with that label. The
+    package's own view wins the URL route; surfacing the consumer's
+    model would only confuse the SPA.
+
     Returns ``None`` if the model is not registered or the request is not
     permitted to view it. The caller must convert that to a 404, per
     ``ACCEPTANCE.md`` §3.1 B-7 and §4.3 S-11/S-12.
     """
     if not isinstance(app_label, str) or not isinstance(model_name, str):
+        return None
+    if app_label.lower() in RESERVED_APP_LABELS:
         return None
     target = (app_label.lower(), model_name.lower())
     for model, model_admin in admin_site._registry.items():

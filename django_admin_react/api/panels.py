@@ -8,7 +8,9 @@ Opt-in via the ``PanelEndpointsMixin`` on a ``ModelAdmin``:
 
 ::
 
-    @admin.register(Invoice)
+    # Register your admin in the usual way — the mixin is orthogonal
+    # to whichever registration syntax (decorator or call form) you
+    # already use.
     class InvoiceAdmin(PanelEndpointsMixin, admin.ModelAdmin):
         panels = {"audit_trail": "get_audit_trail"}
 
