@@ -35,6 +35,7 @@ from django_admin_react.api.registry import get_admin_site
 from django_admin_react.api.registry import model_permissions
 from django_admin_react.api.registry import resolve_model
 from django_admin_react.api.serializers import label_for
+from django_admin_react.api.serializers import safe_get_field
 from django_admin_react.api.serializers import serialize_fk_value
 from django_admin_react.api.serializers import serialize_value
 from django_admin_react.api.writes import not_found_response
@@ -252,20 +253,7 @@ def _serialize_list_value(obj: Model, name: str, value: Any) -> Any:
     ``@admin.display``) have already been resolved to a plain value
     by ``lookup_field``.
     """
-    model_field = _safe_get_field(obj, name)
+    model_field = safe_get_field(obj, name)
     if isinstance(model_field, ForeignKey):
         return serialize_fk_value(value)
     return serialize_value(value)
-
-
-def _safe_get_field(obj: Model, name: str):
-    """Return ``obj._meta.get_field(name)`` or ``None`` if not a real field.
-
-    ``list_display`` may contain method names or ``@admin.display``
-    properties; those have no model field. The caller (FK detection)
-    only cares about the case where a real field exists.
-    """
-    try:
-        return obj._meta.get_field(name)
-    except Exception:
-        return None

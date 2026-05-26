@@ -47,6 +47,7 @@ from django.http import JsonResponse
 
 from django_admin_react.api.serializers import filter_sensitive
 from django_admin_react.api.serializers import is_sensitive_field_name
+from django_admin_react.api.serializers import safe_get_field
 
 # Canonical 404 body. Deliberately omits the requested app/model/pk —
 # leaking those would give an attacker an oracle for what *would* have
@@ -185,7 +186,7 @@ def writable_field_names(
     for name in declared:
         if name in excluded or name in readonly or is_sensitive_field_name(name):
             continue
-        if isinstance(_safe_get_field(model, name), ManyToManyField):
+        if isinstance(safe_get_field(model, name), ManyToManyField):
             continue
         out.append(name)
     return filter_sensitive(out)
@@ -259,7 +260,7 @@ def coerce_fk_values(
     """
     out: dict[str, Any] = {}
     for key, value in payload.items():
-        model_field = _safe_get_field(model, key)
+        model_field = safe_get_field(model, key)
         is_fk_envelope = (
             isinstance(model_field, ForeignKey) and isinstance(value, dict) and "id" in value
         )
@@ -300,26 +301,9 @@ def merged_initial_for_update(
     """
     merged: dict[str, Any] = {}
     for name in writable:
-        if isinstance(_safe_get_field(model, name), ForeignKey):
+        if isinstance(safe_get_field(model, name), ForeignKey):
             merged[name] = getattr(obj, f"{name}_id", None)
         else:
             merged[name] = getattr(obj, name, None)
     merged.update(coerce_fk_values(payload, model))
     return merged
-
-
-# --------------------------------------------------------------------------- #
-# Internals                                                                   #
-# --------------------------------------------------------------------------- #
-def _safe_get_field(model: type[Model], name: str):
-    """Return ``model._meta.get_field(name)`` or ``None`` if not found.
-
-    Centralized so callers don't need to know that ``get_field``
-    raises ``FieldDoesNotExist`` (or any subclass) — the contract
-    here is "field or None", which is what every call site in this
-    module actually wants.
-    """
-    try:
-        return model._meta.get_field(name)
-    except Exception:
-        return None
