@@ -9,12 +9,18 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "lint": "echo 'lint placeholder — wired in PR #6'",
-    "typecheck": "tsc --noEmit -p . || true",
-    "build": "echo 'build placeholder — wired in PR #6'",
+    "lint": "echo 'lint via root'",
+    "typecheck": "tsc --noEmit -p .",
+    "build": "echo 'no build step — TS consumed by @dar/web bundler'",
     "test": "echo 'no tests yet'"
   },
   "dependencies": {
     "@dar/api": "workspace:*"
+  },
+  "peerDependencies": {
+    "react": "^18.3.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.0"
   }
 }

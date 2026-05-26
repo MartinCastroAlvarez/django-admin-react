@@ -1,0 +1,27 @@
+import type { InputHTMLAttributes, ReactNode } from 'react';
+
+export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
+  label?: ReactNode;
+  helpText?: ReactNode;
+  error?: ReactNode;
+}
+
+export function Input({ label, helpText, error, id, className = '', ...rest }: InputProps) {
+  const inputId = id ?? `dar-input-${Math.random().toString(36).slice(2, 8)}`;
+  return (
+    <div className="flex flex-col gap-1">
+      {label ? (
+        <label htmlFor={inputId} className="text-sm font-medium text-gray-700">
+          {label}
+        </label>
+      ) : null}
+      <input
+        id={inputId}
+        className={`block w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${error ? 'border-red-500' : ''} ${className}`}
+        {...rest}
+      />
+      {helpText && !error ? <span className="text-xs text-gray-500">{helpText}</span> : null}
+      {error ? <span className="text-xs text-red-600">{error}</span> : null}
+    </div>
+  );
+}
