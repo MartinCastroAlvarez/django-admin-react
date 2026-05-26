@@ -102,7 +102,12 @@ class ListView(View):
             "total": total,
             "results": results,
         }
-        return JsonResponse(body, status=200)
+        response = JsonResponse(body, status=200)
+        # No-store: per-user, permission-gated payload must never be
+        # cached by intermediate proxies or the browser. Extends
+        # ACCEPTANCE.md §4.6 S-30 (defined for 4xx) to 200 responses.
+        response["Cache-Control"] = "no-store"
+        return response
 
 
 def _clamp_page(raw: str | None) -> int:
