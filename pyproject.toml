@@ -44,12 +44,15 @@ python = "^3.10"
 django = ">=5.0,<7.0"
 
 [tool.poetry.group.dev.dependencies]
-# Dependabot #5: pytest's tmpdir handled symlinks unsafely. The
-# advisory's first-patched version is 9.0.3; pytest 9 is a clean
-# major bump for our use (we don't pin any pre-9 internals). We
-# also bumped pytest-django + pytest-cov to releases that declare
-# pytest 9 compatibility.
-pytest = "^9.0"
+# Dependabot #5: pytest's tmpdir handled symlinks unsafely
+# (CVE-2025-71176). The advisory's first-patched version is 9.0.3;
+# we pin to that minimum so ``poetry lock --update`` cannot resolve
+# back to the vulnerable 9.0.0–9.0.2 series even though the lockfile
+# is already on 9.0.3. ``pytest 9`` is a clean major bump for our use
+# (no pre-9 internals are pinned). ``pytest-django`` and
+# ``pytest-cov`` were bumped to releases that declare pytest 9
+# compatibility at the same time.
+pytest = "^9.0.3"
 pytest-django = "^4.8"
 pytest-cov = "^5.0"
 ruff = "^0.6"
@@ -58,10 +61,11 @@ django-stubs = { version = "^5.0", extras = ["compatible-mypy"] }
 bandit = "^1.7"
 pip-audit = "^2.7"
 # Dependabot #4: black wrote intermediate cache files with
-# unsanitized names — arbitrary-file-write. The advisory's
-# first-patched version is 26.3.1; we move to ^26.3 (the new
-# major series) to clear the alert.
-black = "^26.3"
+# unsanitized names — arbitrary-file-write (CVE-2026-32274). The
+# advisory's first-patched version is 26.3.1; we pin to that minimum
+# so ``poetry lock --update`` cannot resolve back to the vulnerable
+# 26.3.0 even though the lockfile is already on 26.5.x.
+black = "^26.3.1"
 isort = "^5.13"
 flake8 = "^7.1"
 Flake8-pyproject = "^1.2"
