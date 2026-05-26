@@ -5,7 +5,7 @@ The PM does not own engineering or security review — those belong
 to the Architect and Security roles. The PM owns UX, DX, usability,
 responsiveness, onboarding, and product consistency.
 
-Source rules: [`agents/DECISIONS.md`](../DECISIONS.md) "Multi-agent
+Source rules: [`docs/agents/decisions.md`](../DECISIONS.md) "Multi-agent
 PR review workflow" entry; [`ACCEPTANCE.md`](../../ACCEPTANCE.md) §2.
 
 ---
@@ -136,7 +136,7 @@ The review **body template**:
 - [ ] For each PR with failing local lint: post a comment with the
       first ten lines of the failure.
 - [ ] For each PR that has been open > 72 h: add it to
-      [`agents/HANDOFF.md`](../HANDOFF.md) as a "stale PR" with the
+      [`docs/agents/handoff.md`](../HANDOFF.md) as a "stale PR" with the
       author's role and the last activity date.
 
 ---
@@ -148,6 +148,6 @@ The review **body template**:
       documented.
 - ❌ Requesting changes for taste alone — cite a criterion or a
       `DESIGN_SYSTEM.md` rule.
-- ❌ Re-litigating decisions in `agents/DECISIONS.md`. If the
+- ❌ Re-litigating decisions in `docs/agents/decisions.md`. If the
       decision is wrong, open a new entry; don't block the PR.
 - ❌ Reviewing engineering code quality — that's the Architect's job.

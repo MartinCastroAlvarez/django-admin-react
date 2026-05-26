@@ -38,7 +38,7 @@ Maps to acceptance §2.2 D-1, §2.9 E-1.
 If you can't answer without saying "well, in our SPA we…", the
 proposal is wrong. Find the Django analogue or drop the feature.
 
-Maps to [`agents/product-manager/SKILLS.md`](../../agents/product-manager/SKILLS.md).
+Maps to [`docs/agents/product-manager/SKILLS.md`](../../docs/agents/product-manager/SKILLS.md).
 
 ---
 
@@ -121,7 +121,7 @@ user has `has_add_permission`.
 Lying empty states are worse than no UI. Every empty state has been
 explicitly designed (see [`states.md`](states.md)).
 
-Maps to acceptance §2.8 V-4, [`agents/product-manager/OPEN_QUESTIONS.md`](../../agents/product-manager/OPEN_QUESTIONS.md) Q-PM-04.
+Maps to acceptance §2.8 V-4, [`docs/agents/product-manager/OPEN_QUESTIONS.md`](../../docs/agents/product-manager/OPEN_QUESTIONS.md) Q-PM-04.
 
 ---
 
@@ -160,4 +160,4 @@ consumer must touch, or a new concept to learn must produce
 proportional value. Default answer is **no**.
 
 PM veto applies; see
-[`agents/product-manager/AGENT.md`](../../agents/product-manager/AGENT.md) §10.
+[`docs/agents/product-manager/AGENT.md`](../../docs/agents/product-manager/AGENT.md) §10.

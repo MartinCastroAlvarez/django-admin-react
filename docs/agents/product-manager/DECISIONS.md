@@ -43,8 +43,8 @@ Authoring session: `claude-pm-ux-opus47`.
 12. **No `--force` push to `main`. No CI/CD (per repo-owner direction).**
     Local linters via `scripts/lint.sh` are the gate.
     — [`docs/agents/decisions.md`](../../docs/agents/decisions.md) (engineering)
-13. **`agents/` handoff convention adopted** — durable role state
-    survives session loss. — [`agents/DECISIONS.md`](../DECISIONS.md)
+13. **`docs/agents/` handoff convention adopted** — durable role state
+    survives session loss. — [`docs/agents/decisions.md`](../DECISIONS.md)
 
 ---
 

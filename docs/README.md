@@ -5,12 +5,12 @@ What lives here:
 - [`api-contract.md`](api-contract.md) — the stable contract between the
   Django backend and the React frontend. Endpoint paths, request/response
   shapes, error codes, ordering/search/pagination rules.
-- [`agents/`](agents/) — durable inter-agent coordination artifacts:
-  - [`decisions.md`](agents/decisions.md) — append-only log of accepted
+- [`docs/agents/`](docs/agents/) — durable inter-agent coordination artifacts:
+  - [`decisions.md`](docs/agents/decisions.md) — append-only log of accepted
     architectural decisions.
-  - [`open-questions.md`](agents/open-questions.md) — questions awaiting
+  - [`open-questions.md`](docs/agents/open-questions.md) — questions awaiting
     resolution.
-  - [`changelog.md`](agents/changelog.md) — one-line summaries of
+  - [`changelog.md`](docs/agents/changelog.md) — one-line summaries of
     meaningful repo changes.
 
 What does **not** belong here:

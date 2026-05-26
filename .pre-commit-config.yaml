@@ -6,7 +6,7 @@
 #
 # Then every `git commit` runs these hooks against the staged diff.
 # Anything below the [BLOCK] threshold in
-# `agents/security-expert/REVIEW_CHECKLIST.md` §1 aborts the commit.
+# `docs/agents/security-expert/REVIEW_CHECKLIST.md` §1 aborts the commit.
 #
 # This file is part of the local-only quality gate. There is no CI
 # in this repo by design (repo-owner direction); a developer who
@@ -60,7 +60,7 @@ repos:
 
   # -------------------------------------------------------------------
   # House rules — local hooks that enforce package-specific invariants
-  # from agents/security-expert/REVIEW_CHECKLIST.md.
+  # from docs/agents/security-expert/REVIEW_CHECKLIST.md.
   # -------------------------------------------------------------------
   - repo: local
     hooks:

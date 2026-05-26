@@ -1,6 +1,6 @@
 # PM/UX acceptance — live status board
 
-Owner: PM/UX role (`agents/product-manager/AGENT.md`).
+Owner: PM/UX role (`docs/agents/product-manager/AGENT.md`).
 Last reviewed: 2026-05-26.
 
 Snapshot of every criterion in `ACCEPTANCE.md` §2 with its current

@@ -215,9 +215,9 @@ ship in `docs/installation.md` alongside PR #6
 - [`ACCEPTANCE.md`](ACCEPTANCE.md) §4 — measurable security criteria.
 - [`docs/threat-model.md`](docs/threat-model.md) — STRIDE pass per
   endpoint group.
-- [`agents/security-expert/AGENT.md`](agents/security-expert/AGENT.md)
+- [`docs/agents/security-expert/AGENT.md`](docs/agents/security-expert/AGENT.md)
   — Security Lead role contract.
-- [`agents/security-expert/REVIEW_CHECKLIST.md`](agents/security-expert/REVIEW_CHECKLIST.md)
+- [`docs/agents/security-expert/REVIEW_CHECKLIST.md`](docs/agents/security-expert/REVIEW_CHECKLIST.md)
   — what Security checks on every PR.
 
 ## 11. Disclosure timeline

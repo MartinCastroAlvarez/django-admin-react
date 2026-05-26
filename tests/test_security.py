@@ -212,14 +212,13 @@ def test_s37_no_committed_token_patterns_in_head() -> None:
     )
     # Filter out the lines that come from documenting these patterns:
     # tests/test_security.py (this file), scripts/lint.sh, .pre-commit-config.yaml,
-    # docs/agents, agents/security-expert, etc. — anywhere a security-policy
-    # file references the regex itself.
+    # docs/agents — anywhere a security-policy file references the regex
+    # itself. `docs/agents/` covers the per-role subfolders too.
     DOC_PATHS = (
         "tests/test_security.py",
         "scripts/lint.sh",
         "scripts/audit-deps.sh",
         ".pre-commit-config.yaml",
-        "agents/security-expert/",
         "docs/agents/",
         "docs/threat-model.md",
         "ACCEPTANCE.md",

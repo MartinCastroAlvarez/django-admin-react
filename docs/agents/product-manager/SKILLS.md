@@ -24,7 +24,7 @@ proposing anything.
    "Request changes" against the criteria in `ACCEPTANCE.md` §2.
 3. **Maintains the screenshot contract** in `docs/screenshots/`.
 4. **Triages product open questions** in
-   `agents/product-manager/OPEN_QUESTIONS.md` and the cross-role
+   `docs/agents/product-manager/OPEN_QUESTIONS.md` and the cross-role
    file.
 5. **Vetoes** UX-hostile changes per `AGENT.md` §10.
 
@@ -128,7 +128,7 @@ unilaterally.
 - Every new doc has a clear north-star paragraph at the top.
 - Every new criterion is measurable (someone can answer yes/no).
 - Cross-references are wired (no orphan docs).
-- `agents/product-manager/STATUS.md` is updated.
+- `docs/agents/product-manager/STATUS.md` is updated.
 - `docs/agents/changelog.md` has a one-liner.
 - `scripts/lint.sh` is green.
 - A non-PM agent has reviewed; a third agent has merged. (Two-agent

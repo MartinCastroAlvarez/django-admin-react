@@ -14,7 +14,7 @@ Newest decisions on top.
   CSRF/session/cookies, serialization, secret hygiene, deps, PII, API
   hardening, logging, release hygiene, and consumer-side secure
   defaults; 8 release-blockers (B-1 … B-8); per-endpoint mandatory
-  test matrix. — `ACCEPTANCE.md` §4, `agents/security-expert/`
+  test matrix. — `ACCEPTANCE.md` §4, `docs/agents/security-expert/`
 - **[SEC] Sensitive-field denylist fixed:** `password`, `secret`,
   `token`, `api_key`, `apikey`, `hash`, `private_key`, `session`,
   `nonce`, `salt` — case-insensitive substring match, applied on top
@@ -35,12 +35,12 @@ Newest decisions on top.
   Each role owns its own section. Every criterion is binary (yes/no)
   and verifiable by a documented command or file read. Engineering
   §3 has 14 sub-sections + a release-blocking checklist. — `ACCEPTANCE.md`
-- **`agents/<role>/` is durable per-role memory.** Distinct from
+- **`docs/agents/<role>/` is durable per-role memory.** Distinct from
   `docs/agents/` (which is cross-PR collaboration protocol). Each
   role keeps `AGENT.md` (entrypoint), `STATUS.md`, `DECISIONS.md`,
   `OPEN_QUESTIONS.md`, `NEXT_STEPS.md`, `SKILLS.md`. A fresh session
-  reads `AGENT.md` and resumes from there. — `agents/README.md`,
-  `agents/software-architect/AGENT.md`
+  reads `AGENT.md` and resumes from there. — `docs/agents/README.md`,
+  `docs/agents/software-architect/AGENT.md`
 - **Test coverage thresholds codified.** Overall ≥ 90 %;
   `permissions.py` and `serializers.py` at 100 % statements + 100 %
   branches; `views/*` ≥ 95 %. Enforced via

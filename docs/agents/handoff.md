@@ -67,8 +67,8 @@ Context: same as H-02 but for §3.
 Acceptance: §3 filled in.
 Resolution: §3 written with 14 sub-sections of measurable criteria;
 landed in branch `feat/acceptance-criteria-engineering`. Cross-ref:
-`agents/DECISIONS.md` entry of the same date,
-[`agents/software-architect/DECISIONS.md`](software-architect/DECISIONS.md).
+`docs/agents/decisions.md` entry of the same date,
+[`docs/agents/software-architect/DECISIONS.md`](software-architect/DECISIONS.md).
 
 ---
 

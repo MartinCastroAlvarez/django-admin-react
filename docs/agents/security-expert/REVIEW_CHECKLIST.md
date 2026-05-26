@@ -178,7 +178,7 @@ human takes it from there.
 - [ ] **[NOTE]** If the PR creates a cross-role dependency
       (e.g., this PR exposes a new endpoint that needs Architect
       perf review), open a handoff in
-      [`agents/HANDOFF.md`](../HANDOFF.md).
+      [`docs/agents/handoff.md`](../HANDOFF.md).
 - [ ] **[NOTE]** If the PR resolves a handoff to Security, mark it
       `done` in the same diff.
 

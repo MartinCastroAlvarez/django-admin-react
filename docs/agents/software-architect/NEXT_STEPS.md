@@ -9,8 +9,8 @@
 ## Immediate (this PR / next merge cycle)
 
 - [x] Write `ACCEPTANCE.md` §3 (engineering acceptance criteria).
-- [x] Create `agents/software-architect/` durable state files.
-- [x] Create shared `agents/{DECISIONS,OPEN_QUESTIONS,HANDOFF}.md`
+- [x] Create `docs/agents/software-architect/` durable state files.
+- [x] Create shared `docs/agents/{DECISIONS,OPEN_QUESTIONS,HANDOFF}.md`
       stubs.
 - [ ] Run `./scripts/lint.sh` locally if any code changed
       (markdown-only PR → skip lint; record decision in STATUS).
@@ -99,4 +99,4 @@
 ## Done log
 
 - 2026-05-25 — Wrote `ACCEPTANCE.md` §3 (engineering acceptance
-  criteria). Bootstrapped `agents/software-architect/` durable state.
+  criteria). Bootstrapped `docs/agents/software-architect/` durable state.
