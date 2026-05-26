@@ -76,3 +76,29 @@ def test_inline_kind_detection_in_class_name() -> None:
     # to lock the contract.
     assert "Tabular" in TabularInline.__name__
     assert "Stacked" in StackedInline.__name__
+
+
+# --------------------------------------------------------------------------- #
+# _fields_meta carries type + required (Issue #54 — unblocks inline editing)  #
+# --------------------------------------------------------------------------- #
+def test_inline_fields_meta_carries_type_and_required() -> None:
+    """Each inline field meta exposes ``type`` + ``required`` so the SPA
+    can render a typed input per field in edit mode."""
+    from django.contrib.auth.models import Permission
+
+    from django_admin_react.api.inlines import _fields_meta
+
+    class _PermInline(TabularInline):
+        model = Permission
+        fk_name = "content_type"
+        fields = ["name", "codename"]
+
+    inline = _PermInline(Permission, admin.site)
+    meta = _fields_meta(inline, Permission, ["name", "codename"], None)
+    by_name = {m["name"]: m for m in meta}
+    # Permission.name is a non-blank CharField → type "string", required.
+    assert by_name["name"]["type"] == "string"
+    assert by_name["name"]["required"] is True
+    assert by_name["codename"]["type"] == "string"
+    # Back-compat: the original keys are still present.
+    assert set(by_name["name"]) >= {"name", "label", "readonly", "type", "required"}
