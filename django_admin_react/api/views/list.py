@@ -120,9 +120,9 @@ def _clamp_page(raw: str | None) -> int:
 
 
 def _clamp_page_size(raw: str | None) -> int:
-    settings = conf.load()
-    default = settings.DEFAULT_PAGE_SIZE
-    maximum = settings.MAX_PAGE_SIZE
+
+    default = int(conf.DEFAULT_PAGE_SIZE)
+    maximum = int(conf.MAX_PAGE_SIZE)
     try:
         n = int(raw) if raw is not None else default
     except (TypeError, ValueError):
