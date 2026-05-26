@@ -142,3 +142,55 @@ def test_structured_message_surfaced(superuser_client, django_user_model) -> Non
     entry = response.json()["entries"][0]
     assert entry["change_message_structured"] == [{"changed": {"fields": ["name"]}}]
     assert "name" in entry["change_message_human"].lower()
+
+
+@pytest.mark.django_db
+def test_per_object_view_permission_denied_is_403(superuser_client: Client) -> None:
+    """The per-object gate (history.py:88) must 403 once the object is
+    known to exist but `has_view_permission(request, obj)` is False.
+
+    The override returns True for the model-level check (`obj is None`,
+    so `resolve_model` passes) and False for the per-object check — so
+    the request reaches the object-level gate rather than 404'ing at
+    resolution. Distinguishes "can't see this row" (403) from "no such
+    model" (404)."""
+    g = Group.objects.create(name="g")
+    with admin_override(Group, has_view_permission=lambda self, request, obj=None: obj is None):
+        response = superuser_client.get(_history_url(g.pk))
+    assert response.status_code == 403
+
+
+@pytest.mark.django_db
+def test_freetext_change_message_yields_empty_structured(
+    superuser_client, django_user_model
+) -> None:
+    """A non-JSON `change_message` (older / hand-written entries) must
+    surface `change_message_structured: []` without raising
+    (history.py:141-142)."""
+    g = Group.objects.create(name="g")
+    user = django_user_model.objects.filter(is_superuser=True).first()
+    _log(g, user, message="Changed name and email.")  # free text, not JSON
+    entry = superuser_client.get(_history_url(g.pk)).json()["entries"][0]
+    assert entry["change_message_structured"] == []
+    # The human-rendered prose still comes through Django's own renderer.
+    assert entry["change_message_human"]
+
+
+@pytest.mark.django_db
+def test_page_size_param_respected_and_bogus_falls_back(
+    superuser_client, django_user_model
+) -> None:
+    """`?page_size=` is parsed + clamped; garbage falls back to the
+    default (history.py:151-155)."""
+    g = Group.objects.create(name="g")
+    user = django_user_model.objects.filter(is_superuser=True).first()
+    for _i in range(5):
+        _log(g, user)
+    # Valid → honoured.
+    valid = superuser_client.get(_history_url(g.pk) + "?page_size=2").json()
+    assert valid["page_size"] == 2
+    assert len(valid["entries"]) == 2
+    # Bogus → default (not a 500).
+    bogus = superuser_client.get(_history_url(g.pk) + "?page_size=not-a-number")
+    assert bogus.status_code == 200
+    assert bogus.json()["page_size"] >= 1
