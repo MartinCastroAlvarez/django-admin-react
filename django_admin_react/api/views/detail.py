@@ -187,11 +187,18 @@ def _fieldsets_payload(
 def _fields_payload(
     model: type[Model],
     model_admin: ModelAdmin,
-    obj: Model,
+    obj: Model | None,
     request: HttpRequest,
     visible_names: list[str],
+    change: bool = True,
 ) -> dict[str, dict[str, Any]]:
-    """Build the per-field descriptor mapping (contract §4 ``fields``)."""
+    """Build the per-field descriptor mapping (contract §4 ``fields``).
+
+    ``change`` mirrors ``ModelAdmin._changeform_view``: ``True`` for an
+    existing object (detail / edit), ``False`` for the blank add form
+    (``obj=None``). The add-form metadata endpoint reuses this with
+    ``obj=None, change=False``.
+    """
     readonly = set(model_admin.get_readonly_fields(request, obj) or ())
     # ``change=True`` — the detail view is always for an EXISTING object,
     # so we mirror exactly how Django's change view calls ``get_form``
@@ -202,7 +209,7 @@ def _fields_payload(
     # makes that override fall through to the default factory, which
     # then raises ``FieldError`` on the form-only field and 500s the
     # detail endpoint.
-    form = model_admin.get_form(request, obj=obj, change=True)(instance=obj)
+    form = model_admin.get_form(request, obj=obj, change=change)(instance=obj)
 
     out: dict[str, dict[str, Any]] = {}
     for name in visible_names:

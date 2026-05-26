@@ -21,6 +21,7 @@ from django.views.generic import View
 
 from django_admin_react.api.panels import PanelView
 from django_admin_react.api.views.actions import ActionView
+from django_admin_react.api.views.add_form import AddFormView
 from django_admin_react.api.views.auth import LoginView
 from django_admin_react.api.views.auth import LogoutView
 from django_admin_react.api.views.autocomplete import AutocompleteView
@@ -109,6 +110,15 @@ urlpatterns: list = [
         "<str:app_label>/<str:model_name>/bulk/",
         BulkUpdateView.as_view(),
         name="bulk_update",
+    ),
+    # Add-form metadata (#181 create flow) — blank field/fieldset
+    # descriptors for a new object. Literal ``add/`` segment must
+    # precede the ``<pk>`` instance pattern below so it isn't swallowed
+    # as a pk.
+    path(
+        "<str:app_label>/<str:model_name>/add/",
+        AddFormView.as_view(),
+        name="add_form",
     ),
     path(
         "<str:app_label>/<str:model_name>/",
