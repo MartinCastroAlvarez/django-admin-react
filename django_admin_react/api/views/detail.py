@@ -219,7 +219,10 @@ def _descriptor_for(
     if isinstance(model_field, ForeignKey):
         value: Any = serialize_fk_value(getattr(obj, name, None))
     else:
-        value = serialize_value(getattr(obj, name, None))
+        # Forward the model_field so consumer-registered custom
+        # serializers (see #60 / ``register_field_type``) take
+        # precedence over the default Python-type dispatch.
+        value = serialize_value(getattr(obj, name, None), field=model_field)
 
     form_field = form.fields.get(name)
     required = bool(form_field.required) if form_field is not None else False

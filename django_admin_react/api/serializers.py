@@ -17,9 +17,11 @@ Rules (binding; see ``ACCEPTANCE.md`` §3.5 and §4.7):
 
 from __future__ import annotations
 
+import base64
 import datetime as _dt
 import decimal
 import uuid
+from collections.abc import Callable
 from collections.abc import Iterable
 from typing import Any
 from typing import Final
@@ -56,8 +58,19 @@ def filter_sensitive(names: Iterable[str]) -> list[str]:
     return [n for n in names if not is_sensitive_field_name(n)]
 
 
-def serialize_value(value: Any) -> Any:
-    """Convert a Python value to its JSON-compatible wire form."""
+def serialize_value(value: Any, field: Field | None = None) -> Any:
+    """Convert a Python value to its JSON-compatible wire form.
+
+    When ``field`` is provided and its internal type was registered via
+    ``register_field_type`` with a custom serializer, that serializer
+    runs *instead of* the default Python-type dispatch below. This is
+    the consumer extension point for custom field types whose
+    ``str(value)`` representation is not the wire form the SPA wants.
+    """
+    if field is not None:
+        custom = _registered_serializer(field)
+        if custom is not None:
+            return custom(value)
     if value is None or isinstance(value, bool | int | float | str):
         return value
     if isinstance(value, decimal.Decimal):
@@ -70,6 +83,25 @@ def serialize_value(value: Any) -> Any:
         return value.isoformat()
     if isinstance(value, _dt.time):
         return value.isoformat()
+    if isinstance(value, _dt.timedelta):
+        # ISO 8601 duration via ``str(td)`` is "H:MM:SS[.ffffff]" —
+        # not strictly ISO 8601, but stable and round-trippable via
+        # ``datetime.timedelta`` parsing on the consumer side. Use
+        # ``total_seconds()`` as the canonical numeric form too.
+        return str(value)
+    if isinstance(value, bytes | bytearray | memoryview):
+        # BinaryField values: base64-encode for JSON safety. The wire
+        # contract documents this so the SPA knows to decode.
+        return base64.b64encode(bytes(value)).decode("ascii")
+    if isinstance(value, list | tuple):
+        # PostgreSQL ArrayField, plain Python lists from custom getters.
+        # Recursively serialize each element so nested types (e.g.
+        # ``ArrayField(DateField())``) still round-trip cleanly.
+        return [serialize_value(v) for v in value]
+    if isinstance(value, dict):
+        # JSONField: pass through, but recursively serialize values
+        # in case the dict carries e.g. dates that JSON would reject.
+        return {str(k): serialize_value(v) for k, v in value.items()}
     if isinstance(value, Model):
         return {"id": value.pk, "label": label_for(value)}
     return str(value)
@@ -123,34 +155,120 @@ _TYPE_BY_INTERNAL: Final[dict[str, str]] = {
     "AutoField": "integer",
     "BigAutoField": "integer",
     "BigIntegerField": "integer",
+    "BinaryField": "binary",
     "BooleanField": "boolean",
     "CharField": "string",
     "DateField": "date",
     "DateTimeField": "datetime",
     "DecimalField": "decimal",
+    "DurationField": "duration",
     "EmailField": "email",
+    "FilePathField": "filepath",
     "FloatField": "float",
     "ForeignKey": "foreignkey",
+    "GenericIPAddressField": "ip",
+    "IPAddressField": "ip",
     "IntegerField": "integer",
+    "JSONField": "json",
     "OneToOneField": "foreignkey",
     "PositiveBigIntegerField": "integer",
     "PositiveIntegerField": "integer",
     "PositiveSmallIntegerField": "integer",
     "SlugField": "slug",
     "SmallIntegerField": "integer",
+    "SmallAutoField": "integer",
     "TextField": "text",
     "TimeField": "time",
     "URLField": "url",
     "UUIDField": "uuid",
+    # PostgreSQL contrib fields. Listed by internal-type name so the
+    # consumer doesn't need to import ``django.contrib.postgres`` for
+    # the lookup table to be useful.
+    "ArrayField": "array",
+    "HStoreField": "json",
+    "DateRangeField": "range",
+    "DateTimeRangeField": "range",
+    "DecimalRangeField": "range",
+    "IntegerRangeField": "range",
+    "BigIntegerRangeField": "range",
 }
 
 
+# Extension surface: consumers register a custom field type via
+# ``register_field_type`` (see below). Both maps are checked *after*
+# the closed v1 vocabulary so a consumer cannot accidentally redefine
+# a builtin type and surprise the SPA. The custom registry is
+# distinct from ``_TYPE_BY_INTERNAL`` so an audit of the closed
+# vocabulary stays trivial.
+_CUSTOM_TYPE_BY_INTERNAL: dict[str, str] = {}
+_CUSTOM_SERIALIZERS: dict[str, Callable[[Any], Any]] = {}
+
+
+def register_field_type(
+    internal_type: str,
+    vocab_type: str,
+    serializer: Callable[[Any], Any] | None = None,
+) -> None:
+    """Register a custom Django field type so the API serializes it.
+
+    Call this once at app start (e.g. in your ``AppConfig.ready``):
+
+    ::
+
+        from django_admin_react.api.serializers import register_field_type
+        from .fields import MoneyField
+
+        register_field_type(
+            "MoneyField",
+            "decimal",
+            serializer=lambda v: None if v is None else str(v.amount),
+        )
+
+    ``internal_type`` is what ``field.get_internal_type()`` returns —
+    typically the class name. ``vocab_type`` is the wire-type label
+    the SPA branches on; reuse one of the existing labels
+    (``string``, ``integer``, ``json``, ``array``, …) so the SPA can
+    render it without code changes, or coin a new label and ship a
+    matching frontend widget via the extension surface.
+
+    Builtin types in ``_TYPE_BY_INTERNAL`` cannot be redefined — calling
+    this on a builtin internal type silently no-ops. That's
+    intentional: a third-party app shouldn't be able to change how the
+    SPA renders ``CharField`` for every consumer.
+
+    ``serializer``, if provided, runs *instead of* the default
+    ``serialize_value`` for instances of this field. Use it when
+    ``str(value)`` is not a useful wire form (e.g., a custom value
+    object needs its ``.amount`` extracted).
+    """
+    if internal_type in _TYPE_BY_INTERNAL:
+        return
+    _CUSTOM_TYPE_BY_INTERNAL[internal_type] = vocab_type
+    if serializer is not None:
+        _CUSTOM_SERIALIZERS[internal_type] = serializer
+
+
+def _registered_serializer(field: Field) -> Callable[[Any], Any] | None:
+    """Return a custom serializer for ``field``, if one was registered."""
+    return _CUSTOM_SERIALIZERS.get(field.get_internal_type())
+
+
 def field_type_for(field: Field) -> str:
-    """Closed v1-vocabulary type for a Django model field."""
+    """Closed v1-vocabulary type for a Django model field.
+
+    Resolution order:
+
+    1. ``ManyToManyField`` → ``"unsupported"`` (tracked by #55).
+    2. The closed vocabulary in ``_TYPE_BY_INTERNAL``.
+    3. Custom types registered via ``register_field_type``.
+    4. ``"unsupported"`` — the SPA renders a read-only label.
+    """
     if isinstance(field, ManyToManyField):
         return "unsupported"
     internal = field.get_internal_type()
-    return _TYPE_BY_INTERNAL.get(internal, "unsupported")
+    if internal in _TYPE_BY_INTERNAL:
+        return _TYPE_BY_INTERNAL[internal]
+    return _CUSTOM_TYPE_BY_INTERNAL.get(internal, "unsupported")
 
 
 def field_choices(field: Field) -> list[dict[str, Any]] | None:
