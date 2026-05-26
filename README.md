@@ -11,6 +11,62 @@ your `ModelAdmin` classes drive everything. No React code on your side.
 
 ---
 
+## Why django-admin-react
+
+The Django admin is a 20-year-old hypertext app: full-page reloads,
+mid-2000s aesthetics, no real mobile support, no client-side state.
+It is also the most powerful piece of Django: `ModelAdmin` already
+encodes your permissions, querysets, forms, fieldsets, search,
+ordering, and inlines.
+
+`django-admin-react` keeps every line of `ModelAdmin` you already
+have and replaces only the UI:
+
+| What you write                       | What the React SPA does with it                                              |
+| ------------------------------------ | ---------------------------------------------------------------------------- |
+| `list_display`                       | Renders columns in a virtualised, sortable, mobile-collapsing table.         |
+| `search_fields`                      | Renders a search bar that hits `get_search_results` verbatim.                |
+| `list_filter`                        | Renders a sidebar drawer (desktop) / bottom-sheet (mobile) + filter chips.   |
+| `date_hierarchy`                     | Renders a year → month → day drill-down strip.                                |
+| `list_editable` / `list_per_page`    | Renders inline-editable cells + paginated list with deep links.              |
+| `actions`                            | Renders a bulk-actions menu wired to the same `ModelAdmin.actions`.          |
+| `fieldsets` / `readonly_fields`      | Renders the detail form respecting groups + read-only rules.                 |
+| `autocomplete_fields`                | Renders type-ahead pickers that hit `<model>/autocomplete/?q=…`.             |
+| `inlines = [TabularInline, ...]`     | Renders inlines as tables / card stacks alongside the parent.                |
+| `has_*_permission`                   | Hides Add / Save / Delete buttons accordingly; never invents a permission.   |
+| `get_queryset(request)`              | Every list, search, and detail lookup starts here. Never `Model.objects.all()`. |
+
+The SPA is **metadata-driven** — it learns your models, fields, and
+permissions at runtime from `GET /api/v1/registry/`. Add a new
+`ModelAdmin` and refresh; no rebuild, no codegen.
+
+---
+
+## Screenshots
+
+> The React SPA shell is in flight. The screenshots below show the
+> **example apps** (`examples/library/`, `examples/fintech/`) rendered
+> by the **legacy Django admin** — i.e. the experience this package
+> modernises. Once the SPA's v0.1 implementation closes, this section
+> regenerates from `docs/screenshots/`.
+
+| Login                                              | Admin index (legacy)                                    |
+| -------------------------------------------------- | ------------------------------------------------------- |
+| ![Login](docs/screenshots/01-admin-login.png)      | ![Admin index](docs/screenshots/02-admin-index.png)     |
+
+| Library — list view                                            | Library — detail view                                            |
+| -------------------------------------------------------------- | ---------------------------------------------------------------- |
+| ![Author list](docs/screenshots/03-admin-library-list.png)     | ![Author detail](docs/screenshots/05-admin-library-detail.png)   |
+
+| Mobile (375 px) — `list_display` collapsed                          | API: `GET /api/v1/registry/`                                  |
+| ------------------------------------------------------------------- | ------------------------------------------------------------- |
+| ![Mobile list](docs/screenshots/04-admin-library-list-mobile.png)   | ![Registry JSON](docs/screenshots/06-registry-api-json.png)   |
+
+Screenshots use deterministic synthetic fixtures (no real names,
+emails, account numbers, or PII).
+
+---
+
 ## Install
 
 ```bash
@@ -66,11 +122,25 @@ DJANGO_ADMIN_REACT = {
 
 - **Python**: 3.10+
 - **Django**: 5.0, 5.1, 5.2, 6.0 (and any later 6.x)
-- **Database**: anything Django supports — the package is ORM-only, no
-  direct SQL.
+- **Database**: anything Django supports — the package is ORM-only,
+  no direct SQL.
 - **Auth**: Django's built-in session + CSRF. Works with custom
   `AUTH_USER_MODEL`, custom `AUTHENTICATION_BACKENDS`, and custom
   `AdminSite.has_permission`.
+
+### Running side-by-side with the legacy admin
+
+A common rollout: keep `/admin/` on the legacy HTML admin, mount the
+React SPA at `/admin-react/`, and migrate users at your own pace.
+Both run off the same `ModelAdmin` registrations — there is no
+duplicate state.
+
+```python
+urlpatterns = [
+    path("admin/",        admin.site.urls),                          # legacy, unchanged
+    path("admin-react/",  include("django_admin_react.urls")),       # SPA
+]
+```
 
 ---
 
@@ -91,15 +161,15 @@ class InvoiceAdmin(admin.ModelAdmin):
 
 ```python
 class InvoiceAdmin(admin.ModelAdmin):
-    list_display   = ("number", "customer", "status", "total", "issued_at")
-    sortable_by    = ("issued_at", "total")        # everything else is fixed
+    list_display = ("number", "customer", "status", "total", "issued_at")
+    sortable_by  = ("issued_at", "total")        # everything else is fixed
 ```
 
 ### Add free-text search
 
 ```python
 class InvoiceAdmin(admin.ModelAdmin):
-    search_fields  = ("number", "customer__name", "notes__icontains")
+    search_fields = ("number", "customer__name", "notes__icontains")
     # The SPA wires `?q=<term>` to `ModelAdmin.get_search_results` verbatim.
 ```
 
@@ -128,12 +198,51 @@ are filtered on top of those rules as defense-in-depth.
 ```python
 class InvoiceAdmin(admin.ModelAdmin):
     fieldsets = (
-        ("Identity",     {"fields": ("number", "customer")}),
-        ("Money",        {"fields": ("subtotal", "tax", "total")}),
-        ("Lifecycle",    {"fields": ("status", "issued_at", "paid_at")}),
-        ("Internal",     {"fields": ("notes",), "classes": ("collapse",)}),
+        ("Identity",  {"fields": ("number", "customer")}),
+        ("Money",     {"fields": ("subtotal", "tax", "total")}),
+        ("Lifecycle", {"fields": ("status", "issued_at", "paid_at")}),
+        ("Internal",  {"fields": ("notes",), "classes": ("collapse",)}),
     )
 ```
+
+### Surface filters in the sidebar
+
+```python
+class InvoiceAdmin(admin.ModelAdmin):
+    list_filter = ("status", "issued_at", "customer")
+    # Boolean / choices / FK / date / SimpleListFilter all supported.
+```
+
+### Drill down by date
+
+```python
+class InvoiceAdmin(admin.ModelAdmin):
+    date_hierarchy = "issued_at"
+    # SPA renders a year → month → day strip wired to ?year=&month=&day=
+```
+
+### Edit cells inline on the list view
+
+```python
+class InvoiceAdmin(admin.ModelAdmin):
+    list_editable = ("status",)
+    # SPA: click cell → input swap → blur/Enter saves via PATCH /<app>/<model>/bulk/
+```
+
+### Add custom admin actions
+
+```python
+class InvoiceAdmin(admin.ModelAdmin):
+    actions = ["mark_paid"]
+
+    @admin.action(description="Mark selected as paid")
+    def mark_paid(self, request, queryset):
+        queryset.update(status="paid", paid_at=timezone.now())
+```
+
+The SPA renders a bulk-actions menu and posts to the same
+`ModelAdmin.actions` machinery — same signatures, same audit
+trail.
 
 ### Per-row permission gating
 
@@ -211,13 +320,114 @@ DJANGO_ADMIN_REACT = {
 The SPA inherits the custom site's permission gate and the
 `ModelAdmin` registrations on that site — no parallel registry.
 
-### Pre-built form / queryset overrides still work
+### Plug in custom field types
+
+```python
+# yourapp/admin_react.py
+from django_admin_react.api.serializers import register_field_type
+from yourapp.fields import MoneyField
+
+register_field_type(MoneyField, vocab_type="decimal")
+# SPA renders MoneyField with the built-in decimal widget; no React
+# code required.
+```
+
+For coining a brand-new `vocab_type` (with a matching SPA widget)
+see [`docs/extensions.md`](docs/extensions.md).
+
+### Pre-built `get_*` overrides still work
 
 `get_form`, `get_fieldsets`, `get_fields`, `get_exclude`,
 `get_readonly_fields`, `get_search_results`, `get_list_display`,
-`get_sortable_by` — all of them are called by the SPA the same way the
-HTML admin calls them. If you customised them for `/admin/`, the SPA
-already honours those customisations.
+`get_sortable_by`, `get_list_filter`, `get_actions` — all of them
+are called by the SPA the same way the HTML admin calls them. If
+you customised them for `/admin/`, the SPA already honours those
+customisations.
+
+---
+
+## Feature status (v0.1.0-alpha)
+
+| Surface                                                | Status                                                          |
+| ------------------------------------------------------ | --------------------------------------------------------------- |
+| Registry / list / detail / create / update / delete    | ✅ Backend + SPA contract                                       |
+| `list_display`, `sortable_by`, `search_fields`         | ✅ Backend + SPA contract                                       |
+| `list_filter` (boolean / choice / FK / date / Simple)  | ✅ Backend; SPA implementation pending                          |
+| `date_hierarchy`                                       | ✅ Backend; SPA implementation pending                          |
+| `list_editable` + bulk PATCH                           | ✅ Backend; SPA implementation pending                          |
+| `actions` (custom + bulk runner)                       | ✅ Backend; SPA implementation pending                          |
+| `autocomplete_fields` / `raw_id_fields`                | ✅ Backend + SPA contract                                       |
+| `ManyToManyField` read + write                         | ✅ Backend; SPA implementation pending                          |
+| `inlines` (TabularInline / StackedInline) — read       | ✅ Backend; SPA implementation pending                          |
+| `inlines` — write (formsets)                           | 🟡 Tracked in [#54](https://github.com/MartinCastroAlvarez/django-admin-react/issues/54) |
+| `FileField` / `ImageField` — read                      | ✅ Backend + SPA contract                                       |
+| `FileField` / `ImageField` — multipart upload          | 🟡 Tracked in [#57](https://github.com/MartinCastroAlvarez/django-admin-react/issues/57) |
+| `JSONField` / `ArrayField` / range types               | ✅ Backend                                                      |
+| `register_field_type` + per-model SPA extension hook   | ✅ Backend + extension contract                                 |
+| Session-expiry re-login modal                          | ✅ Wire contract; SPA implementation pending                    |
+| OpenAPI 3.1 schema at `/api/v1/schema/`                | ✅ Backend                                                      |
+| Dark mode (no-flash server-side resolution)            | 🟡 UX contract; tracked in [#84](https://github.com/MartinCastroAlvarez/django-admin-react/issues/84) |
+| Mobile creative patterns (FAB / bottom-sheet / swipe)  | 🟡 UX contract; tracked in [#85](https://github.com/MartinCastroAlvarez/django-admin-react/issues/85) |
+| PWA (manifest + service worker + cache-on-logout)      | 🟡 UX contract; tracked in [#86](https://github.com/MartinCastroAlvarez/django-admin-react/issues/86) |
+
+Status meanings: ✅ ships in the current alpha; 🟡 contract or
+backend lands in the alpha, SPA implementation in flight. See
+[`ACCEPTANCE.md`](ACCEPTANCE.md) for the full criterion-by-criterion
+list and [the issue tracker](https://github.com/MartinCastroAlvarez/django-admin-react/issues)
+for live status.
+
+---
+
+## The API surface
+
+The SPA is a thin client over a small, closed REST surface. You can
+also use these endpoints from any HTTP client (curl, your own
+frontend, a script).
+
+| Method  | Path                                              | Purpose                                                                       |
+| ------- | ------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `GET`   | `/api/v1/registry/`                               | All apps + models the current user can see, with their permissions.           |
+| `GET`   | `/api/v1/schema/`                                 | OpenAPI 3.1 schema for the envelopes + closed type vocabulary.                |
+| `GET`   | `/api/v1/<app>/<model>/`                          | Paginated list. Honours `?search=`, `?ordering=`, `?page=`, `list_filter`.    |
+| `POST`  | `/api/v1/<app>/<model>/`                          | Create. Runs `ModelAdmin.get_form()` + `form.is_valid()` + `save_model()`.    |
+| `GET`   | `/api/v1/<app>/<model>/<pk>/`                     | Detail with serialised fields, `permissions`, `inlines`, `panels`.            |
+| `PATCH` | `/api/v1/<app>/<model>/<pk>/`                     | Partial update. Same form pipeline as POST.                                   |
+| `DELETE`| `/api/v1/<app>/<model>/<pk>/`                     | Hard delete via `ModelAdmin.delete_model()`.                                  |
+| `PATCH` | `/api/v1/<app>/<model>/bulk/`                     | `list_editable` round-trip for multiple rows.                                 |
+| `POST`  | `/api/v1/<app>/<model>/<action>/`                 | Invoke a registered `ModelAdmin.actions` entry on a queryset.                 |
+| `GET`   | `/api/v1/<app>/<model>/autocomplete/?q=…`         | `autocomplete_fields` lookup. Permission-gated on the **target** model.       |
+
+Every endpoint is **staff-only by default** (or whatever
+`AdminSite.has_permission` returns), CSRF-required on unsafe
+methods, and emits `Cache-Control: no-store`. Full wire contract:
+[`docs/api-contract.md`](docs/api-contract.md).
+
+---
+
+## Examples
+
+Six runnable example projects ship with the repo under
+[`examples/`](examples/):
+
+| Project    | What it exercises                                                                                  |
+| ---------- | -------------------------------------------------------------------------------------------------- |
+| `library/` | `Author`, `Book`, `Genre` — basic CRUD, FKs, M2M, `search_fields`, `list_filter`.                  |
+| `fintech/` | `Account`, `Transaction` — permissions, queryset narrowing, custom actions.                        |
+| `blog/`    | `Post`, `Tag`, `Comment` — `list_editable`, `inlines`, `date_hierarchy`.                           |
+| `ecommerce/` | `Product`, `Order`, `LineItem` — fieldsets, readonly, `register_field_type` for `MoneyField`.    |
+| `hr/`      | `Employee`, `Department` — `autocomplete_fields`, `raw_id_fields`, organisational filters.         |
+| `project/` | Glue project that mounts every example app for an end-to-end demo.                                 |
+
+Boot any of them with:
+
+```bash
+cd examples/project
+python manage.py migrate
+python manage.py loaddata seed
+python manage.py runserver
+# → http://127.0.0.1:8000/admin/    (legacy admin)
+# → http://127.0.0.1:8000/admin-react/  (the React SPA)
+```
 
 ---
 
@@ -228,7 +438,8 @@ already honours those customisations.
   user model, no parallel permission system.
 - **Responsive, modern UI**: React + Tailwind + React Query, served
   as a single bundle from `django_admin_react/static/admin_react/`.
-- **Extensible by editing `ModelAdmin`**, not React.
+- **Extensible by editing `ModelAdmin`**, not React. Per-model SPA
+  extension hooks for the cases that genuinely need them.
 - **Configurable URL prefix** — `/admin/`, `/admin-react/`, anywhere.
 - **Conservative & secure-by-default** — never exposes models the
   admin doesn't already expose; never writes fields the admin form
@@ -243,16 +454,15 @@ already honours those customisations.
 
 ## License
 
-MIT — see [`LICENSE`](https://github.com/MartinCastroAlvarez/django-admin-react/blob/main/LICENSE).
+MIT — see [`LICENSE`](LICENSE).
 
 ## Security
 
 Please report security issues privately through GitHub's Private
 Vulnerability Reporting on the repository (Security → Advisories).
-See [`SECURITY.md`](https://github.com/MartinCastroAlvarez/django-admin-react/blob/main/SECURITY.md).
-Do **not** open a public issue.
+See [`SECURITY.md`](SECURITY.md). Do **not** open a public issue.
 
 ## Contributing
 
 Humans and AI agents both welcome. Start with
-[`CONTRIBUTING.md`](https://github.com/MartinCastroAlvarez/django-admin-react/blob/main/CONTRIBUTING.md).
+[`CONTRIBUTING.md`](CONTRIBUTING.md).
