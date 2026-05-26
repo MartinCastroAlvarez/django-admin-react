@@ -218,13 +218,17 @@ def _columns_payload(
 ) -> list[dict[str, Any]]:
     """Build the ``columns[]`` payload for the list response.
 
-    Each entry has ``{name, label, sortable}``. Labels resolve through
-    Django's ``label_for_field`` so admin-customised labels (verbose
-    name, ``short_description``, etc.) are honored. The ``except``
-    fallback to the bare name is defensive — corrupt admin
-    registrations should never 500 the endpoint.
+    Each entry has ``{name, label, sortable, editable}``. Labels
+    resolve through Django's ``label_for_field`` so admin-customised
+    labels (verbose name, ``short_description``, etc.) are honored.
+    ``editable`` is derived from ``ModelAdmin.list_editable`` — the
+    SPA renders the cell as an in-place editor when ``True`` and
+    submits changes via the bulk PATCH endpoint (Issue #61). The
+    ``except`` fallback to the bare name is defensive — corrupt
+    admin registrations should never 500 the endpoint.
     """
     sortable = set(getattr(model_admin, "get_sortable_by", lambda r: ())(None) or ())
+    editable = set(getattr(model_admin, "list_editable", ()) or ())
     payload = []
     for name in list_display:
         try:
@@ -236,6 +240,7 @@ def _columns_payload(
                 "name": name,
                 "label": str(label),
                 "sortable": name in sortable,
+                "editable": name in editable,
             }
         )
     return payload
