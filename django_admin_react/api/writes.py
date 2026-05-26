@@ -186,10 +186,32 @@ def writable_field_names(
     for name in declared:
         if name in excluded or name in readonly or is_sensitive_field_name(name):
             continue
-        if isinstance(safe_get_field(model, name), ManyToManyField):
+        # ManyToManyField is now writable (Issue #55). Plain M2M
+        # writes go through ``form.save_m2m()`` (already called in
+        # create/update). M2M with a custom ``through`` model that
+        # has extra columns stays excluded — Django's stock admin
+        # has the same limitation.
+        field = safe_get_field(model, name)
+        if isinstance(field, ManyToManyField) and not _is_plain_m2m(field):
             continue
         out.append(name)
     return filter_sensitive(out)
+
+
+def _is_plain_m2m(field: ManyToManyField) -> bool:
+    """Return True iff ``field`` is a plain M2M (no ``through`` extras).
+
+    A ``through`` model with only the two implicit FK columns is
+    "plain" — Django auto-generates it (``through._meta.auto_created``
+    points back at the parent model). A through model with extra
+    columns cannot be written via ``form.save_m2m()`` and stays
+    excluded from the writable set.
+    """
+    through = getattr(field.remote_field, "through", None)
+    if through is None:
+        return True
+    auto_created = getattr(through._meta, "auto_created", False)
+    return bool(auto_created)
 
 
 def readonly_or_excluded_names(
@@ -248,12 +270,18 @@ def coerce_fk_values(
     payload: dict[str, Any],
     model: type[Model],
 ) -> dict[str, Any]:
-    """Normalize ForeignKey values to the bare pk the form layer expects.
+    """Normalize FK / M2M values to the bare pk(s) the form layer expects.
 
-    The wire contract sends FKs *out* as ``{"id": pk, "label": str}``
-    (§4) but accepts bare pk *in* (§5.1). Clients that echo the read
-    shape back would otherwise hit a form-validation error even when
-    their intent is clear. Recognizing the envelope on input keeps
+    The wire contract sends:
+
+    - FKs *out* as ``{"id": pk, "label": str}`` (§4) but accepts a
+      bare pk *in* (§5.1).
+    - M2M *out* as ``[{"id": pk, "label": str}, ...]`` (§4.2) and
+      accepts a list of bare pks *in* — or a list of envelopes, which
+      we unwrap here.
+
+    Clients that echo the read shape back would otherwise hit a
+    form-validation error. Recognizing the envelope on input keeps
     the SPA's edit-in-place flow honest without weakening
     validation — Django will still reject any pk that does not
     resolve to a real related row.
@@ -261,10 +289,16 @@ def coerce_fk_values(
     out: dict[str, Any] = {}
     for key, value in payload.items():
         model_field = safe_get_field(model, key)
-        is_fk_envelope = (
-            isinstance(model_field, ForeignKey) and isinstance(value, dict) and "id" in value
-        )
-        out[key] = value["id"] if is_fk_envelope else value
+        if isinstance(model_field, ForeignKey) and isinstance(value, dict) and "id" in value:
+            out[key] = value["id"]
+            continue
+        if isinstance(model_field, ManyToManyField) and isinstance(value, list):
+            # Each entry may be a bare pk or a ``{id, label}`` envelope.
+            out[key] = [
+                v["id"] if isinstance(v, dict) and "id" in v else v for v in value
+            ]
+            continue
+        out[key] = value
     return out
 
 
@@ -301,8 +335,22 @@ def merged_initial_for_update(
     """
     merged: dict[str, Any] = {}
     for name in writable:
-        if isinstance(safe_get_field(model, name), ForeignKey):
+        field = safe_get_field(model, name)
+        if isinstance(field, ForeignKey):
             merged[name] = getattr(obj, f"{name}_id", None)
+        elif isinstance(field, ManyToManyField):
+            # M2M form fields expect a list of pks. Reading the
+            # current set requires a query — accept the cost; the
+            # alternative (skipping M2M in the merged data) would
+            # cause every PATCH that doesn't touch the M2M to
+            # CLEAR it, since ModelForm runs full validation on
+            # every save.
+            try:
+                merged[name] = list(
+                    getattr(obj, name).all().values_list("pk", flat=True)
+                )
+            except Exception:  # pragma: no cover — defensive
+                merged[name] = []
         else:
             merged[name] = getattr(obj, name, None)
     merged.update(coerce_fk_values(payload, model))

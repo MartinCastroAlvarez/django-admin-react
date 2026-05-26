@@ -28,6 +28,8 @@ from django.http import HttpResponse
 from django.http import JsonResponse
 from django.views.generic import View
 
+from django.db.models import ManyToManyField
+
 from django_admin_react.api.permissions import forbidden_response
 from django_admin_react.api.permissions import is_admin_user
 from django_admin_react.api.registry import get_admin_site
@@ -218,6 +220,16 @@ def _descriptor_for(
 
     if isinstance(model_field, ForeignKey):
         value: Any = serialize_fk_value(getattr(obj, name, None))
+    elif isinstance(model_field, ManyToManyField):
+        # M2M (Issue #55): serialise as a list of ``{id, label}``
+        # envelopes. The related manager is iterable on a saved row;
+        # unsaved rows (e.g. during ``obj=None`` create) have no
+        # related set, so default to an empty list.
+        try:
+            related = list(getattr(obj, name).all())
+        except (ValueError, AttributeError):
+            related = []
+        value = [serialize_fk_value(r) for r in related]
     else:
         # Forward the model_field so consumer-registered custom
         # serializers (see #60 / ``register_field_type``) take
