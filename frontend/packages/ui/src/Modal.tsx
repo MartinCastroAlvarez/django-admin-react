@@ -5,6 +5,7 @@
 // bulk-action confirm, and the delete confirm (#206).
 
 import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import type { ReactNode } from 'react';
 
 export interface ModalProps {
@@ -27,9 +28,19 @@ export function Modal({ title, onClose, children, footer }: ModalProps) {
     return () => document.removeEventListener('keydown', onKey);
   }, [onClose]);
 
-  return (
+  // SSR / no-DOM guard — render nothing rather than crash.
+  if (typeof document === 'undefined') return null;
+
+  // Portal to <body> so the overlay always covers the true viewport.
+  // Rendered inline, the modal lived inside <main>; an ancestor in the
+  // layout (the sidebar <aside> uses `transform`, and the shell sets up
+  // its own stacking contexts) trapped `position: fixed` so the overlay
+  // only dimmed part of the page and painted *under* the sidebar. A
+  // body portal escapes every ancestor stacking/containing context;
+  // `z-[100]` keeps it above the sidebar's `z-50`.
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
+      className="fixed inset-0 z-[100] flex items-end justify-center sm:items-center"
       role="dialog"
       aria-modal="true"
     >
@@ -50,6 +61,7 @@ export function Modal({ title, onClose, children, footer }: ModalProps) {
         <div>{children}</div>
         {footer != null && <div className="mt-5 flex justify-end gap-2">{footer}</div>}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
