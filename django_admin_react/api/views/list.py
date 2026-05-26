@@ -53,6 +53,22 @@ class ListView(View):
         *args: Any,
         **kwargs: Any,
     ) -> HttpResponse:
+        """Return a paginated list of rows for one model (contract §3).
+
+        Gates, in order:
+
+        1. ``is_admin_user`` — 403 if not authenticated active staff.
+        2. ``resolve_model`` — 404 if the model isn't registered with
+           the admin site or the user can't view it. Returning 404
+           (not 403) is deliberate so the endpoint never reveals
+           "this model exists but you can't see it" (rule 12 /
+           ACCEPTANCE §4.3 S-11).
+        3. ``ModelAdmin.get_queryset(request)`` provides the starting
+           queryset — never ``Model.objects.all()`` (rule 10 / B-2).
+
+        Then applies search, ordering, page-size clamp, and serializes
+        each row through the conservative serializer.
+        """
         admin_site = get_admin_site()
         if not is_admin_user(request, admin_site=admin_site):
             return forbidden_response()
@@ -104,6 +120,12 @@ class ListView(View):
 
 
 def _clamp_page(raw: str | None) -> int:
+    """Parse ``?page=`` into a positive integer, defaulting to 1.
+
+    Garbage input (non-integer, negative, missing) returns 1. The
+    endpoint never raises on a bad query string — that would let a
+    crawler send "?page=abc" to trigger a 500.
+    """
     try:
         n = int(raw) if raw is not None else 1
     except (TypeError, ValueError):
@@ -112,7 +134,12 @@ def _clamp_page(raw: str | None) -> int:
 
 
 def _clamp_page_size(raw: str | None) -> int:
+    """Parse ``?page_size=`` and clamp to ``[1, conf.MAX_PAGE_SIZE]``.
 
+    The clamp is a denial-of-service guard: without an upper bound a
+    client could pass ``?page_size=10_000_000`` and force the
+    database to materialise ten million rows.
+    """
     default = int(conf.DEFAULT_PAGE_SIZE)
     maximum = int(conf.MAX_PAGE_SIZE)
     try:
@@ -166,6 +193,14 @@ def _columns_payload(
     model_admin: ModelAdmin,
     list_display: list[str],
 ) -> list[dict[str, Any]]:
+    """Build the ``columns[]`` payload for the list response.
+
+    Each entry has ``{name, label, sortable}``. Labels resolve through
+    Django's ``label_for_field`` so admin-customised labels (verbose
+    name, ``short_description``, etc.) are honored. The ``except``
+    fallback to the bare name is defensive — corrupt admin
+    registrations should never 500 the endpoint.
+    """
     sortable = set(getattr(model_admin, "get_sortable_by", lambda r: ())(None) or ())
     payload = []
     for name in list_display:
@@ -189,6 +224,15 @@ def _row_for(
     list_display: list[str],
     request: HttpRequest,
 ) -> dict[str, Any]:
+    """Build one ``results[]`` entry for the list response.
+
+    Each row is ``{pk, label, fields: {name: serialized_value}}``.
+    Cell values go through ``lookup_field`` (so admin
+    ``@admin.display`` callables resolve correctly), then through
+    the conservative serializer with ``str()`` fallback. The except
+    branch is intentional — a misbehaving ``list_display`` callable
+    must not break the whole list response (graceful degrade).
+    """
     fields: dict[str, Any] = {}
     for name in list_display:
         try:

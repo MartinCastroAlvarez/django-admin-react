@@ -52,6 +52,19 @@ class DestroyView(View):
         *args: Any,
         **kwargs: Any,
     ) -> HttpResponse:
+        """Delete an instance (contract §5.3).
+
+        Gates: ``is_admin_user`` → ``resolve_model`` →
+        ``load_object_or_none`` (the admin's queryset is the only
+        lookup path — rule 10 / B-2) → ``has_delete_permission(request,
+        obj)`` per-object gate.
+
+        The actual delete goes through ``ModelAdmin.delete_model(request,
+        obj)`` — **never** ``obj.delete()`` — so any admin-side
+        cascade / hook logic is honored (rule 7 / B-4). Wrapped in
+        ``transaction.atomic()``. Returns a 204 (No Content) with
+        ``Cache-Control: no-store``.
+        """
         admin_site = get_admin_site()
         if not is_admin_user(request, admin_site=admin_site):
             return forbidden_response()

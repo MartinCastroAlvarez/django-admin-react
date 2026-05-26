@@ -22,10 +22,65 @@
 - Compliance posture and secure defaults.
 - The `SECURITY.md` document.
 - The "Security & Compliance" section of `ACCEPTANCE.md`.
+- **Code quality + audit-readiness for open-source** (per repo
+  owner's 2026-05-26 directive). The package is going to PyPI as
+  open source; every public symbol must be **readable** by an
+  independent auditor with no prior context. This means:
+  - Every public function/class has a docstring that explains
+    *why*, not just *what* — including security-relevant invariants
+    it relies on.
+  - Private helpers that look subtle (exception-swallowing,
+    silent-drop logic, defensive defaults) get a docstring stating
+    the reason.
+  - Variable names reflect intent; magic numbers get a named
+    constant or a one-line "why".
+  - Comments explain *non-obvious* behavior, not the obvious. No
+    "what" comments — those belong in the docstring.
+  - Dead code, stale TODOs, and orphan symbols get removed.
+- **Git history hygiene + open-source readiness** (per repo
+  owner's 2026-05-26 directive: "git commit history and the code;
+  everything must be secured so that i can be open sourced"). The
+  Security session periodically scans:
+  - Every commit in `git log --all -p` for `ghp_/gho_/ghs_/aws_/
+    pypi-/BEGIN (RSA|EC|OPENSSH) PRIVATE` patterns, full and
+    partial.
+  - Every commit for accidentally-committed `.env`, `*.pem`,
+    `*.key`, `*.crt`, or `secrets/` paths via `git log --all
+    --name-only`.
+  - Every commit for personal data, internal hostnames, IPs, or
+    other PII patterns.
+  - The `tests/test_security.py::test_s37_no_committed_token_patterns_in_head`
+    test already covers HEAD; periodic full-history runs catch
+    anything that historically slipped through (and would be
+    discoverable by anyone with a git clone after open-source).
+  - If a finding appears, the **only** safe remediation is to
+    rotate the secret upstream first, then file an INCIDENT in
+    `forum/INCIDENT-<date>-<topic>.md` and ask the repo owner for
+    explicit approval before any history rewrite.
+
+## Deploy gate (PyPI release)
+
+The repo owner authorised the Security session to hold the PyPI
+API token. The token lives in **`.env`** at the repo root (local
+only — `.gitignore` line 2 + 3 + gitleaks pre-commit hook keep it
+off any commit).
+
+Release is gated on the cross-role agreement in
+[`../../forum/AGENT-security-opus47-pypi-deploy-gate.md`](../../forum/AGENT-security-opus47-pypi-deploy-gate.md):
+
+1. PM signs off on §2 acceptance.
+2. Architect signs off on §3 + Clean Architecture/Code 10/10.
+3. Security audit (this role) signs off on §4 + git-history scan.
+
+When all three are on `main` and the repo owner says "deploy",
+this session runs `set -a; . ./.env; set +a; poetry publish`.
+No other agent role can read the token; no subagent prompt
+includes it.
 
 You are **not** the Author, Reviewer, or Merger of feature code by
-default. You **review** code from a security perspective and **block**
-PRs that weaken security guarantees.
+default. You **review** code from a security and audit-readiness
+perspective and **block** PRs that weaken security guarantees or
+ship code that an outside auditor would have to reverse-engineer.
 
 ## Core philosophy
 

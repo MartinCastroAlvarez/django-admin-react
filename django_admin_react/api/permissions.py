@@ -24,6 +24,20 @@ from django_admin_react.api.registry import get_admin_site
 
 
 def _user_is_active_staff(request: HttpRequest) -> bool:
+    """Return True iff the request user is authenticated, active, and staff.
+
+    The triple check is intentional and each part is load-bearing.
+
+    - ``is_authenticated`` rejects ``AnonymousUser``.
+    - ``is_active`` ensures a deactivated account loses access immediately;
+      relying on ``is_staff`` alone would still let a disabled superuser
+      through.
+    - ``is_staff`` is the standard Django admin gate.
+
+    ``getattr(user, "is_active", False)`` (rather than ``user.is_active``)
+    is defensive: a custom user model might omit the attribute, and the
+    safe default is "no".
+    """
     user = getattr(request, "user", None)
     return bool(
         user is not None

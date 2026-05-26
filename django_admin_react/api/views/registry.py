@@ -33,6 +33,14 @@ class RegistryView(View):
     http_method_names = ["get"]
 
     def get(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:  # noqa: ARG002
+        """Return the registry payload (contract §2).
+
+        Hard gate: ``is_admin_user(request)`` (rule 1) → 403 envelope
+        if the request isn't authenticated active staff. Otherwise
+        builds the payload via :func:`build_registry_payload` and
+        attaches ``Cache-Control: no-store`` so the per-user payload
+        is never cached by intermediate proxies.
+        """
         admin_site = get_admin_site()
         if not is_admin_user(request, admin_site=admin_site):
             return forbidden_response()

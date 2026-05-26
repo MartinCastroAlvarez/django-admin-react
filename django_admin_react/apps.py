@@ -9,6 +9,18 @@ from django.apps import AppConfig
 
 
 class DjangoAdminReactConfig(AppConfig):
+    """Django app config — the only side effect of adding the package.
+
+    The four attributes are the standard Django ``AppConfig`` contract:
+
+    - ``name`` — Python import path; required by Django's app registry.
+    - ``label`` — short identifier used in migrations and admin URLs.
+    - ``verbose_name`` — human-readable name shown in the admin index.
+    - ``default_auto_field`` — bigint primary keys for any future models
+      the package adds (none today, but pinning the default avoids a
+      Django warning and locks the choice in for forwards compat).
+    """
+
     name = "django_admin_react"
     label = "django_admin_react"
     verbose_name = "Django Admin React"

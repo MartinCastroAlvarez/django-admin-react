@@ -51,6 +51,25 @@ class CreateView(View):
         *args: Any,
         **kwargs: Any,
     ) -> HttpResponse:
+        """Create a new instance (contract §5.1).
+
+        Gates: ``is_admin_user`` → ``resolve_model`` →
+        ``has_add_permission(request)``. CSRF enforcement is Django's
+        ``CsrfViewMiddleware`` — no ``@csrf_exempt`` (rule 4 /
+        ACCEPTANCE §4.6 S-26).
+
+        Payload validation runs **before** the form is built:
+
+        - Unknown keys → 400 ``bad_request``.
+        - Keys matching ``get_readonly_fields`` or ``get_exclude`` →
+          400 (rule 12 / S-22, S-23).
+        - Keys matching the sensitive-name denylist → 400 (S-31).
+
+        The actual write goes through ``ModelAdmin.get_form()`` →
+        ``form.save(commit=False)`` → ``model_admin.save_model(...)``
+        — never ``setattr`` (rule 6 / B-3). Wrapped in
+        ``transaction.atomic()``.
+        """
         admin_site = get_admin_site()
         if not is_admin_user(request, admin_site=admin_site):
             return forbidden_response()
