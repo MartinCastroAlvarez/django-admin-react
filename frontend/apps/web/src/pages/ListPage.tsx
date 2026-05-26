@@ -5,7 +5,7 @@
 // controlled state local to this page; cache/network management is
 // the data layer's job.
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ListFilter, Settings2 } from 'lucide-react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
@@ -81,6 +81,53 @@ export function ListPage() {
     }
   });
   const [colsOpen, setColsOpen] = useState(false);
+
+  // Persist the applied list_filter selections per model (a UI
+  // preference, like the column customizer) so a later bare visit can
+  // restore them. Keyed outside the `dar:v1:*` data cache.
+  const filtersStorageKey = `dar:filters:${appLabel}:${modelName}`;
+  useEffect(() => {
+    try {
+      if (Object.keys(activeFilters).length > 0) {
+        localStorage.setItem(filtersStorageKey, JSON.stringify(activeFilters));
+      } else {
+        // Clearing all filters clears the saved view — a later visit
+        // shouldn't resurrect filters the user deliberately removed.
+        localStorage.removeItem(filtersStorageKey);
+      }
+    } catch {
+      /* localStorage unavailable (private mode) — best effort. */
+    }
+  }, [activeFilters, filtersStorageKey]);
+
+  // Restore filters from localStorage when arriving with a bare URL.
+  // The URL is the source of truth at all times — this only hydrates
+  // when there is nothing in the URL to honour, then writes the
+  // restored filters straight back into the URL (replace) so refresh /
+  // deep-link / share keep reflecting them. Runs once per model.
+  const restoredForModel = useRef<string>('');
+  useEffect(() => {
+    const modelKey = `${appLabel}/${modelName}`;
+    if (restoredForModel.current === modelKey) return;
+    restoredForModel.current = modelKey;
+    // Only hydrate a truly bare view (nothing but an optional `page`);
+    // any q / filter / ordering means the URL is intentional — honour it.
+    const onlyPage = Array.from(searchParams.keys()).every((k) => k === 'page');
+    if (!onlyPage) return;
+    let saved: Record<string, string> | null = null;
+    try {
+      const raw = localStorage.getItem(filtersStorageKey);
+      saved = raw ? (JSON.parse(raw) as Record<string, string>) : null;
+    } catch {
+      saved = null;
+    }
+    if (!saved || Object.keys(saved).length === 0) return;
+    const next = new URLSearchParams();
+    for (const [key, value] of Object.entries(saved)) {
+      if (typeof value === 'string' && value !== '') next.set(key, value);
+    }
+    if ([...next.keys()].length > 0) setSearchParams(next, { replace: true });
+  }, [appLabel, modelName, searchParams, setSearchParams, filtersStorageKey]);
 
   function toggleColumn(name: string, visibleCount: number): void {
     setHiddenCols((prev) => {
