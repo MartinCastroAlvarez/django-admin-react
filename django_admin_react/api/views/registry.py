@@ -36,4 +36,8 @@ class RegistryView(View):
         admin_site = get_admin_site()
         if not is_admin_user(request, admin_site=admin_site):
             return forbidden_response()
-        return JsonResponse(build_registry_payload(admin_site, request), status=200)
+        response = JsonResponse(build_registry_payload(admin_site, request), status=200)
+        # Never let an intermediate proxy or browser cache cross-user
+        # data (extends ACCEPTANCE.md §4.6 S-30 to 200 responses).
+        response["Cache-Control"] = "no-store"
+        return response

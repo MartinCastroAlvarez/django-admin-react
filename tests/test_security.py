@@ -251,6 +251,38 @@ def test_s30_forbidden_response_has_no_store(user_client: Client) -> None:
     ), f"Cache-Control was {response.headers.get('Cache-Control')!r}, expected 'no-store'"
 
 
+@pytest.mark.django_db
+def test_s30_registry_200_has_no_store(superuser_client: Client) -> None:
+    """S-30 extended: 200 responses must also set ``Cache-Control:
+    no-store``. Without it, an intermediate proxy or browser cache
+    could serve User A's registry payload to User B (different
+    permissions → cross-user data leak).
+    """
+    response = superuser_client.get("/admin-react/api/v1/registry/")
+    assert response.status_code == 200
+    assert response.headers.get("Cache-Control") == "no-store"
+
+
+@pytest.mark.django_db
+def test_s30_list_200_has_no_store(superuser_client: Client) -> None:
+    """S-30 extended for the list endpoint."""
+    response = superuser_client.get("/admin-react/api/v1/auth/user/")
+    assert response.status_code == 200
+    assert response.headers.get("Cache-Control") == "no-store"
+
+
+@pytest.mark.django_db
+def test_s30_detail_200_has_no_store(superuser_client: Client) -> None:
+    """S-30 extended for the detail endpoint."""
+    from django.contrib.auth import get_user_model
+
+    user = get_user_model().objects.first()
+    assert user is not None, "superuser_client fixture should have created a user"
+    response = superuser_client.get(f"/admin-react/api/v1/auth/user/{user.pk}/")
+    assert response.status_code == 200
+    assert response.headers.get("Cache-Control") == "no-store"
+
+
 # --------------------------------------------------------------------------- #
 # §4.11 S-51 — HTTP method allow-list                                         #
 # --------------------------------------------------------------------------- #
@@ -323,7 +355,7 @@ def test_s1_anonymous_body_has_no_model_or_field_leak(anon_client: Client) -> No
 # --------------------------------------------------------------------------- #
 
 
-SENSITIVE_FIELD_PATTERNS = (
+REQUIRED_SENSITIVE_SUBSTRINGS = (
     "password",
     "secret",
     "token",
@@ -338,28 +370,28 @@ SENSITIVE_FIELD_PATTERNS = (
 
 
 def test_s31_denylist_constant_exists_and_complete() -> None:
-    """S-31 (when implemented): the serializer module exposes a
-    ``SENSITIVE_FIELD_PATTERNS`` constant containing at least the
-    expected patterns.
-
-    Marked ``xfail`` until the serializer lands in PR #4 (per
-    ``PLAN.md`` §2). The xfail will flip to a real pass automatically
-    once the symbol exists, alerting the Architect that this contract
-    is now load-bearing.
+    """S-31: the serializer module exposes a
+    ``SENSITIVE_NAME_SUBSTRINGS`` constant containing every required
+    substring. Case-insensitive matching is enforced by the helper,
+    not by this constant — the constant just lists the substrings.
     """
-    try:
-        from django_admin_react.api import serializers
-    except ImportError:
-        pytest.xfail("serializers module not yet implemented (PR #4)")
-        return
+    from django_admin_react.api import serializers
 
-    constant = getattr(serializers, "SENSITIVE_FIELD_PATTERNS", None)
-    if constant is None:
-        pytest.xfail("SENSITIVE_FIELD_PATTERNS not yet defined (PR #4)")
-        return
+    constant = serializers.SENSITIVE_NAME_SUBSTRINGS
+    missing = [p for p in REQUIRED_SENSITIVE_SUBSTRINGS if p not in constant]
+    assert missing == [], f"Denylist is missing required substrings: {missing}"
 
-    # `constant` is expected to be a collection of strings; pylint
-    # cannot statically infer that here.
-    membership_test = list(constant)  # type: ignore[arg-type]
-    missing = [p for p in SENSITIVE_FIELD_PATTERNS if p not in membership_test]
-    assert missing == [], f"Denylist is missing patterns: {missing}"
+
+def test_s31_is_sensitive_field_name_matches_required_patterns() -> None:
+    """S-31 (functional): every required substring is matched by
+    ``is_sensitive_field_name`` — case-insensitive, substring match.
+    """
+    from django_admin_react.api.serializers import is_sensitive_field_name
+
+    for pattern in REQUIRED_SENSITIVE_SUBSTRINGS:
+        if not is_sensitive_field_name(pattern):
+            raise AssertionError(f"plain match failed: {pattern!r}")
+        # Substring + case-insensitive: a real field name like
+        # ``user_password_hash`` must trip the denylist.
+        if not is_sensitive_field_name(f"user_{pattern.upper()}_field"):
+            raise AssertionError(f"substring/case match failed: {pattern!r}")

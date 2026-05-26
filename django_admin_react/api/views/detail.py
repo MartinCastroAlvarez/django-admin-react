@@ -85,7 +85,12 @@ class DetailView(View):
             return forbidden_response()
 
         payload = _build_payload(model, model_admin, obj, request)
-        return JsonResponse(payload, status=200)
+        response = JsonResponse(payload, status=200)
+        # No-store: per-user, permission-gated payload must never be
+        # cached by intermediate proxies or the browser. Extends
+        # ACCEPTANCE.md §4.6 S-30 (defined for 4xx) to 200 responses.
+        response["Cache-Control"] = "no-store"
+        return response
 
 
 def _build_payload(
