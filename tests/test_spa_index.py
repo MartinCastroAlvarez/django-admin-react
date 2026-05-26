@@ -94,6 +94,20 @@ def test_superuser_receives_spa_html(superuser_client: Client) -> None:
     assert "csrftoken" in response.cookies
 
 
+@pytest.mark.django_db
+def test_spa_shell_is_not_cacheable(superuser_client: Client) -> None:
+    """The HTML shell references the hash-named bundle, so it must never
+    be cached — a stale shell points at an asset filename that no longer
+    exists after a rebuild, booting a broken/old SPA. (Hashed assets
+    themselves stay cacheable; only this entrypoint must revalidate.)
+    """
+    response = superuser_client.get(ROOT_URL)
+    cache_control = response.headers.get("Cache-Control", "")
+    assert "no-cache" in cache_control or "no-store" in cache_control, (
+        f"SPA shell must send no-cache/no-store; got {cache_control!r}"
+    )
+
+
 # --------------------------------------------------------------------------- #
 # Mount detection                                                             #
 # --------------------------------------------------------------------------- #
