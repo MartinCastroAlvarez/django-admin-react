@@ -38,6 +38,7 @@ import json
 from typing import Any
 
 from django.contrib.admin.options import ModelAdmin
+from django.core.exceptions import ValidationError
 from django.db.models import ForeignKey
 from django.db.models import ManyToManyField
 from django.db.models import Model
@@ -138,24 +139,34 @@ def load_object_or_none(
     request: HttpRequest,
     pk: Any,
 ) -> Model | None:
-    """Fetch one row through the admin's queryset, or ``None`` on miss.
+    """Fetch one row through ``ModelAdmin.get_object``, or ``None`` on miss.
 
-    Three lookup failures collapse to ``None`` (callers convert to
-    404, never to 500):
+    Uses ``ModelAdmin.get_object(request, pk)`` — exactly what Django's
+    own change view calls — rather than ``get_queryset().get(pk=pk)``.
+    Django's default ``get_object`` *is* ``get_queryset().get(...)``, so
+    the default security posture is unchanged. But a consumer that
+    overrides ``get_object`` (a documented Django extension point) gets
+    that override honoured here too — matching the legacy admin. A real
+    example: an admin whose ``get_queryset`` hides rows for list
+    performance / scoping but whose ``get_object`` deliberately bypasses
+    that filter so an individual record is still openable. Resolving
+    detail via ``get_queryset`` would 404 such a row even though the
+    legacy admin opens it.
 
-    - ``DoesNotExist`` — pk valid but no matching row, or the row was
-      filtered out by ``ModelAdmin.get_queryset(request)``.
-    - ``ValueError`` — pk could not be parsed for the field's type
-      (e.g., ``"abc"`` against an ``IntegerField``).
-    - ``TypeError`` — similar parse failure for a custom pk type.
+    The view still gates the returned object on ``has_view_permission``
+    (see ``detail.py`` / ``update.py`` / ``destroy.py``), so using
+    ``get_object`` does not widen access — it only fixes *which object
+    resolves*, consistent with Django.
 
-    Centralizing this here means every "load or 404" call site has
-    the same exception surface and the same security posture
-    (queryset never bypassed, parse errors never leak).
+    Failures collapse to ``None`` (callers convert to 404, never 500):
+    ``DoesNotExist`` (no row / filtered out), ``ValidationError`` /
+    ``ValueError`` / ``TypeError`` (pk unparseable for the field type).
+    Django's stock ``get_object`` already returns ``None`` on these, but
+    a consumer override might raise, so we stay defensive.
     """
     try:
-        return model_admin.get_queryset(request).get(pk=pk)
-    except (model.DoesNotExist, ValueError, TypeError):
+        return model_admin.get_object(request, str(pk))
+    except (model.DoesNotExist, ValidationError, ValueError, TypeError):
         return None
 
 
