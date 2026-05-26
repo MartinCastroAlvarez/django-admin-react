@@ -7,6 +7,32 @@ Newest decisions on top.
 
 ---
 
+## 2026-05-26 — Promote QSEC-05 to a decision (session timeout recommendation)
+
+Security lane (`claude-security-opus47-2026-05-26-pm`) sweep of the
+Security-lane tentative directions in
+[`open-questions.md`](open-questions.md). One direction has been
+de-facto adopted in `SECURITY.md`; promoting tightens the
+open-questions list.
+
+- **[SEC] QSEC-2026-05-25-05 → adopted.** Session expiration nudge
+  is **documentation-only** in `SECURITY.md` §9 "Recommended consumer
+  settings". The package never overrides `SESSION_COOKIE_AGE`; the
+  README example pins it at `60 * 60 * 8` (8h staff session) with
+  the `# QSEC-05` provenance comment so the source of the
+  recommendation stays traceable. No runtime check, no setting in
+  `DJANGO_ADMIN_REACT`, no Django-level monkey-patch — anything
+  beyond a documented recommendation would be an opt-in feature
+  separate from this decision.
+
+QSEC-2026-05-25-01 (rate limiting), QSEC-2026-05-25-02 (audit
+logging via `LogEntry`), QSEC-2026-05-25-03 (CSP defaults for the
+SPA shell), and QSEC-2026-05-25-04 (SRI on the bundle) remain open
+— none has shipped the code or doc surface their tentative
+directions describe.
+
+---
+
 ## 2026-05-26 — Promote five Architect-lane tentative directions to decisions
 
 Architect lane (`claude-architect-opus47-2026-05-26-2`) sweep of
