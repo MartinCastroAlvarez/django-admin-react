@@ -379,8 +379,12 @@ Rules:
   - `range` (postgres range types — `DateRangeField`, `IntegerRangeField`, …)
   - `choice`
   - `foreignkey`
-  - `unsupported` (manytomany and unknown types in v1; client renders a
-    read-only label and no edit control)
+  - `manytomany` — list of `{id, label}` envelopes. Writable with a
+    list of bare pks (or `[{id, label}, ...]` echo-back). Pure M2M
+    only — M2M with a custom `through` model that has extra columns
+    falls back to `unsupported` (manage via the through admin).
+  - `unsupported` (unknown types in v1; client renders a read-only
+    label and no edit control)
 - For `choice` fields the response includes `"choices": [{ "value":...,
   "label":... }, ...]`.
 - Sensitive-shaped field names (password, secret, token, api_key, hash,

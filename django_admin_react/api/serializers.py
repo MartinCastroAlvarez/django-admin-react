@@ -258,13 +258,13 @@ def field_type_for(field: Field) -> str:
 
     Resolution order:
 
-    1. ``ManyToManyField`` → ``"unsupported"`` (tracked by #55).
+    1. ``ManyToManyField`` → ``"manytomany"`` (Issue #55).
     2. The closed vocabulary in ``_TYPE_BY_INTERNAL``.
     3. Custom types registered via ``register_field_type``.
     4. ``"unsupported"`` — the SPA renders a read-only label.
     """
     if isinstance(field, ManyToManyField):
-        return "unsupported"
+        return "manytomany"
     internal = field.get_internal_type()
     if internal in _TYPE_BY_INTERNAL:
         return _TYPE_BY_INTERNAL[internal]
@@ -304,7 +304,12 @@ def field_metadata(
         "help_text": help_text,
         "value": value,
     }
-    if isinstance(field, ForeignKey):
+    if isinstance(field, ForeignKey | ManyToManyField):
+        # FK and M2M both reference a related model. The SPA uses
+        # ``to`` to wire autocomplete (#59) and to render the FK/M2M
+        # picker. For M2M-with-through-extras the field stays
+        # readonly via writable_field_names; ``to`` still points at
+        # the target so the SPA can render the existing labels.
         related = field.related_model
         if related is not None:
             meta = related._meta
