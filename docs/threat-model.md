@@ -160,6 +160,115 @@ Same matrix as list with these additions:
 | I      | The injected `<meta name="dar-mount">` leaks more than the mount  | The view sets exactly one meta tag with the resolved mount string (escaped).                  | S-29       |
 | E      | T-4 reads `csrftoken` cookie via JS to issue forged requests       | `csrftoken` is not `HttpOnly` (by design — the SPA needs it). Mitigation is upstream CSP + same-site cookies. | S-65       |
 
+> **Status note (2026-05-27 refresh).** §4.1–4.6 above were written
+> pre-merge ("lands in PR #N"); all six are now on `main` and tested.
+> The endpoint surface has since grown — §4.7–4.16 below STRIDE the
+> endpoints added after the original pass.
+
+### 4.7 Auth — `POST /api/v1/login/` + `/logout/` (#168, #190 / `api/views/auth.py`)
+
+The package's React-login primitive: a thin JSON shell over Django's
+`authenticate` / `login` / `logout`. The **only** anonymous-writable
+endpoints in the package — so the highest-scrutiny surface.
+
+| STRIDE | Threat                                                            | Mitigation                                                                                          | Acceptance / Test |
+| ------ | ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- | ----------------- |
+| S      | T-1 username enumeration via differential responses/timing        | One generic `403 invalid_credentials` for unknown-user / wrong-password / inactive / non-staff. Django's `ModelBackend` runs the hasher even for unknown users (no timing oracle). | `test_auth.py::test_unknown_user_returns_generic_403`, `…wrong_password…` |
+| S      | T-4 CSRF-forges a login/logout from another origin                | CSRF enforced (no `@csrf_exempt`); shell sets the cookie. | `test_auth.py::test_login_without_csrf_is_403`, `…logout_without_csrf…` |
+| E      | T-2 (valid non-staff) gains a staff session                       | Access policy (`is_admin_user`) runs **before** `login()`; a valid-but-unauthorized user gets **no** session cookie. | `test_auth.py::test_valid_nonstaff_user_returns_generic_403_no_session` |
+| S      | Session fixation — reuse a pre-login session id                   | `django.contrib.auth.login` rotates the session key. | (Django built-in) |
+| I      | Password leaks into logs/response                                 | Password is read from the body and passed straight to `authenticate`; never logged or echoed. | code review |
+| D      | T-1 brute-forces credentials                                      | Out of scope (consumer's job) — documented `django-ratelimit`/`django-axes` recommendation. QSEC-01. | n/a |
+| —      | Shell served to anon under `REACT_LOGIN`                          | Shell carries no user data; every data API call still 403s until auth. | `test_spa_index.py::test_react_login_on_anon_gets_shell_not_redirect` |
+
+### 4.8 `GET /api/v1/<app>/<model>/autocomplete/` (#97)
+
+FK-picker typeahead. Same auth + resolve-via-`_registry` gate as list.
+
+- **I — cross-model leak:** results come from the **target** model's
+  `has_view_permission` + its `get_queryset`; an operator never sees
+  rows of a model they can't view. **T — search injection:** delegates
+  to the admin's search machinery (no raw ORM). **D:** results capped /
+  paginated. **E:** unregistered/reserved target → 404.
+
+### 4.9 `POST /api/v1/<app>/<model>/actions/<name>/` (#101)
+
+- **E — arbitrary callable:** the action name is re-resolved via
+  `ModelAdmin.get_actions(request)` — never `getattr` on a
+  client-supplied string, so only whitelisted admin actions run.
+  **T — acting on out-of-scope rows:** the action runs over
+  `get_queryset(request)`-scoped pks; `has_*_permission` gates per
+  action. **S:** CSRF required (unsafe method).
+
+### 4.10 `PATCH /api/v1/<app>/<model>/bulk/` (#103)
+
+- **T/E — mass edit beyond scope:** `has_change_permission(request,
+  obj)` checked **per row**; readonly/excluded fields rejected per row.
+  **S:** CSRF required. **D:** capped at `_BULK_MAX_UPDATES` (400 over
+  the cap). **R:** each row emits a `LogEntry`. **I:** `no-store`.
+
+### 4.11 `GET /api/v1/<app>/<model>/<pk>/history/` (#158, #162)
+
+LogEntry timeline (`api/views/history.py`, reads via `api/audit.py`).
+
+- **I — read history of an unviewable object:** gated by the object's
+  own `has_view_permission`; missing/unviewable → 404 (no oracle).
+  **I — field-name disclosure** via `change_message`: reveals which
+  fields changed (names, not values) — identical to Django's HTML admin
+  history; documented non-blocking observation (audit on PR #162).
+  **Rule-10 exception:** `LogEntry` is Django's own framework table, not
+  a consumer model, so it's read via `LogEntry.objects.filter(...)` —
+  the get-queryset rule is categorically inapplicable (documented in
+  `api/audit.py`). **I:** `no-store`. **D:** paginated, clamped.
+
+### 4.12 `GET /api/v1/<app>/<model>/<pk>/delete-preview/` (#164)
+
+- **I — cascade-structure disclosure:** gated by
+  `has_delete_permission` (not view) so the preview never reveals
+  cascade for a row the user couldn't delete. Exposes **counts** +
+  protected-reprs only — *less* than Django's HTML confirm page (the
+  full deletable tree is computed but discarded). **Never mutates**
+  (GET, preview only). **I:** `no-store`.
+
+### 4.13 Inline formset writes — `PATCH … {"inlines": …}` (#183 / `api/inlines_write.py`)
+
+- **E — per-row state escalation:** add→`has_add_permission`,
+  change→`has_change_permission`, delete→`has_delete_permission`, each
+  against the parent; a single failing gate → 403 and the **whole**
+  PATCH rolls back (`transaction.atomic`). **T — mass-assign via an
+  unknown inline:** an `inlines` key not matching a declared inline →
+  400 (deny-by-default; never silently ignored). **Rule-3:** writes
+  round-trip through `inline.get_formset(...).save()` (consumer
+  `clean()`/`save_formset` + signals preserved), never a per-row
+  `save()` loop. **I:** malformed payload → fixed generic 400 message
+  (no `str(exc)` echo — CodeQL `py/stack-trace-exposure` cleared, #191).
+
+### 4.14 Panel hook — `GET /api/v1/<app>/<model>/<pk>/panel/<name>/` (#111)
+
+- **E — arbitrary method invocation:** the panel name resolves only
+  against the `ModelAdmin`'s declared `panels` mapping (opt-in mixin),
+  never `getattr` on a client string. **I:** output serialized through
+  the same conservative serializer + denylist. **S:** staff-gated +
+  object resolved via `get_queryset`.
+
+### 4.15 `GET /api/v1/schema/` (#108)
+
+- **I — surface enumeration:** staff-gated; the envelope schema is
+  static (OpenAPI 3.1 shape), not a per-consumer model dump, so a
+  non-staff user gets 403 and a staff user learns only the wire
+  contract they're already entitled to. Reserved label (`schema`) can't
+  be shadowed by a consumer app.
+
+### 4.16 PWA — `<mount>/web.manifest` + `<mount>/sw.js` (#86, #200, #208)
+
+| STRIDE | Threat                                                            | Mitigation                                                                                          | Test |
+| ------ | ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- | ---- |
+| I      | Anonymous manifest leaks per-user data                            | Manifest is computed at request time from mount + AdminSite header + static fields — **no** user data. | `test_pwa.py::test_manifest_carries_no_per_user_data` |
+| T      | SW claims scope beyond the mount (intercepts sibling Django views) | Served with `Service-Worker-Allowed: <mount>`; SW `fetch` passes through anything outside the mount. | `test_pwa.py::test_sw_served_with_scope_header` |
+| I      | SW caches a `no-store` API read → payload outlives the session    | SW skips caching any response whose `Cache-Control` includes `no-store`; **cache-purge on logout** (`dar:purge`). | `test_pwa.py::test_sw_embeds_mount_and_security_guards` |
+| S/T    | Cross-origin frame drives the SW cache via `postMessage`          | Message handler verifies `event.origin === self.location.origin` (CodeQL `js/missing-origin-check`, #208). | `test_pwa.py` (origin-check assertion) |
+| T      | SW caches a mutation (replay risk)                                | Non-GET requests are never cached/replayed. | `test_pwa.py` |
+
 ---
 
 ## 5. Supply-chain
