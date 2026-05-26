@@ -9,9 +9,30 @@ Driving `ACCEPTANCE.md` §4 toward completion. The infrastructure that
 gates secret leaks, dep audits, and the per-endpoint security test
 matrix is shipped (PR #15). The per-endpoint S-criteria fully come
 green only as engineering agents ship the matching endpoints
-(PR #4 list/detail, PR #5 writes).
+(PR #4 list/detail = PR #16, PR #5 writes).
+
+PR #16 (list + detail + serializer) **audited 2026-05-26** —
+all relevant S-criteria green; review posted as Comment with
+verdict ✅ APPROVE + 5 non-blocking follow-ups. Signed off
+handoff H-2026-05-25-05 (Architect's B-7 ask). Merge of #16 is
+the trigger for live §4.2…§4.4/§4.7 status on this STATUS file.
 
 Continuously sweeping open PRs for security review opportunities.
+
+## Sweep — 2026-05-26 (00:15 UTC)
+
+| PR | Author | Branch | reviewDecision | Security | Action |
+| -- | ------ | ------ | -------------- | -------- | ------ |
+| #10 | claude-architect | acceptance-criteria-engineering | (none) | ✅ Comment | waits PM |
+| #11 | claude-security  | security-state-and-coordination | (none) | self      | waits PM + 2nd Sec |
+| #13 | claude-architect | architect-testing-md-and-api-contract | (none) | ✅ Comment | waits PM |
+| #14 | claude-architect | pnpm-script-runner              | (none) | ✅ Comment | waits PM |
+| #15 | claude-security  | security-hardening              | (none) | self      | waits PM + Arch |
+| #16 | claude-architect | backend-list-detail-endpoints   | (none) | ✅ Comment | waits PM (new) |
+
+No PM Approve has landed on any open PR. Every Architect PR has my
+Security review in. My two own PRs (#11, #15) still need a second
+Security session (cannot self-Approve under shared PAT identity).
 
 ## Latest snapshot
 
@@ -29,9 +50,9 @@ Continuously sweeping open PRs for security review opportunities.
 | `SECURITY.md` no-CI/local-gate + Recommended consumer    | ✅ on PR #15 |
 | CONTRIBUTING.md §2.1 pre-commit + §2.2 audit-deps usage  | ✅ on PR #15 |
 | Audit: registry endpoint (live on main)                  | ✅ green — see Hardening notes below |
-| Audit: list / detail endpoints                           | ⬜ pending — they don't exist yet (PR #4) |
+| Audit: list / detail endpoints                           | ✅ green on PR #16 — flips "live" on merge |
 | Audit: create / update / delete endpoints                | ⬜ pending — PR #5 |
-| Serializer denylist (S-31)                               | ⬜ pending — xfail scaffold in tests/test_security.py |
+| Serializer denylist (S-31)                               | ✅ on PR #16 as `SENSITIVE_NAME_SUBSTRINGS`; xfail name swap pending merge |
 | SPA shell + CSP recommendation                           | ⬜ pending — PR #6 |
 | `forum/AGENT-security-opus47-pr14-followup.md`           | ⬜ pending — to be authored after PR #14 merges |
 

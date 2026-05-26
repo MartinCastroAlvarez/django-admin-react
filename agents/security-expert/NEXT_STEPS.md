@@ -7,6 +7,12 @@ check it, append a new one, and update `STATUS.md`.
 
 ## Recently delivered (chronological, newest at top)
 
+- [x] **2026-05-26** — Security audit of PR #16 (list + detail +
+      serializer + tests). Comment review posted with verdict
+      ✅ APPROVE; signed off handoff H-2026-05-25-05 (B-7).
+      Non-blocking follow-ups: rename xfail scaffold to
+      `SENSITIVE_NAME_SUBSTRINGS`, add S-23 excluded-field test,
+      add `Cache-Control: no-store` header assertion.
 - [x] `agents/security-expert/REVIEW_CHECKLIST.md` (PR #11 commit 5a24eb5).
 - [x] `.pre-commit-config.yaml` — gitleaks + ruff + black + isort +
       bandit + 5 local pygrep hooks (PR #15).
@@ -38,14 +44,18 @@ check it, append a new one, and update `STATUS.md`.
    - Print the credentials banner on startup so the dev sees what's
      been provisioned.
 
-2. **When backend PR #4 (list / detail) lands on main:**
-   - Audit `views/list.py` and `views/detail.py` against §4.2, §4.3,
-     §4.4, §4.7 of ACCEPTANCE.md.
-   - Extend `tests/test_security.py` with per-endpoint cases
-     (anonymous → 403, non-staff → 403, staff-with-perm → 200,
-     unregistered model → 404, queryset isolation, ordering
-     injection drop, page-size clamp, sensitive-field denylist).
-   - Resolve handoff H-2026-05-25-05 (Architect B-7 sign-off).
+2. **When backend PR #4 (= PR #16, list / detail) merges to main:**
+   - Flip `docs/threat-model.md` §4.2/§4.3 from "forward-declared"
+     to "live".
+   - Update `PROGRESS.md` quality-gate row for list/detail to ✅.
+   - Rename xfail scaffold in `tests/test_security.py` to use
+     `SENSITIVE_NAME_SUBSTRINGS` (Architect's chosen name) so the
+     test flips from xfail to a real pass.
+   - Add the two non-blocking per-endpoint tests called out in the
+     PR #16 review: explicit S-23 excluded-field test and a
+     `Cache-Control: no-store` header assertion on the list 200
+     response.
+   - (Pre-merge audit is already on file — verdict ✅ APPROVE.)
 
 3. **When backend PR #5 (writes) lands on main:**
    - Audit `views/create.py`, `views/update.py`, `views/delete.py`
