@@ -12,9 +12,13 @@
     {% else %}
       <link rel="icon" href="data:," />
     {% endif %}
-    {# PWA (#86): the manifest + SW are served by the package at the
-       mount (pwa.py); link the manifest + PWA meta so the browser
-       offers "Install". The SW is registered from main.tsx. #}
+    {% comment %}
+      PWA (#86): the manifest + SW are served by the package at the mount
+      (pwa.py); link the manifest + PWA meta so the browser offers "Install".
+      The SW is registered from main.tsx. This is a block-tag comment on
+      purpose: the inline hash form is single-line only, so a multi-line one
+      would be rendered verbatim into the page head.
+    {% endcomment %}
     <link rel="manifest" href="{{ mount_point }}web.manifest" />
     <meta name="theme-color" content="#ffffff" />
     <meta name="apple-mobile-web-app-capable" content="yes" />

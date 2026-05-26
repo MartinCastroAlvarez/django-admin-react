@@ -102,3 +102,55 @@ def test_inline_fields_meta_carries_type_and_required() -> None:
     assert by_name["codename"]["type"] == "string"
     # Back-compat: the original keys are still present.
     assert set(by_name["name"]) >= {"name", "label", "readonly", "type", "required"}
+
+
+# --------------------------------------------------------------------------- #
+# Inline rows: display methods on the inline admin resolve (the "—" bug)       #
+# --------------------------------------------------------------------------- #
+@pytest.mark.django_db
+def test_inline_row_resolves_admin_display_method() -> None:
+    """An inline row column that is a display method defined on the inline
+    admin (the ``@admin.display def x(self, obj)`` pattern, called with
+    ``obj``) must resolve to the method's return value — not ``None`` /
+    "—".
+
+    Mirrors the detail-view fix in #232: row values resolve through
+    Django's own ``lookup_field(name, obj, inline)`` (admin-first), so a
+    method living on the *inline admin* resolves, not just methods on the
+    model instance. A naive ``getattr(obj, name)`` returns ``None`` for
+    admin methods, which the SPA renders as a dash for every row.
+    """
+    from django.contrib.auth import get_user_model
+    from django.contrib.auth.models import Permission
+    from django.contrib.contenttypes.models import ContentType
+    from django.test import RequestFactory
+
+    from django_admin_react.api.inlines import _rows_for_inline
+
+    ct = ContentType.objects.create(app_label="dar_test", model="widget")
+    Permission.objects.create(content_type=ct, codename="can_do", name="Can do")
+
+    class _PermInline(TabularInline):
+        model = Permission
+        fk_name = "content_type"
+
+        def shout(self, obj):  # bound on the admin; called with obj
+            return f"shout-{obj.codename}"
+
+    inline = _PermInline(Permission, admin.site)
+    # The inline's get_queryset runs a view/change permission check, which
+    # reads request.user — attach a superuser so the rows are visible.
+    request = RequestFactory().get("/")
+    request.user = get_user_model().objects.create_superuser(
+        username="inline-su", email="su@example.com", password="x"
+    )
+
+    rows = _rows_for_inline(inline, ct, "content_type", ["codename", "shout"], request)
+
+    assert len(rows) == 1
+    fields = rows[0]["fields"]
+    # The real model field keeps resolving.
+    assert fields["codename"] == "can_do"
+    # The admin display method resolves to its return value (was None
+    # before the fix → rendered as "—").
+    assert fields["shout"] == "shout-can_do"
