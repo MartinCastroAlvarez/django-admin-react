@@ -206,7 +206,7 @@ Reusing `InlineModelAdmin`, `TabularInline`, `StackedInline` —
 the same classes the consumer already wrote for the HTML admin.
 **No new Django-side definition step.**
 
-### Contract (PM/UX requirements — Architect designs the API shape)
+### Contract (PM/UX requirements — Architect signed off on the wire shape)
 
 - The detail response (`GET /api/v1/<app>/<model>/<pk>/`) MUST
   include an `inlines: [...]` array describing each inline's:
@@ -217,12 +217,39 @@ the same classes the consumer already wrote for the HTML admin.
   - `fields`, `readonly_fields`, `extra`, `max_num`,
   - `permissions` for the inline's model (add / change / delete
     booleans, computed via `InlineModelAdmin.has_*_permission`),
-  - and a `data` URL or embedded payload to populate it.
+  - and an embedded `rows` payload (filtered server-side by
+    `inline.get_queryset(request).filter(parent_fk=parent)`).
+  - **Permission leak guard (Security ask):** `inlines: [...]` MUST
+    NOT ship metadata for related models the user has no `view`
+    permission for. Filter the array server-side before
+    serialising.
 
-- Atomic save: a single `PATCH /api/v1/<app>/<model>/<pk>/`
-  must accept inline child edits in the request body and either
-  commit all changes in one transaction or reject all changes
-  with a per-field error envelope.
+- **Atomic save** (Architect Q-EXT-05 answer): a single
+  `PATCH /api/v1/<app>/<model>/<pk>/` carries inline edits via a
+  new optional top-level body field:
+
+  ```json
+  {
+    "title": "New title",
+    "inlines": {
+      "book_inline": {
+        "rows": [
+          {"id": 1, "title": "Edited"},
+          {"id": null, "title": "Added"},
+          {"id": 3, "_delete": true}
+        ]
+      }
+    }
+  }
+  ```
+
+  Server wraps the parent form save + every inline formset save in
+  one `transaction.atomic()`. Validates everything first; if any
+  validation fails, returns a per-row error envelope shaped like
+  Django formset errors and rolls back. **No per-inline endpoint**
+  and no transaction marker — single round-trip, fits cleanly
+  with `@dar/data`'s debounce, matches Django's own admin POST
+  shape.
 
 ### SPA UX
 
@@ -283,6 +310,19 @@ a related-data table — without any frontend code change.
 - The detail endpoint (`GET /api/v1/<app>/<model>/<pk>/`)
   serialises the result under `detail_blocks: [...]`.
 
+- **Per-block isolation (Architect ask, Security amplified).** Each
+  block's server-side computation runs inside its own
+  `try/except`. A failing block emits an `ErrorState` block in the
+  same slot; sibling blocks render normally. Never 500 the page
+  because one block raised.
+
+- **Caching is consumer-managed** (Architect Q-EXT-06 answer). The
+  package ships no DAR-side cache contract in v0.1. Consumers who
+  want to memoize an expensive `get_detail_blocks` call use
+  `django.core.cache` directly — they own both the cache key and
+  the invalidation policy because they own the data the block
+  reads. The contract is silent on cache headers.
+
 ### 6.1 Allowed block types (closed set in v0.1)
 
 | `type`         | Payload shape                                                       | Renders as                                          |
@@ -290,12 +330,43 @@ a related-data table — without any frontend code change.
 | `"stats"`      | `{items: [{label, value, hint?}]}`                                 | Stat cards row.                                     |
 | `"table"`      | `{columns: [{key, label}], rows: [{key: value}]}`                  | Read-only `Table` primitive.                        |
 | `"description_list"` | `{items: [{label, value}]}`                                  | `<dl>` styled per design tokens.                    |
-| `"markdown"`   | `{markdown: "string"}`                                              | Server-rendered → client-rendered through a fixed allowlist of tags (no scripts, no inline events, no iframes). |
-| `"html"`       | `{html: "<sanitised string>"}`                                      | See §7 below — **only** if Security signs off. |
+| `"markdown"`   | `{markdown: "string"}`                                              | Server renders markdown → runs through **the same `nh3` sanitiser** as `html` (we ship one sanitiser pipeline, not two). |
+| `"html"`       | `{html: "<sanitised string>", sanitiser_version: "<n.n.n>", sanitiser_profile: "<name>"}` | See §7 below. Carries the sanitiser version + profile in the envelope. |
 
 Block types are a closed enum in v0.1. New types require a
 `docs/agents/decisions.md` entry and an Architect + Security
 review.
+
+### 6.2 Shipped example block
+
+To prove X-5 without showcasing the escape-hatch type, exactly one
+example block ships with the package (per Security Q-EXT-08):
+
+> An "Account audit summary" block on `Account` detail in
+> `examples/fintech/`, returning a `type: "stats"` block:
+>
+> ```json
+> {
+>   "title": "Account audit summary",
+>   "placement": "after_form",
+>   "type": "stats",
+>   "payload": {
+>     "items": [
+>       {"label": "Open transactions (90 d)", "value": 12},
+>       {"label": "Last login", "value": "2026-05-25T08:13:00Z"},
+>       {"label": "Failed-login count (7 d)", "value": 0}
+>     ]
+>   }
+> }
+> ```
+>
+> Why this one: scalar values only, no HTML, computed over
+> `ModelAdmin.get_queryset(request)`, plausibly useful for a real
+> consumer.
+
+We deliberately do **not** ship an `html` block example. The
+contract says "the `html` type is the escape hatch, not the
+default"; the example apps back that up by simply not using it.
 
 ### SPA UX
 
@@ -323,79 +394,198 @@ New criteria **E-8 a/b/c** in `ACCEPTANCE.md` §2.9.
 
 ## 7. X-6 — Custom HTML in detail blocks (`type: "html"`)
 
-This is the most security-sensitive surface. **PM/UX defers the
-final design to Architect + Security** and documents only the
-acceptance bar here.
+This is the most security-sensitive surface. The Security lane has
+reviewed this contract and approved-with-changes; the changes are
+absorbed below. The follow-up sanitiser implementation lives in
+[`SECURITY.md`](../../SECURITY.md) and the Security-authored
+implementation PR (tier 5, human-gated).
 
-### Non-negotiable invariants
+> Security verdict: see
+> [`forum/REVIEW-security-pr-ux-extensibility-contract.md`](../../forum/REVIEW-security-pr-ux-extensibility-contract.md)
+> §1 (Approve-with-changes on the contract; Approve-with-changes on
+> E-9 conditional on C-1..C-10; **Reject** the original
+> `allow_unsafe_html = True` boolean shape, counter-proposal absorbed
+> in §7.3 below).
+
+### 7.1 Non-negotiable invariants
 
 1. **Server is the trust boundary.** Sanitisation happens
-   server-side, before the payload leaves Django. Client never
-   re-parses arbitrary HTML through `dangerouslySetInnerHTML`
-   without it having been through the server sanitiser.
+   server-side, before the payload leaves Django. The frontend has
+   **exactly one** `dangerouslySetInnerHTML` call site — in
+   `@dar/details/HtmlBlock.tsx` — and it consumes only
+   `block.type === "html"` payloads. Enforced by ESLint
+   (`react/no-danger`) allowed exactly once with a justifying
+   comment. *(Security C-5.)*
 
-2. **Default safe.** The default sanitiser implementation is
-   strict: tags allowlisted to a small set (`p`, `ul`, `ol`,
+2. **Sanitiser library: `nh3`.** The Python binding for Rust's
+   `ammonia`. The `markdown` block type runs through the **same**
+   sanitiser — we ship one sanitiser pipeline, not two.
+   `bleach` is unmaintained as of 2023 and is not an option.
+   *(Security C-1, Q-EXT-01.)*
+
+3. **Closed allowlist, defined in code, not configurable.** Tags
+   are pinned in `django_admin_react/sanitiser.py` (the Security
+   follow-up PR lands the file). Starting point: `p`, `ul`, `ol`,
    `li`, `strong`, `em`, `a`, `code`, `pre`, `table`, `thead`,
-   `tbody`, `tr`, `th`, `td`, `h2`, `h3`, `h4`, `br`, `hr`);
-   attributes allowlisted (`href` on `a` with `http(s):` only;
-   `colspan`/`rowspan` on table cells); no `style`, no `class`
-   except a documented allowlist of `dar-*` classes; no `script`,
-   `iframe`, `object`, `embed`, `form`, event handlers, or
-   inline `style`.
+   `tbody`, `tr`, `th`, `td`, `h2`, `h3`, `h4`, `br`, `hr`.
+   Attributes allowlisted: `href` on `a` with `http(s):` only,
+   `colspan`/`rowspan` on table cells. **No** `style`, **no**
+   `class` except a documented allowlist of `dar-*` classes,
+   **no** `script`, `iframe`, `object`, `embed`, `form`, event
+   handlers, or inline `style`. *(Security C-2.)*
 
-3. **Sanitiser is opt-out, not opt-in.** A `ModelAdmin` that
-   returns an `html` block is sanitised by default. Opting out
-   requires `DJANGO_ADMIN_REACT["allow_unsafe_html"] = True` in
-   settings *and* a log line every time it serves an
-   un-sanitised block. (Architect + Security: confirm or revise.)
+4. **External `<a href>` rewriting.** Every `<a href>` rendered
+   from an `html` block is post-processed server-side, **after**
+   sanitising: external origins get `rel="noopener noreferrer ugc"`
+   and `target="_blank"`; only `http(s):` URLs survive. *(Security
+   C-4.)*
 
-4. **CSP-friendly.** No inline `<script>` is ever emitted —
-   `Content-Security-Policy: script-src 'self'` must remain
-   sound. (Security to lock the CSP spec.)
+5. **CSP is package-emitted, not just recommended.** The package
+   emits a `Content-Security-Policy` header on the SPA shell
+   response: `default-src 'self'; script-src 'self'; style-src
+   'self'; img-src 'self' data:; object-src 'none';
+   frame-ancestors 'none'; base-uri 'self'; form-action 'self'`.
+   No `'unsafe-inline'`, no `'unsafe-eval'`, no nonces. Consumers
+   can override via setting if they truly need to. *(Security C-3,
+   Q-EXT-03.)*
 
-5. **Auditability.** Every served `html` block is logged
-   server-side with the consumer's package version + the
-   sanitiser version that processed it.
+6. **Sanitiser version in envelope.** Every `html` block in the
+   serialised response carries a `sanitiser_version` field; the
+   server logs it per served block. Forward-compat hook for
+   bumping the allowlist. *(Security C-6 + Q-EXT-02 Architect
+   ask.)*
 
-### Preferred design (PM/UX recommendation, non-binding)
+7. **Latency budget: ≤ 5 ms p99 per block ≤ 8 KiB.** A regression
+   target, not an aspiration. *(Security C-7.)*
 
-PM/UX prefers a **structured-JSON-first** approach: most "custom
-reports" can be expressed as `stats`/`table`/`description_list`
-blocks (§6.1). The `html` type is the escape hatch, not the
-default. The Architect should make `html` feel one step harder
-to reach than the structured types in the docs and examples.
+8. **Audit log per served block.** Format:
+   `INFO dar.sanitiser: served html block model=<app>.<model>
+   pk=<pk> bytes_in=<n> bytes_out=<m> dropped_tags=<count>
+   sanitiser=nh3@<ver>`. Goes through
+   `logging.getLogger("dar.sanitiser")`. *(Security C-8.)*
 
-### What we never do
+9. **Fail closed.** If sanitising raises, the response carries an
+   `ErrorState` block in place of the `html` block. Never
+   fall through to raw HTML. *(Security C-9.)*
+
+10. **No client-supplied HTML.** The package's write API rejects
+    any client-supplied HTML at the serializer layer. HTML form
+    fields are plain text. Round-trip test:
+    `<script>alert(1)</script>` stored → returned escaped.
+
+### 7.2 PM/UX-preferred design
+
+Structured-JSON-first: most "custom reports" should be expressed
+as `stats`/`table`/`description_list` blocks (§6.1). The `html`
+type is the escape hatch, not the default. The Architect should
+make `html` feel one step harder to reach than the structured
+types in the docs and examples. The shipped example app block is
+a `stats` block, not an `html` block (see §6 below + Security
+Q-EXT-08).
+
+### 7.3 No "switch off the sanitiser" boolean (Security veto)
+
+The original draft of this contract proposed
+`DJANGO_ADMIN_REACT["allow_unsafe_html"] = True` to bypass the
+sanitiser. **Security rejected this shape** — a global "switch
+off" boolean is the kind of footgun an exhausted consumer reaches
+for to "unblock" a broken report and forgets to turn back off.
+Counter-proposal absorbed:
+
+> **`type: "trusted_html"`** — a separate, opt-in, register-by-name
+> block type. Out of scope for v0.1; available as a v1.x extension
+> path. If/when it ships, it MUST satisfy *all* of:
+>
+> 1. Defined by the consumer via subclassing a `BlockType` base
+>    class (Architect-lane API).
+> 2. Registered explicitly:
+>    `DJANGO_ADMIN_REACT["unsafe_block_types"] = ["myapp.MyTrustedBlock"]`.
+> 3. Served to `request.user.is_superuser` only — even if
+>    `is_staff` and `has_view_permission`.
+> 4. WARNING-level audit log line per served block.
+> 5. `SECURITY.md` carries an explicit "no XSS guarantees beyond
+>    this point; consumer accepts the risk" disclaimer.
+
+PM/UX recommendation: **no escape hatch in v1.** Consumers who
+need truly un-sanitised HTML write a Django view outside the
+package. The 80 % consumer pays no complexity tax. If a real
+consumer use case proves the need in v1.x, ship the constrained
+`trusted_html` type above. Security signed off on either path.
+
+### 7.4 Inline action-invocation security notes (cross-ref X-2)
+
+Pulled forward from Security review §2.2:
+
+- Action invocation endpoint MUST use the same permission class as
+  list/detail; do not invent a sibling class.
+- `len(pks)` is capped server-side at **1000** (Django HTML admin's
+  de-facto limit). Architect codifies the exact constant.
+- The requested `action_name` is a lookup, never a substring match,
+  against `ModelAdmin.get_actions(request)`.
+- Server restricts mutated objects to
+  `ModelAdmin.get_queryset(request).filter(pk__in=pks)` and bails
+  if the difference is non-empty.
+
+### 7.5 What we never do
 
 - Render server HTML in the SPA without going through the
   sanitiser.
-- Accept HTML from the client and echo it back to other users
-  (the consumer's server-side admin is the only HTML source —
-  user-typed admin form HTML is plain text, never executed).
+- Accept HTML from the client and echo it back to other users.
 - Allow a `ModelAdmin` block to install arbitrary CSS into the
-  page. Stylesheet additions go through X-1.
+  page — stylesheet additions go through X-1.
+- Ship more than one `dangerouslySetInnerHTML` call site in the
+  SPA.
+- Add a global "switch off the sanitiser" setting (see §7.3).
 
-### Open questions for Architect + Security
+### 7.6 Resolved questions
 
-These are tracked in
-[`forum/UX-DIRECTIVE-extensibility-contract.md`](../../forum/UX-DIRECTIVE-extensibility-contract.md)
-and must be resolved before any implementation PR opens:
+The following are now answered (full reasoning in
+[`forum/REVIEW-security-pr-ux-extensibility-contract.md`](../../forum/REVIEW-security-pr-ux-extensibility-contract.md)
+§4):
 
-- **Q-EXT-01 (Security):** which sanitiser library — `bleach`,
-  `nh3`, hand-rolled? Latency budget for a typical block?
-- **Q-EXT-02 (Architect):** does the `html` block schema embed a
-  `sanitiser_version` field for forward-compat?
-- **Q-EXT-03 (Security):** CSP additions needed to safely allow
-  `style-src` for tokens-only?
-- **Q-EXT-04 (Both):** does `allow_unsafe_html=True` require an
-  additional staff-level confirmation (refuses to serve to
-  non-superusers, even with the setting on)?
+- ~~Q-EXT-01~~ (sanitiser): `nh3`, ≤ 5 ms p99 per 8 KiB block.
+- ~~Q-EXT-03~~ (CSP `style-src`): no loosening; package emits the
+  policy in §7.1 (5).
+- ~~Q-EXT-04~~ (`allow_unsafe_html`): boolean rejected; see §7.3
+  for the constrained `trusted_html` alternative (v1.x at
+  earliest); PM/UX recommends no escape hatch in v1.
+- ~~Q-EXT-07~~ (CSRF nonce on action invocation): no; Django's
+  session-backed CSRF is sufficient. The view enforces
+  `csrf_protect`; integration test "missing `X-CSRFToken` → 403"
+  is added in the Security follow-up PR.
+- ~~Q-EXT-08~~ (safe example block): one `stats` block on
+  `Account` in `examples/fintech/` (see §6.2 below). No `html`
+  block example.
 
-### Acceptance
+All Architect-lane questions are now answered too
+([`forum/REVIEW-architect-pr-ux-extensibility-contract.md`](../../forum/REVIEW-architect-pr-ux-extensibility-contract.md)):
 
-New criterion **E-9** in `ACCEPTANCE.md` §2.9, gated on
-Security sign-off in [`SECURITY.md`](../../SECURITY.md).
+- ~~Q-EXT-02~~ (sanitiser_version in envelope): yes, plus
+  `sanitiser_profile` forward-hook for the future
+  `trusted_html` path. Bump policy: **patch** = sanitiser
+  bugfix; **minor** = strictly safer allowlist; **major** =
+  broader allowlist or payload shape change — SPA refuses to
+  render newer-major blocks and shows an `ErrorState`.
+- ~~Q-EXT-05~~ (atomic inline PATCH): single body field on the
+  existing `PATCH /api/v1/<app>/<model>/<pk>/`, wrapped in
+  `transaction.atomic()`. See §5 above for the body shape.
+- ~~Q-EXT-06~~ (detail-block cache): fully consumer-managed via
+  `django.core.cache`. No DAR-side cache contract in v0.1.
+  Per-block `try/except` is the only server-side guarantee.
+
+All 8 open questions in the original directive are now closed. The
+implementation PRs live in the Architect's and Security's lanes
+respectively.
+
+### 7.7 Acceptance
+
+Criterion **E-9** in `ACCEPTANCE.md` §2.9, gated on the Security
+follow-up PRs landing (sanitiser spec + sanitiser implementation
++ CSP defaults middleware). Until those land, E-9 is **drafted,
+not live**; X-6 is implementable but not part of the v0.1 release
+gate. PM/UX is comfortable shipping v0.1 with X-1..X-5 + X-7
+only, deferring X-6 to a follow-up release. The 80 % consumer
+loses nothing.
 
 ---
 
