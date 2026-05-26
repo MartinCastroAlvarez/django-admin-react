@@ -10,6 +10,12 @@ For end-user-facing release notes, see the (future) top-level
 
 ## 2026-05-25
 
+- [SEC] `ACCEPTANCE.md` §4 (Security & Compliance) populated with 66
+  binary acceptance criteria (S-1…S-66), 8 release-blockers
+  (B-1…B-8), and the mandatory per-endpoint test matrix. New
+  `agents/security-expert/` durable role state established. Closes
+  handoff H-2026-05-25-02. Branch
+  `feat/security-acceptance-and-state`.
 - Autonomous PR protocol (PR #2 in flight): `docs/agents/pr-workflow.md`
   + `docs/agents/autonomy-policy.md` define roles (Author/Reviewer/
   Merger/Releaser), tiers (1 docs → 6 releases), kill switches, two-
