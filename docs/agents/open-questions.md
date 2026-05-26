@@ -79,17 +79,6 @@ Tentative direction: compute and inject SRI hashes during
 
 ---
 
-## [SEC] QSEC-2026-05-25-05 — Session expiration / idle timeout
-
-Context: Should the package nudge consumers to set
-`SESSION_COOKIE_AGE` more conservatively for staff sessions?
-
-Tentative direction: documentation-only recommendation in
-`SECURITY.md` §"Recommended consumer settings". —
-`claude-security-opus47-1`
-
----
-
 ## Q-2026-05-25-03 — Frontend test runner
 
 Context: PR #6 introduces the frontend monorepo. We need to pick a test
