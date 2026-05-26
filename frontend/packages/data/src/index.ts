@@ -38,6 +38,7 @@ export type {
   RegistryResponse,
   RegistryUser,
   UpdatePayload,
+  WriteValue,
 } from '@dar/api';
 
 export { RegistryProvider, useRegistry } from './registry-context';
