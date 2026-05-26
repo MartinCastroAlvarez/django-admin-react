@@ -185,3 +185,122 @@ def test_field_argument_optional_for_back_compat() -> None:
     assert serialize_value(today) == "2025-01-01"
     assert serialize_value(None) is None
     assert serialize_value("abc") == "abc"
+
+
+# --------------------------------------------------------------------------- #
+# PostgreSQL range envelope — Closes #141                                     #
+# --------------------------------------------------------------------------- #
+#
+# psycopg is not a test-suite dependency (it's only present when the
+# consumer's project uses ``django.contrib.postgres``). To exercise the
+# serializer without forcing a psycopg install, we mint a Range-shaped
+# duck — the serializer's ``_looks_like_range`` deliberately uses
+# duck-typing for exactly this reason.
+class _FakeRange:
+    """psycopg-compatible Range stand-in for the test suite.
+
+    Mirrors the public attribute surface ``psycopg2.extras.Range`` and
+    ``psycopg.types.range.Range`` both expose: ``lower``, ``upper``,
+    ``lower_inc``, ``upper_inc``, ``isempty``.
+    """
+
+    def __init__(
+        self,
+        lower=None,
+        upper=None,
+        lower_inc: bool = True,
+        upper_inc: bool = False,
+        empty: bool = False,
+    ) -> None:
+        self.lower = lower
+        self.upper = upper
+        self.lower_inc = lower_inc
+        self.upper_inc = upper_inc
+        self.isempty = empty
+
+    def __str__(self) -> str:  # noqa: D401
+        # Mimic ``psycopg2.extras.Range.__str__`` so a regression in the
+        # serializer that falls through to ``str(value)`` is visibly
+        # different from the structured envelope.
+        if self.isempty:
+            return "empty"
+        lo = "[" if self.lower_inc else "("
+        hi = "]" if self.upper_inc else ")"
+        return f"{lo}{self.lower},{self.upper}{hi}"
+
+
+@pytest.mark.parametrize(
+    "field_cls_name,expected_subtype",
+    [
+        ("DateRangeField", "daterange"),
+        ("DateTimeRangeField", "datetimerange"),
+        ("DecimalRangeField", "numrange"),
+        ("IntegerRangeField", "intrange"),
+        ("BigIntegerRangeField", "intrange"),
+    ],
+)
+def test_range_envelope_subtype_per_field_type(field_cls_name, expected_subtype) -> None:
+    """Closes #141: each range field type maps to its documented subtype."""
+
+    class _FakeField(models.Field):
+        def get_internal_type(self) -> str:
+            return field_cls_name
+
+    out = serialize_value(_FakeRange(lower=1, upper=5), field=_FakeField())
+    assert isinstance(out, dict)
+    assert out["subtype"] == expected_subtype
+    assert out["value"] == {"lower": 1, "upper": 5, "bounds": "[)"}
+
+
+def test_range_envelope_without_field_uses_generic_subtype() -> None:
+    """A range with no ``field`` hint falls back to the generic ``"range"`` subtype."""
+    out = serialize_value(_FakeRange(lower=10, upper=20))
+    assert out == {
+        "subtype": "range",
+        "value": {"lower": 10, "upper": 20, "bounds": "[)"},
+    }
+
+
+@pytest.mark.parametrize(
+    "lower_inc,upper_inc,bounds",
+    [
+        (True, True, "[]"),
+        (True, False, "[)"),
+        (False, True, "(]"),
+        (False, False, "()"),
+    ],
+)
+def test_range_bounds_closed_four_char_vocabulary(lower_inc, upper_inc, bounds) -> None:
+    """Closes #141: bounds is exactly one of the four documented strings."""
+    out = serialize_value(_FakeRange(lower=1, upper=2, lower_inc=lower_inc, upper_inc=upper_inc))
+    assert out["value"]["bounds"] == bounds
+
+
+def test_range_empty_envelope() -> None:
+    """An empty range emits ``value: null`` + ``empty: true`` per the contract."""
+    out = serialize_value(_FakeRange(empty=True))
+    assert out == {"subtype": "range", "value": None, "empty": True}
+
+
+def test_range_recurses_on_date_bounds() -> None:
+    """Lower/upper are recursively serialized — a daterange ships ISO strings."""
+    out = serialize_value(_FakeRange(lower=dt.date(2026, 1, 1), upper=dt.date(2026, 2, 1)))
+    assert out["value"]["lower"] == "2026-01-01"
+    assert out["value"]["upper"] == "2026-02-01"
+
+
+def test_range_falls_back_to_str_when_attributes_missing() -> None:
+    """A non-Range object that happens to have ``lower``/``upper`` but
+    lacks ``lower_inc``/``upper_inc``/``isempty`` must NOT be misread as
+    a range — it falls through to ``str(value)`` like any unknown type."""
+
+    class _NotRange:
+        def __init__(self) -> None:
+            self.lower = 1
+            self.upper = 2
+
+        def __str__(self) -> str:
+            return "<NotRange>"
+
+    out = serialize_value(_NotRange())
+    assert out == "<NotRange>"
