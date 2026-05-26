@@ -34,6 +34,8 @@ export type {
   InlineDescriptor,
   InlineFieldMeta,
   InlineRow,
+  InlineWriteItem,
+  InlineWritePayload,
   ListResponse,
   ListRow,
   LoginResponse,

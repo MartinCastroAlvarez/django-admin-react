@@ -7,7 +7,7 @@
 // confirms inline, then DELETEs and returns to the list. Edit/Delete
 // are gated by the `permissions` block the API returns.
 
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import {
@@ -19,12 +19,15 @@ import {
   type DetailResponse,
   type FieldDescriptor,
   type InlineDescriptor,
+  type InlineWriteItem,
+  type InlineWritePayload,
   type WriteValue,
 } from '@dar/data';
 import { Button, Card, EmptyState, Spinner, Table } from '@dar/ui';
 
 import { FieldInput } from '../components/FieldInput';
 import { FieldValueView } from '../components/FieldValueView';
+import { InlineEditor } from '../components/InlineEditor';
 
 // Render a detail field's value. ForeignKey values become a navigable
 // link to the related object's detail page (#184 — Django-admin
@@ -158,7 +161,7 @@ export function DetailPage() {
 interface EditFormProps {
   data: DetailResponse;
   onCancel: () => void;
-  onSave: (payload: Record<string, WriteValue>) => Promise<void>;
+  onSave: (payload: import('@dar/data').UpdatePayload) => Promise<void>;
 }
 
 function initialValueFor(field: DetailResponse['fields'][string]): WriteValue {
@@ -183,14 +186,35 @@ function EditForm({ data, onCancel, onSave }: EditFormProps) {
   const [errors, setErrors] = useState<Record<string, string[]>>({});
   const [nonFieldError, setNonFieldError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  // Inline write items collected from each InlineEditor, keyed by name.
+  const [inlineItems, setInlineItems] = useState<Record<string, InlineWriteItem[]>>({});
+
+  // Stable so InlineEditor's effect doesn't re-fire every render.
+  const handleInlineItems = useCallback((name: string, items: InlineWriteItem[]) => {
+    setInlineItems((prev) => ({ ...prev, [name]: items }));
+  }, []);
+
+  // Inlines the user can actually modify (per-inline permission flags).
+  const editableInlines = (data.inlines ?? []).filter(
+    (inline) => inline.can_add || inline.can_change || inline.can_delete,
+  );
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
     setErrors({});
     setNonFieldError(null);
+    // Build the PATCH body: parent field values + any non-empty inline
+    // blocks (api-contract §5.2.1). Empty inline blocks are omitted so
+    // an untouched inline never posts.
+    const payload: import('@dar/data').UpdatePayload = { ...values };
+    const inlines: InlineWritePayload = {};
+    for (const [name, items] of Object.entries(inlineItems)) {
+      if (items.length > 0) inlines[name] = { items };
+    }
+    if (Object.keys(inlines).length > 0) payload.inlines = inlines;
     try {
-      await onSave(values);
+      await onSave(payload);
     } catch (err) {
       if (err instanceof ApiError && err.envelope?.error) {
         const fieldErrors = err.envelope.error.fields ?? {};
@@ -233,6 +257,20 @@ function EditForm({ data, onCancel, onSave }: EditFormProps) {
           </div>
         </Card>
       ))}
+
+      {/* Editable inlines (#54 write half) — typed inputs per child row,
+          add/remove, submitted via the PATCH `inlines` block. */}
+      {editableInlines.map((inline) => (
+        <Card key={`inline-${inline.name}`} title={inline.label}>
+          <InlineEditor inline={inline} onItems={handleInlineItems} />
+          {errors[`inlines.${inline.name}`]?.map((msg, i) => (
+            <p key={i} className="mt-2 text-xs text-red-600">
+              {msg}
+            </p>
+          ))}
+        </Card>
+      ))}
+
       <div className="flex gap-2">
         <Button type="submit" variant="primary" disabled={saving}>
           {saving ? 'Saving…' : 'Save'}
