@@ -334,10 +334,16 @@ interface FilterModalProps {
   onClose: () => void;
 }
 
-// Modal on desktop, bottom-sheet on mobile. Closing on backdrop tap or
-// the Done button; Escape handled by the parent page's listeners are
-// not needed here because the backdrop already gives an obvious exit.
+// Modal on desktop, bottom-sheet on mobile. Closes on backdrop tap,
+// the Done button, OR the Escape key.
 function FilterModal({ filters, active, onChange, onClearAll, onClose }: FilterModalProps) {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
   return (
     <div
       className="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
