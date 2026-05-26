@@ -213,3 +213,51 @@ def test_brand_logo_url_unset_falls_back_to_data_uri(superuser_client: Client) -
         html = response.content.decode("utf-8")
         assert 'rel="icon" href="data:,"' in html
         assert 'name="dar-brand-logo"' not in html
+
+
+# --------------------------------------------------------------------------- #
+# REACT_LOGIN — serve the shell to anonymous users (Issue #167)               #
+# --------------------------------------------------------------------------- #
+def test_react_login_off_anon_still_redirected(anon_client: Client) -> None:
+    """Default (REACT_LOGIN unset): anonymous → 302 to the login page."""
+    with override_settings(DJANGO_ADMIN_REACT={}):
+        _reload_conf()
+        try:
+            response = anon_client.get(ROOT_URL)
+            assert response.status_code == 302
+        finally:
+            _reload_conf()
+
+
+def test_react_login_on_anon_gets_shell_not_redirect(
+    anon_client: Client, fake_manifest: Path
+) -> None:
+    """REACT_LOGIN=True: anonymous gets the SPA shell (200) + CSRF cookie.
+
+    The React app then renders its own login form (Issue #167). The
+    shell carries no user data, so serving it to an anonymous user is
+    safe — every data API call still 403s until they authenticate.
+    """
+    with override_settings(DJANGO_ADMIN_REACT={"REACT_LOGIN": True}):
+        _reload_conf()
+        try:
+            response = anon_client.get(ROOT_URL)
+            assert response.status_code == 200
+            # CSRF cookie issued so the login POST can carry X-CSRFToken.
+            assert "csrftoken" in response.cookies
+            # The shell must not leak any authenticated-user data.
+            body = response.content.decode("utf-8", errors="replace").lower()
+            assert "is_superuser" not in body
+        finally:
+            _reload_conf()
+
+
+def test_react_login_on_does_not_change_staff_path(superuser_client: Client) -> None:
+    """REACT_LOGIN=True doesn't alter the authenticated-staff behavior."""
+    with override_settings(DJANGO_ADMIN_REACT={"REACT_LOGIN": True}):
+        _reload_conf()
+        try:
+            response = superuser_client.get(ROOT_URL)
+            assert response.status_code == 200
+        finally:
+            _reload_conf()

@@ -11,6 +11,7 @@ import type {
   DetailResponse,
   FieldErrorEnvelope,
   ListResponse,
+  LoginResponse,
   RegistryResponse,
   UpdatePayload,
 } from './contract';
@@ -158,6 +159,18 @@ export class ApiClient {
 
   detail(appLabel: string, modelName: string, pk: string | number): Promise<DetailResponse> {
     return this.request<DetailResponse>('GET', `${appLabel}/${modelName}/${pk}/`);
+  }
+
+  /**
+   * Authenticate via the package's React-login endpoint (contract §7,
+   * Issue #167). A thin JSON shell over Django's own
+   * `authenticate`/`login` (`api/views/auth.py`) — on success the
+   * session cookie is set and the user block returned; a bad login is
+   * a generic 403 surfaced as an `ApiError` (no user-enumeration
+   * oracle). CSRF is enforced by the middleware.
+   */
+  login(username: string, password: string): Promise<LoginResponse> {
+    return this.request<LoginResponse>('POST', 'login/', { username, password });
   }
 
   create(appLabel: string, modelName: string, payload: CreatePayload): Promise<CreateResponse> {
