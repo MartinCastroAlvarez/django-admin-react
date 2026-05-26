@@ -176,7 +176,7 @@ double-fire on reconnect.
 #### Optional pre-expiry warning
 
 If the consumer sets
-`DJANGO_ADMIN_REACT["session_warning_seconds"] = N` (positive int):
+`DJANGO_ADMIN_REACT["SESSION_WARNING_SECONDS"] = N` (positive int):
 
 - The SPA polls `GET /api/v1/session/` at most once per minute.
 - At `expires_at - N` it shows a non-blocking toast:
@@ -186,7 +186,7 @@ If the consumer sets
 - If the user does nothing, the modal in the previous subsection
   fires when expiry actually lands.
 
-When `session_warning_seconds` is unset (default), the toast never
+When `SESSION_WARNING_SECONDS` is unset (default), the toast never
 appears and the modal is the only signal.
 
 #### Banned copy in this flow

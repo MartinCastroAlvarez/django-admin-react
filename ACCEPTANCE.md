@@ -121,7 +121,7 @@ owner only.
 | N-3 | The URL is the source of truth for state that should be shareable: app, model, pk, search query, page, ordering. Refreshing the page yields the same view. | Reload mid-flow; confirm. |
 | N-4 | Deep links to a model that the user can no longer view (perm lost) render the standard "not found / forbidden" empty state, never an unrecoverable error. | Manual: revoke perm mid-session, reload. |
 | N-5 | Authenticated session expiry inside the SPA renders a focus-trapped **re-login modal** (page behind it stays rendered) with a **Sign in** button that round-trips through `LOGIN_URL?next=<spa-path>`. Backend distinguishes `error.code: "session_expired"` from `forbidden` per [`docs/api-contract.md`](docs/api-contract.md) §6.1 (detection, landed in PR #95) + §10 (SPA flow + `?next=` posture + optional warning endpoints). UX flow is in [`docs/ux/states.md`](docs/ux/states.md) §3.5. **Never** a silent JS error, blank page, or hard redirect that drops in-flight work. | Force-clear the session cookie; click anything; modal appears, Sign in completes, user lands on the original SPA path. |
-| N-6 | When the consumer sets `DJANGO_ADMIN_REACT["session_warning_seconds"]` to a positive int, the SPA shows a non-blocking toast at `expires_at - N` with a **Stay signed in** button that hits `POST /api/v1/session/touch/`. When unset (default) the SPA ships the modal-only flow from N-5. | Set `session_warning_seconds = 60`; let the session approach expiry; toast appears; click Stay signed in; session extends. |
+| N-6 | When the consumer sets `DJANGO_ADMIN_REACT["SESSION_WARNING_SECONDS"]` to a positive int, the SPA shows a non-blocking toast at `expires_at - N` with a **Stay signed in** button that hits `POST /api/v1/session/touch/`. When unset (default) the SPA ships the modal-only flow from N-5. | Set `SESSION_WARNING_SECONDS = 60`; let the session approach expiry; toast appears; click Stay signed in; session extends. |
 
 ### 2.8 Visual consistency
 
@@ -227,7 +227,7 @@ deliverables. The PM/UX role does **not** sign these off alone.
   in `@dar/data` (Engineering).
 - N-6 (session-warning toast) depends on the optional
   `/api/v1/session/` + `/api/v1/session/touch/` endpoints
-  (Engineering — owned only when `session_warning_seconds` is set)
+  (Engineering — owned only when `SESSION_WARNING_SECONDS` is set)
   and on Security's review of the session-touch flow (no privilege
   escalation, no open redirect via `?next=`).
 
