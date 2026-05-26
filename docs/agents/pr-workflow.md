@@ -16,15 +16,15 @@ step**, while preserving open-source security guarantees.
 
 Each Claude session adopts exactly one of these roles when it starts:
 
-| Role        | Picks up                                       | May call                                                     | May NOT call                                  |
-| ----------- | ---------------------------------------------- | ------------------------------------------------------------ | --------------------------------------------- |
-| **Author**  | Next unclaimed PR in `PLAN.md` §2 + this doc   | `git push`, `gh pr create`, `gh pr edit`                     | `gh pr review`, `gh pr merge` on their own PR |
-| **Reviewer** | Any PR in `open` state without a recent review | `gh pr review --comment / --request-changes / --approve`, `gh pr diff`, `git fetch && git checkout` | `gh pr merge` (only Merger may merge)         |
-| **Merger**  | Any PR that meets §5 auto-merge criteria       | `gh pr merge --squash --delete-branch`, `gh pr close`        | bypass the §5 checklist                       |
-| **Releaser**| Tagging a version and publishing to PyPI       | `gh release create`, `poetry publish` (TestPyPI only)        | publish to **prod PyPI** (always human-gated) |
+| Role        | Picks up                                                                   | May call                                                     | May NOT call                                  |
+| ----------- | -------------------------------------------------------------------------- | ------------------------------------------------------------ | --------------------------------------------- |
+| **Author**  | Next unclaimed card on the [Project board](https://github.com/users/MartinCastroAlvarez/projects/3) (or open an issue first) | `git push`, `gh pr create`, `gh pr edit`                     | `gh pr review`, `gh pr merge` on their own PR |
+| **Reviewer** | Any PR in `open` state without a recent review                            | `gh pr review --comment / --request-changes / --approve`, `gh pr diff`, `git fetch && git checkout` | `gh pr merge` (only Merger may merge)         |
+| **Merger**  | Any PR that meets §5 auto-merge criteria                                   | `gh pr merge --squash --delete-branch`, `gh pr close`        | bypass the §5 checklist                       |
+| **Releaser**| Tagging a version and publishing to PyPI                                   | `gh release create`, `poetry publish` (TestPyPI only)        | publish to **prod PyPI** (always human-gated) |
 
-Pick the role you'll play in your session's first `forum/` post. Don't
-switch roles mid-PR — start a new session.
+Declare your role in the PR description (and any review comments your
+session posts). Don't switch roles mid-PR — start a new session.
 
 **No agent may take more than one role on the same PR.** If you wrote
 the diff, you cannot also review or merge it.
@@ -36,13 +36,18 @@ the diff, you cannot also review or merge it.
 Before any tool call:
 
 1. Read `CLAUDE.md` (this file is referenced from there).
-2. Read `PLAN.md`, `ARCHITECTURE.md`, `SECURITY.md`,
-   `docs/agents/decisions.md`, `docs/agents/changelog.md`.
+2. Read `ARCHITECTURE.md`, `SECURITY.md`, `docs/agents/decisions.md`,
+   `docs/agents/open-questions.md`.
 3. `git fetch origin && git status` to see local state.
 4. `gh pr list --state open --json number,title,headRefName,labels`
    to see open PRs.
-5. `ls forum/` to see active claims.
-6. Pick your role; post a one-line forum claim.
+5. Open the
+   [Project board](https://github.com/users/MartinCastroAlvarez/projects/3)
+   to see who has claimed which card.
+6. Pick your role; declare it in the PR description (Author) or in
+   your first review comment (Reviewer / Merger). If you're picking
+   up new work, claim the issue (assign yourself or post a claim
+   comment) **before** branching.
 
 If `gh` is not authed to the repo, **stop and tell the human**. Do not
 try clever workarounds.
@@ -52,14 +57,13 @@ try clever workarounds.
 ## 3. Author workflow
 
 ```
-Session start  ──►  Pick a PR slot from PLAN.md §2 (or open-questions)
-                ──►  forum claim posted
-                ──►  git checkout -b pr-<NN>-<slug>  (or feat/<slug>)
+Session start  ──►  Pick (or open) an issue + claim its board card
+                ──►  Issue assigned to you / claim comment posted
+                ──►  git checkout -b feat/<slug>  (or fix/, docs/, chore/)
                 ──►  write code + tests + docs
                 ──►  local checks (see §5.2)
                 ──►  git push -u origin <branch>
-                ──►  gh pr create  (HEREDOC body following template)
-                ──►  forum status post + PLAN.md table update
+                ──►  gh pr create  (HEREDOC body, links the issue + card)
                 ──►  Author done. Do not review or merge your own PR.
 ```
 
@@ -74,8 +78,8 @@ Session start  ──►  Pick a PR slot from PLAN.md §2 (or open-questions)
 - **Cite the contract.** Every PR body lists the `ARCHITECTURE.md` /
   `docs/api-contract.md` section(s) it implements.
 - **No `--force` push.** If you need to rewrite history (e.g.,
-  accidentally committed a secret — see §6), open a forum thread and
-  wait for human approval.
+  accidentally committed a secret — see §6), open an issue labelled
+  `incident:secret-leak` and wait for human approval.
 
 ### Author must nots
 
@@ -90,7 +94,7 @@ Session start  ──►  Pick a PR slot from PLAN.md §2 (or open-questions)
 ## 4. Reviewer workflow
 
 ```
-Session start  ──►  forum claim "reviewing PR #N"
+Session start  ──►  Comment on PR #N: "reviewing as <role>"
                 ──►  gh pr checkout N
                 ──►  gh pr diff N | head -... (or read locally)
                 ──►  Apply checklist §5.1
@@ -100,7 +104,7 @@ Session start  ──►  forum claim "reviewing PR #N"
                        gh pr review N --request-changes --body "..."
                      OR
                        gh pr review N --comment --body "..."  (questions)
-                ──►  forum post with link to review and checklist results
+                ──►  Review + checklist results live on the PR itself.
 ```
 
 ### Reviewer musts
@@ -109,7 +113,7 @@ Session start  ──►  forum claim "reviewing PR #N"
 - Quote specific file + line + reason for every requested change.
   Vague reviews don't count toward §5.3.
 - **At least one** reviewer on every PR must check the security
-  checklist (§5.1 items marked `[S]`). The forum post says which.
+  checklist (§5.1 items marked `[S]`). The review comment says which.
 - Verify CI is green. If CI failed, request changes; do not approve.
 
 ### Reviewer must nots
@@ -153,8 +157,10 @@ For every PR:
       (`@dar/ui`, `@dar/api`, `@dar/data`) without a decisions entry.
 - [ ] Docs touched if behavior changed (especially
       `docs/api-contract.md`).
-- [ ] `PLAN.md` §2 status column updated.
-- [ ] `docs/agents/changelog.md` has a one-liner for this PR.
+- [ ] PR is linked to its driving Issue (and the matching board card),
+      so the
+      [Project board](https://github.com/users/MartinCastroAlvarez/projects/3)
+      reflects the work.
 - [ ] If the PR adds a new folder, that folder has a `README.md`.
 
 ### 5.2 Local-only Author checks (before opening PR)
@@ -174,7 +180,7 @@ PR touches. Authoritative tiering lives in
 
 | Tier | Surface                                                                        | Reviewers required | Human required? |
 | ---- | ------------------------------------------------------------------------------ | ------------------ | --------------- |
-| 1    | Docs only (`docs/`, `*.md`), forum/, folder READMEs                            | 1 agent approve    | No              |
+| 1    | Docs only (`docs/`, `*.md`), folder READMEs                                    | 1 agent approve    | No              |
 | 2    | Skeletons, stubs, type-only changes, READMEs touched alongside skeleton        | 1 agent approve    | No              |
 | 3    | Backend code (`django_admin_react/`) without security surface change           | 2 agent approves   | No              |
 | 4    | Frontend code under `frontend/packages/`                                       | 2 agent approves   | No              |
@@ -193,10 +199,11 @@ gh pr merge <N> --squash --delete-branch --subject "<conventional title>" --body
 - **Squash** keeps `main` linear. No merge commits.
 - **Delete-branch** keeps the remote tidy.
 - After merge, the Merger:
-  - Appends a one-liner to `docs/agents/changelog.md` (next PR will
-    pick it up).
-  - Marks the `PLAN.md` §2 row "Merged".
-  - Posts a final forum status close-out.
+  - Moves the linked board card to **Done**.
+  - Closes the driving issue if `Closes #N` didn't already auto-close
+    it.
+  - Optionally posts a one-line close-out comment on the PR for
+    audit trail.
 
 ---
 
@@ -205,7 +212,8 @@ gh pr merge <N> --squash --delete-branch --subject "<conventional title>" --body
 ### Secret accidentally committed
 
 1. Whoever notices it: **stop**. Do not push more commits.
-2. Post a `forum/INCIDENT-<date>-secret-leak.md`.
+2. Open a GitHub Issue labelled `incident:secret-leak` describing the
+   leak (without re-pasting the secret).
 3. Rotate the secret on the upstream provider (GitHub, AWS, etc.).
 4. Wait for explicit human approval before history rewrite. No
    agent may `git push --force` autonomously, ever.
@@ -222,10 +230,10 @@ gh pr merge <N> --squash --delete-branch --subject "<conventional title>" --body
   - Make the change and force-push **with the reviewer's consent**, or
   - Open a `docs/agents/open-questions.md` entry and pause the PR.
 
-### Two agents racing on the same PR
+### Two agents racing on the same issue
 
-- First `forum/` claim wins. The loser posts a counter-claim or picks
-  another PR.
+- First to claim the issue (assigned, or first claim comment) wins.
+  The other agent picks a different card.
 - Never rebase another agent's branch without their consent.
 
 ### The merge gate is ambiguous (e.g., is this tier 3 or tier 5?)

@@ -44,8 +44,9 @@ pnpm -r typecheck
 pnpm -r build
 ```
 
-Build pipeline, Vite config, ESLint, and Tailwind setup all land in
-PR #6 (see [`PLAN.md`](../PLAN.md) §2).
+Build pipeline, Vite config, ESLint, and Tailwind setup are tracked
+on the
+[Project board](https://github.com/users/MartinCastroAlvarez/projects/3).
 
 ## Shipping to the Python package
 

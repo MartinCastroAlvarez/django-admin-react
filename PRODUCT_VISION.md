@@ -159,8 +159,10 @@ Not just "looks new". Specifically:
 ## 9. Cross-references
 
 - [`ARCHITECTURE.md`](ARCHITECTURE.md) — what the system **is**.
-- [`PLAN.md`](PLAN.md) — what we **build** next, in PR order.
-- [`ROADMAP.md`](ROADMAP.md) — what users will **get**, by release.
+- [Project board](https://github.com/users/MartinCastroAlvarez/projects/3)
+  — what we **build** next, in priority/phase order.
+- [Open Issues](https://github.com/MartinCastroAlvarez/django-admin-react/issues)
+  — what users will **get** (each issue carries the acceptance signal).
 - [`DESIGN_SYSTEM.md`](DESIGN_SYSTEM.md) — how it **looks**.
 - [`ONBOARDING.md`](ONBOARDING.md) — how a dev **starts**.
 - [`docs/ux/`](docs/ux/) — the UX rules in detail.

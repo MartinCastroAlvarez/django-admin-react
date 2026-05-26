@@ -16,10 +16,10 @@ defend against and the guarantees we make).
 Every PR is classified by its **highest-tier touched file**. A
 mixed PR is treated at the higher tier.
 
-### Tier 1 — Docs / forum only
+### Tier 1 — Docs only
 
 **Includes:** `*.md` outside `SECURITY.md` / `LICENSE`, `docs/**`
-(other than `docs/api-contract.md`), `forum/**`, folder READMEs.
+(other than `docs/api-contract.md`), folder READMEs.
 
 **Required reviewers:** 1 agent approve.
 **Auto-merge:** yes, after CI green + checklist.
@@ -116,16 +116,17 @@ Any of these immediately disables autonomous merging until a human
 re-enables:
 
 1. **File `KILL_SWITCH` exists at the repo root.** Any agent finding
-   this file aborts merge attempts and posts a forum entry. The file
-   contents may include the reason.
+   this file aborts merge attempts and posts a comment on the most
+   recent open PR (or opens an issue if none). The file contents may
+   include the reason.
 2. **`docs/agents/autonomy-policy.md` has been edited in the last 24
    hours.** Until a human reviews + this change merges, agents fall
    back to "human approval required for everything".
 3. **Two failed CI runs back-to-back on `main`.** Agents pause auto-
    merge and notify the human.
-4. **Open `forum/INCIDENT-*.md` file.** Any active incident file
-   disables autonomy. Resolve and rename to `forum/RESOLVED-*.md`
-   to re-enable.
+4. **Open issue labelled `incident:secret-leak` or `incident:*`.**
+   Any active incident issue disables autonomy. Close the issue (with
+   a remediation summary) to re-enable.
 
 To **manually** disable: `touch KILL_SWITCH && git add KILL_SWITCH &&
 git commit -m "chore: disable agent autonomy" && git push`.
@@ -152,7 +153,8 @@ Agents must **never**:
 - Add a new third-party dependency without a `decisions.md` entry.
 - Touch `LICENSE`, `SECURITY.md`, or this file without human review.
 - Echo a token, secret, `.env` content, or `git config` output into
-  any committed file (forum, docs, PR body, commit message).
+  any committed file (docs, PR body, commit message, Issue,
+  Discussion).
 - Resolve a merge conflict by overwriting another agent's change
   silently.
 - Modify the gh CLI auth state, `git config`, or `.git/hooks/`
@@ -167,7 +169,7 @@ An agent approval is **only** valid if all of these are true:
 - The reviewer session is a different `agent-id` than any author or
   co-author of the diff.
 - The reviewer ran the full `pr-workflow.md` §5.1 checklist and
-  recorded the results in a forum post or PR comment.
+  recorded the results as a PR review comment.
 - The reviewer ran the local checks (or verified CI ran them) within
   the same session as the approval.
 - The reviewer wrote a free-form reason for the approval (one
@@ -179,19 +181,23 @@ A Merger session may reject any approval that fails these criteria.
 
 ## 6. Audit trail
 
-For every auto-merged PR, the Merger must leave behind:
+For every auto-merged PR, the Merger must leave behind, on the PR
+itself (as the final close-out comment):
 
-1. A `forum/AGENT-<merger-id>-pr-<N>-audit.md` file with:
-   - PR number and title.
-   - List of agent-ids that approved + reviewer summary.
-   - Computed tier and why.
-   - CI run URL.
-   - Confirmation that §5.1 checklist passed.
-2. A one-line entry in `docs/agents/changelog.md`.
-3. PR table update in `PLAN.md` §2.
+- PR number and title.
+- List of agent-ids that approved + reviewer summary.
+- Computed tier and why.
+- CI run URL.
+- Confirmation that §5.1 checklist passed.
 
-These artifacts are how a human auditor reconstructs *who decided
-what, when, and why* without reading every PR.
+The Merger also moves the linked
+[Project board](https://github.com/users/MartinCastroAlvarez/projects/3)
+card to **Done** (and closes the driving issue if not already
+auto-closed by `Closes #N`).
+
+These artifacts — PR review comments + closed PR + closed issue +
+moved card — are how a human auditor reconstructs *who decided what,
+when, and why* without leaving GitHub.
 
 ---
 
@@ -215,7 +221,7 @@ When in doubt, **err human**.
 This file is reviewed on a rolling basis:
 
 - After every tier 5 PR.
-- After any incident (`forum/INCIDENT-*.md`).
+- After any incident (closed `incident:*`-labelled issue).
 - Before the first PyPI release (revisit tier 6 / release process).
 - Every 30 days of active development.
 

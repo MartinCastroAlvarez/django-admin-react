@@ -223,7 +223,6 @@ def test_s37_no_committed_token_patterns_in_head() -> None:
         "docs/threat-model.md",
         "ACCEPTANCE.md",
         "SECURITY.md",
-        "PROGRESS.md",
     )
     lines = [
         ln

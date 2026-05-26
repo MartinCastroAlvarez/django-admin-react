@@ -16,10 +16,11 @@ assignees: ""
 
 - [ ] `CLAUDE.md`
 - [ ] `ARCHITECTURE.md`
-- [ ] `PLAN.md`
 - [ ] `SECURITY.md`
 - [ ] `docs/agents/decisions.md`
 - [ ] `docs/agents/open-questions.md`
+- [ ] [Project board](https://github.com/users/MartinCastroAlvarez/projects/3)
+      and open Issues
 
 ## Suggested resolution path
 

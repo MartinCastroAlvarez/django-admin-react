@@ -9,7 +9,8 @@
 
 ## Linked planning artifacts (required)
 
-- `PLAN.md` PR slot: <!-- e.g. PR #3 -->
+- Project board card: <!-- e.g. https://github.com/users/MartinCastroAlvarez/projects/3 — link the card -->
+- Driving issue (closes / refs): <!-- e.g. Closes #54 -->
 - `ARCHITECTURE.md` section(s): <!-- e.g. §4.1 -->
 - `docs/api-contract.md` section(s) touched (or "n/a"):
 - `docs/agents/decisions.md` entry (or "n/a"):
@@ -45,8 +46,10 @@ If you are an AI agent:
 
 - [ ] I have read `CLAUDE.md` and `docs/agents/decisions.md` since my
       last session
-- [ ] I claimed scope in `forum/` if this PR touches non-trivial files
-- [ ] I updated `docs/agents/changelog.md` with a one-liner
+- [ ] I claimed (or opened) the driving Issue / Project board card
+      before starting; this PR is linked to it
+- [ ] My role this session (Author / Reviewer / Merger / Releaser) is
+      stated in this PR description
 
 ## Screenshots / curl examples
 

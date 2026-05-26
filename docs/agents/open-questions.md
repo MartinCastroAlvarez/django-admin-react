@@ -108,9 +108,9 @@ Options:
   habit.
 
 Tentative direction: **A.** Reasons: smaller install surface, fewer
-"don't use this DRF feature" rules to enforce. Recorded as the working
-assumption in `PLAN.md` §4. Revisit if hand-rolled serialization becomes
-maintenance burden.
+"don't use this DRF feature" rules to enforce. Recorded as a working
+assumption. Revisit if hand-rolled serialization becomes a maintenance
+burden.
 
 — claude-foundation-opus47
 

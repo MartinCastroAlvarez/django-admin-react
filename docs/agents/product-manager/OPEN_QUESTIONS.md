@@ -57,7 +57,7 @@ must first satisfy `ACCEPTANCE.md` §2.1-§2.5 cleanly.
 ## Q-2026-05-25-PM-03 — How do we surface custom `list_filter` in the SPA?
 
 Context: Django Admin's `list_filter` shows a right-rail filter
-sidebar. The SPA needs an equivalent. `PLAN.md` defers "complex
+sidebar. The SPA needs an equivalent. The roadmap defers "complex
 filters" but simple choice filters (`status = active/inactive`) are
 common and valuable.
 

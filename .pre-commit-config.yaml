@@ -84,7 +84,6 @@ repos:
             |\.pre-commit-config\.yaml
             |docs/threat-model\.md
             |docs/agents/security-expert/.*
-            |forum/(REVIEW|SECURITY|AGENT)-.*\.md
             |tests/test_security\.py
             |scripts/README\.md
           )$

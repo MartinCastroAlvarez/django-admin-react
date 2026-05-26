@@ -20,7 +20,7 @@
   Reason: these are the surfaces where a one-line regression has the
   worst blast radius.
 - **Source-of-truth files for engineering** (codified in §3 head
-  paragraph): `ARCHITECTURE.md`, `PLAN.md`, `TESTING.md` (to write),
+  paragraph): `ARCHITECTURE.md`, `TESTING.md` (to write),
   `API_CONTRACT.md` (top-level pointer to write).
 - **`scripts/lint.sh` is the merge gate, `scripts/build.sh` is the
   release gate.** No GitHub Actions per repo-owner direction. To be

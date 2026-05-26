@@ -1,8 +1,8 @@
 # Design system
 
-Owner: `claude-pm-ux-opus47` (Product / UX).
-Implementing role: Frontend Engineer agent (PR #6 / #7 in
-[`PLAN.md`](PLAN.md)).
+Owner: Product / UX role.
+Implementing role: Frontend Engineer agent — see open Issues on the
+[Project board](https://github.com/users/MartinCastroAlvarez/projects/3).
 Last reviewed: 2026-05-25.
 
 > The design system is **opinionated, closed, and small**. The point

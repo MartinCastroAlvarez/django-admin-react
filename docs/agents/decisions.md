@@ -17,7 +17,7 @@ Newest decisions on top.
   (Backend/Frontend/Docs/Security/DX/Infra), `Phase` (v0.1/v0.2/v1.0/
   Later). The PR list + issue list are the changelog by attribution.
 - **[PROCESS] Markdown stays the source for the *why*.**
-  `PLAN.md` keeps the narrative (assumptions, ordering rationale).
+  The driving Issues + Project board cards carry the why for each work item;
   `ACCEPTANCE.md` keeps the spec text. `ARCHITECTURE.md`, `SECURITY.md`,
   `CLAUDE.md`, `docs/api-contract.md`, `docs/threat-model.md` —
   unchanged, still markdown. The board shows *what*; the docs explain
@@ -26,7 +26,7 @@ Newest decisions on top.
   Announcements and open questions move to Discussions (categories:
   Announcements, Q&A, Ideas, Show & Tell). Per-PR reviews move to PR
   review comments. The claim / counter-claim / status-update pattern
-  stays in `forum/` because it's git-resident state by design.
+  moved to Discussions / Issues / PR comments; the `forum/` folder has been retired.
   Migration plan: [Discussion #71](https://github.com/MartinCastroAlvarez/django-admin-react/discussions/71).
 - **[PROCESS] Consumer feedback drops are recorded under
   `docs/consumer/`.** One markdown file per integration round,
@@ -67,7 +67,7 @@ Newest decisions on top.
   `docs/agents/` (which is cross-PR collaboration protocol). Each
   role keeps `AGENT.md` (entrypoint), `STATUS.md`, `DECISIONS.md`,
   `OPEN_QUESTIONS.md`, `NEXT_STEPS.md`, `SKILLS.md`. A fresh session
-  reads `AGENT.md` and resumes from there. — `docs/agents/README.md`,
+  reads `AGENT.md` and resumes from there. (STATUS / NEXT_STEPS were retired into the Project board + Issues.) — `docs/agents/README.md`,
   `docs/agents/software-architect/AGENT.md`
 - **Test coverage thresholds codified.** Overall ≥ 90 %;
   `permissions.py` and `serializers.py` at 100 % statements + 100 %
@@ -115,7 +115,7 @@ Newest decisions on top.
 - **Tailwind theming via CSS variables + config extension. Full config
   replacement is "fork your bundle".** — `ARCHITECTURE.md` §5.3
 - **ManyToMany is read-only stub in v1.** Editing requires autocomplete;
-  both are deferred. — `PLAN.md` §1
+  both are deferred. (deferred — tracked on the project board)
 - **The PyPI artifact ships pre-built React assets.** Consumers do not
   need Node to install. — `ARCHITECTURE.md` §5.4
 - **Forum + docs/agents split.** Forum for ephemeral coordination,
@@ -123,7 +123,7 @@ Newest decisions on top.
 - **Folder rule: every folder has a `README.md`.** — `CLAUDE.md` §1
 - **v1 is small.** Inlines, custom actions, bulk actions, custom widgets,
   autocomplete, raw_id, and the React extension API are explicitly
-  deferred. — `PLAN.md` §1
+  deferred. (deferred — tracked on the project board)
 
 ---
 

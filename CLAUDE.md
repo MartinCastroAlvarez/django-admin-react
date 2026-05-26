@@ -15,25 +15,28 @@ other.
 
 ## 0. Required reading on session start
 
-Read these files, in order, every session:
+Read these, in order, every session:
 
 1. [`CLAUDE.md`](CLAUDE.md) — this file. Check for updates since last
    session.
 2. **Live status: the [GitHub Projects board](https://github.com/users/MartinCastroAlvarez/projects/3)**
    ("django-admin-react roadmap"). What's in flight, what's blocked,
    what's planned, by Priority / Area / Phase. Claim a card before
-   opening a PR. See `docs/agents/decisions.md` (2026-05-26 entry).
-3. [`PLAN.md`](PLAN.md) — current PR sequence, scope, assumptions.
-   The narrative *why*; the board carries the live *what*.
-4. [`ARCHITECTURE.md`](ARCHITECTURE.md) — the architectural contract.
-5. [`SECURITY.md`](SECURITY.md) — non-negotiable security rules.
-6. [`docs/agents/decisions.md`](docs/agents/decisions.md) — accepted
+   opening a PR.
+3. **Open [Issues](https://github.com/MartinCastroAlvarez/django-admin-react/issues)** —
+   the work backlog. The board surfaces them with priority/area; the
+   issue itself carries the acceptance signal.
+4. **Recent activity: [open](https://github.com/MartinCastroAlvarez/django-admin-react/pulls)
+   and [closed PRs](https://github.com/MartinCastroAlvarez/django-admin-react/pulls?q=is%3Apr+is%3Aclosed)
+   + [Discussions](https://github.com/MartinCastroAlvarez/django-admin-react/discussions)** —
+   what other agents have shipped recently and announced.
+5. [`ARCHITECTURE.md`](ARCHITECTURE.md) — the architectural contract.
+6. [`SECURITY.md`](SECURITY.md) — non-negotiable security rules.
+7. [`docs/agents/decisions.md`](docs/agents/decisions.md) — accepted
    decisions.
-7. [`docs/agents/open-questions.md`](docs/agents/open-questions.md) —
+8. [`docs/agents/open-questions.md`](docs/agents/open-questions.md) —
    open questions; do not re-decide things already answered in
    `decisions.md`.
-8. [`docs/agents/changelog.md`](docs/agents/changelog.md) — what other
-   agents have shipped recently.
 9. [`docs/agents/pr-workflow.md`](docs/agents/pr-workflow.md) — the
    author/reviewer/merger protocol for autonomous PR ops. **Pick your
    role for the session before any tool call.**
@@ -86,14 +89,18 @@ Detailed shape is in [`ARCHITECTURE.md`](ARCHITECTURE.md).
 ## 3. Working agreements
 
 - **PR-only flow.** No direct commits to `main` except the bootstrap empty
-  commit. Open a branch `pr/<NN>-<slug>` for planned PRs (see
-  [`PLAN.md`](PLAN.md)), or `feat/...` / `fix/...` / `docs/...` /
-  `chore/...` otherwise.
+  commit. Open a branch matching the work type: `feat/...`, `fix/...`,
+  `docs/...`, `chore/...`. For tracked work, link the PR to its
+  [Project board](https://github.com/users/MartinCastroAlvarez/projects/3)
+  card and its driving issue.
 - **Autonomous PR ops.** Sessions pick a role — Author, Reviewer, Merger,
-  Releaser — at session start, post the role to `forum/`, and obey
-  [`docs/agents/pr-workflow.md`](docs/agents/pr-workflow.md). Auto-merge
-  is gated by [`docs/agents/autonomy-policy.md`](docs/agents/autonomy-policy.md).
-  Author ≠ Reviewer ≠ Merger on the same PR.
+  Releaser — at session start and obey
+  [`docs/agents/pr-workflow.md`](docs/agents/pr-workflow.md). The role
+  is declared in the PR description (and any review comments the
+  session posts). Auto-merge is gated by
+  [`docs/agents/autonomy-policy.md`](docs/agents/autonomy-policy.md).
+  Author ≠ Reviewer ≠ Merger on the same PR. **Approvals happen as PR
+  review comments — never as committed markdown files.**
 - **Tier 5 / 6 is always human.** Any change to `SECURITY.md`,
   `LICENSE`, `docs/api-contract.md`, `pyproject.toml` deps, frontend
   root `package.json` deps, `.github/workflows/`, CSRF/auth code, or
@@ -117,27 +124,37 @@ Detailed shape is in [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
 ## 4. Multi-agent coordination
 
-Several agents may be running at once. To avoid collisions:
+Several agents may be running at once. Coordination lives on GitHub —
+not in committed markdown — so the surface stays searchable, indexed,
+and notification-driven.
 
-1. **Pick an in-flight or unclaimed PR slot.** Look at branches on the
-   remote (`git ls-remote --heads origin`) and at
-   [`PLAN.md`](PLAN.md) §2. If the next planned PR is unclaimed, claim it
-   by opening a draft PR with `[WIP]` in the title and a checklist.
-2. **Coordinate in `docs/agents/` and `forum/`.**
-   - [`docs/agents/decisions.md`](docs/agents/decisions.md) — accepted
-     decisions (append-only).
-   - [`docs/agents/open-questions.md`](docs/agents/open-questions.md) —
-     questions awaiting a decision.
-   - [`docs/agents/changelog.md`](docs/agents/changelog.md) — one line
-     per merged PR.
-   - [`forum/`](forum/) — free-form threads, one `.md` per topic. Sign
-     your messages (e.g., `— claude-foundation`).
-3. **Do not duplicate work.** If another agent is already on the branch
-   you wanted, leave a comment on their PR and pick the next item.
-4. **Public folder, public eyes.** Everything in `docs/agents/` and
-   `forum/` is committed to a public open-source repository. Do not paste
-   secrets, tokens, transcripts, private user data, or anything that
-   wouldn't survive a public audit.
+1. **Claim a Project board card before opening a PR.** Look at the
+   [Project board](https://github.com/users/MartinCastroAlvarez/projects/3)
+   and the open [Issues](https://github.com/MartinCastroAlvarez/django-admin-react/issues).
+   Assign yourself (or post a claim comment on the issue) before you
+   start. If the issue doesn't exist yet, open one first.
+2. **Use GitHub for everything else:**
+   - **[Issues](https://github.com/MartinCastroAlvarez/django-admin-react/issues)**
+     — work tracking. One issue per actionable piece of work.
+   - **[Discussions](https://github.com/MartinCastroAlvarez/django-admin-react/discussions)**
+     — announcements, Q&A, ideas, show-and-tell. Anything broadcast
+     or community-shaped.
+   - **PR review comments** — *all* review feedback and *all*
+     approvals. Per-PR conversations belong on the PR itself, not in
+     committed markdown files.
+   - [`docs/agents/decisions.md`](docs/agents/decisions.md) —
+     append-only ADRs (one to two lines each, link out for detail).
+   - [`docs/agents/open-questions.md`](docs/agents/open-questions.md)
+     — questions awaiting a decision that aren't yet shaped for an
+     issue or Discussion.
+3. **Do not duplicate work.** Before starting, scan the open PR list
+   and the assigned cards on the board. If someone is already on it,
+   comment on their PR or their card instead of forking the effort.
+4. **Public repo, public eyes.** Everything in this repository
+   (`docs/`, commits, PR descriptions, commit messages, Issues,
+   Discussions) is published. Do not paste secrets, tokens,
+   transcripts, private user data, or anything that wouldn't survive
+   a public audit.
 
 ---
 
@@ -215,8 +232,8 @@ Plus whichever feature-specific cases your endpoint introduces.
   conflict in `docs/agents/open-questions.md`.
 - This file and `ARCHITECTURE.md` disagree → fix this file (it's the
   agent-facing contract) **and** the architecture file in the same PR.
-- The code disagrees with both → fix the code, write the test, and add a
-  `docs/agents/changelog.md` line.
+- The code disagrees with both → fix the code, write the test, and
+  describe the fix in the PR body. The PR list is the change log.
 
 ---
 
@@ -231,8 +248,12 @@ If you are stuck, do **not**:
 
 Instead:
 
-- Open a draft PR with what you have.
-- Write a note in `forum/` describing where you got stuck.
-- Append the question to `docs/agents/open-questions.md`.
+- Open a draft PR with what you have. Describe what's stuck in the PR
+  body.
+- Open a [Discussion](https://github.com/MartinCastroAlvarez/django-admin-react/discussions)
+  (Q&A category) if the blocker is a *question* that needs an answer
+  from a human or another agent.
+- Append the question to `docs/agents/open-questions.md` if it's
+  shaped like an architectural decision waiting for input.
 
 The next agent (or the human reviewer) will pick it up.

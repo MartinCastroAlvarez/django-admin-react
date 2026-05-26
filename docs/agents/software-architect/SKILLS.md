@@ -10,7 +10,7 @@
 
 - **Defines and enforces** the system contract
   ([`ARCHITECTURE.md`](../../ARCHITECTURE.md)).
-- **Sequences engineering work** ([`PLAN.md`](../../PLAN.md)).
+- **Sequences engineering work** via the [Project board](https://github.com/users/MartinCastroAlvarez/projects/3).
 - **Sets the engineering acceptance bar**
   ([`ACCEPTANCE.md`](../../ACCEPTANCE.md) §3).
 - **Owns the test strategy** ([`TESTING.md`](../../TESTING.md) —
@@ -106,7 +106,7 @@
 - Tier-6 change (release/PyPI publish) → human only.
 - Cross-role dispute → `docs/agents/open-questions.md`.
 - Discovered secret in a commit →
-  `forum/INCIDENT-<date>-secret-leak.md`; do **not** force-push.
+  an Issue labelled `incident:secret-leak`; do **not** force-push.
 
 ## Long-horizon question I keep asking myself
 

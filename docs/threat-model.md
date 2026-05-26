@@ -219,5 +219,5 @@ This document is re-reviewed:
 - Whenever a CVE is reported against Django or a direct dep.
 - Whenever the autonomy policy changes.
 
-The reviewer signs off in the matching `forum/AGENT-security-...md`
-post when the review pass is complete.
+The reviewer signs off via a PR review comment on the relevant PR
+when the review pass is complete.

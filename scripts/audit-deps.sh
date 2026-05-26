@@ -14,7 +14,9 @@
 #
 # Run on demand or as part of release prep. Linked from
 # `scripts/lint.sh` once it's been stable for a release cycle. See
-# `docs/agents/security-expert/NEXT_STEPS.md`.
+# the security role's `AGENT.md` charter and the
+# [Project board](https://github.com/users/MartinCastroAlvarez/projects/3)
+# for the schedule.
 
 set -euo pipefail
 

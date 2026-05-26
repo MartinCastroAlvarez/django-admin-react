@@ -3,7 +3,7 @@
 Owner: PM/UX lane.
 Status: draft. Architect + Security must co-sign before any
 implementation PR opens (see
-[`forum/UX-DIRECTIVE-extensibility-contract.md`](../../forum/UX-DIRECTIVE-extensibility-contract.md)).
+(directive content folded into this doc)).
 
 This document defines **what consumers can customise** in
 `django-admin-react` without forking the package, and **how** that
@@ -401,7 +401,7 @@ absorbed below. The follow-up sanitiser implementation lives in
 implementation PR (tier 5, human-gated).
 
 > Security verdict: see
-> [`forum/REVIEW-security-pr-ux-extensibility-contract.md`](../../forum/REVIEW-security-pr-ux-extensibility-contract.md)
+> the Security PR review
 > §1 (Approve-with-changes on the contract; Approve-with-changes on
 > E-9 conditional on C-1..C-10; **Reject** the original
 > `allow_unsafe_html = True` boolean shape, counter-proposal absorbed
@@ -540,7 +540,7 @@ Pulled forward from Security review §2.2:
 ### 7.6 Resolved questions
 
 The following are now answered (full reasoning in
-[`forum/REVIEW-security-pr-ux-extensibility-contract.md`](../../forum/REVIEW-security-pr-ux-extensibility-contract.md)
+the Security PR review
 §4):
 
 - ~~Q-EXT-01~~ (sanitiser): `nh3`, ≤ 5 ms p99 per 8 KiB block.
@@ -558,7 +558,7 @@ The following are now answered (full reasoning in
   block example.
 
 All Architect-lane questions are now answered too
-([`forum/REVIEW-architect-pr-ux-extensibility-contract.md`](../../forum/REVIEW-architect-pr-ux-extensibility-contract.md)):
+(the Architect PR review):
 
 - ~~Q-EXT-02~~ (sanitiser_version in envelope): yes, plus
   `sanitiser_profile` forward-hook for the future
@@ -653,7 +653,7 @@ Items that **remain** in §2.10 v1 non-goals after this directive:
 - i18n beyond `LANGUAGE_CODE` defaults.
 
 The promotion of X-4 / X-5 / X-6 may push v0.1 by one PR cycle.
-PM/UX recommends sequencing in [`PLAN.md`](../../PLAN.md) §2:
+PM/UX recommends sequencing on the [Project board](https://github.com/users/MartinCastroAlvarez/projects/3):
 
 - **PR #9** (new): backend hooks for X-2/X-3.
 - **PR #10** (new): backend hooks for X-4 (inlines) + X-5
@@ -699,5 +699,5 @@ The following extend `ACCEPTANCE.md` §2.9 "Extensibility UX":
   sanitiser spec for X-6 (Security updates).
 - [`docs/api-contract.md`](../api-contract.md) — endpoint shapes
   Architect adds for X-2 / X-4 / X-5.
-- [`forum/UX-DIRECTIVE-extensibility-contract.md`](../../forum/UX-DIRECTIVE-extensibility-contract.md)
+- (directive content folded into this doc)
   — coordination thread; cross-role open questions live there.

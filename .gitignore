@@ -61,7 +61,6 @@ Thumbs.db
 
 # --- Local-only Claude / agent state ---
 .claude/local/
-forum/_drafts/
 
 # --- Screenshot capture (one-off DB + symlinked node_modules) ---
 .dar-screenshots.sqlite3
@@ -72,3 +71,4 @@ django_admin_react/static/admin_react/.vite/
 django_admin_react/static/admin_react/assets/
 django_admin_react/static/admin_react/index.html
 
+.claude/

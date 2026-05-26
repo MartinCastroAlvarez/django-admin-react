@@ -29,9 +29,10 @@ up alongside their existing legacy admin.
 - One markdown file per consumer integration round, named
   `requirements-<integration-name>-<YYYY-MM-DD>.md`.
 - Cross-link the matching GitHub issues by number (`#54`, `#55`, …).
-- A short forum entry in [`../../forum/`](../../forum/) is the canonical
-  public announcement of a new consumer-feedback drop; the detailed doc
-  lives here.
+- A short
+  [Discussion](https://github.com/MartinCastroAlvarez/django-admin-react/discussions)
+  (Announcements category) is the canonical public surface for a new
+  consumer-feedback drop; the detailed doc lives here.
 
 ## See also
 
@@ -41,5 +42,6 @@ up alongside their existing legacy admin.
 - [`../../ACCEPTANCE.md`](../../ACCEPTANCE.md) — the formal acceptance
   spec. Consumer feedback is one of the inputs that drives changes
   here.
-- [`../../ROADMAP.md`](../../ROADMAP.md) — when a consumer-feedback
-  item is accepted into scope, it lands here.
+- [Project board](https://github.com/users/MartinCastroAlvarez/projects/3)
+  — when a consumer-feedback item is accepted into scope, it gets a
+  card (Phase = the target version).

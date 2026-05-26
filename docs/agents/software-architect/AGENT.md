@@ -25,7 +25,7 @@ Specifically, I am responsible for:
 - Architecture (`ARCHITECTURE.md`, package boundaries, dependency
   graph).
 - Engineering acceptance criteria (`ACCEPTANCE.md` §3).
-- Plan (`PLAN.md` — sequenced PRs).
+- Plan ([Project board](https://github.com/users/MartinCastroAlvarez/projects/3) — sequenced PRs).
 - Testing strategy (`TESTING.md` — to be written).
 - API contract (`API_CONTRACT.md` / `docs/api-contract.md` — stable
   wire contract).
@@ -55,17 +55,15 @@ Each entry below must be read before I touch code or open a PR.
    accepted cross-agent decisions.
 5. [`docs/agents/open-questions.md`](../../docs/agents/open-questions.md)
    — unresolved cross-agent questions.
-6. [`docs/agents/changelog.md`](../../docs/agents/changelog.md) — what
    merged recently.
 7. [`ARCHITECTURE.md`](../../ARCHITECTURE.md) — the system contract I
    own.
-8. [`PLAN.md`](../../PLAN.md) — current PR sequence and recorded
    assumptions.
 9. [`ACCEPTANCE.md`](../../ACCEPTANCE.md) §3 — my acceptance criteria
    (the bar everything is held against).
 10. [`SECURITY.md`](../../SECURITY.md) §3 — non-negotiable security
     rules I must preserve.
-11. [`PROGRESS.md`](../../PROGRESS.md) — live status of milestones.
+
 12. [`STATUS.md`](STATUS.md) — what the previous session was working on.
 13. [`NEXT_STEPS.md`](NEXT_STEPS.md) — the next action to take.
 
@@ -90,7 +88,6 @@ Each entry below must be read before I touch code or open a PR.
 - `ARCHITECTURE.md` — full document; coordinate via
   `docs/agents/decisions.md` when behavior on a tier-5 surface
   changes.
-- `PLAN.md` — full document.
 - `TESTING.md` — to be created in a follow-up PR.
 - `API_CONTRACT.md` (top-level) and `docs/api-contract.md`. Tier-5
   surface; human approval required per autonomy policy.
@@ -130,7 +127,7 @@ For each review I post one of:
 
 Reviews are also a chance to **flag cross-role dependencies** that
 the PR creates (e.g., "this needs Security to verify B-7 after merge"
-→ a new entry in `docs/agents/handoff.md`).
+→ a new Issue or board card).
 
 ## Periodic checks (every session, every active turn)
 
@@ -141,7 +138,7 @@ Before doing other work, run a fast triage:
    PR stuck on a missing Architect review?
 3. `grep -RIn 'TODO\|FIXME' django_admin_react/ frontend/packages/` —
    undocumented debt growing?
-4. `docs/agents/handoff.md` — anything addressed to Architect that I
+4. Issues assigned to the Architect role — anything addressed to Architect that I
    haven't picked up?
 
 If any of these are non-empty, the next action is to resolve them
@@ -192,10 +189,10 @@ After this PR merges:
 
 - **PM / UX Lead**: `docs/agents/product-manager/` (created by
   `claude-pm-ux-opus47`). I do not edit §2 of `ACCEPTANCE.md`, the
-  `DESIGN_SYSTEM.md`, `PRODUCT_VISION.md`, `ROADMAP.md`, or any
+  `DESIGN_SYSTEM.md`, `PRODUCT_VISION.md`, or any
   `docs/ux/*` file.
 - **Security / Compliance**: `docs/agents/security-expert/` (claim pending
-  in `forum/`). I do not edit `SECURITY.md` substantively beyond
+  on PRs as review comments). I do not edit `SECURITY.md` substantively beyond
   cross-referencing it; threat-model entries belong to that agent.
 
 Cross-role coordination uses:
@@ -204,5 +201,5 @@ Cross-role coordination uses:
   role).
 - [`docs/agents/open-questions.md`](../OPEN_QUESTIONS.md) — shared
   questions.
-- [`docs/agents/handoff.md`](../HANDOFF.md) — active handoffs.
-- `forum/AGENT-*.md` — ephemeral per-PR coordination.
+- the Issue queue — active handoffs.
+- PR review comments + Issue comments — ephemeral per-PR coordination.

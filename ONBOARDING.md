@@ -282,7 +282,8 @@ first-class `ModelAdmin` extension instead.
 
 - [`PRODUCT_VISION.md`](PRODUCT_VISION.md) — why this exists and
   what it tries to be.
-- [`ROADMAP.md`](ROADMAP.md) — what's coming after v1.
+- [Project board](https://github.com/users/MartinCastroAlvarez/projects/3)
+  — what's coming, by Phase.
 - [`docs/api-contract.md`](docs/api-contract.md) — the wire
   protocol the SPA uses (relevant only if you're curious or
   contributing).
