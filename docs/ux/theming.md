@@ -66,6 +66,13 @@ dar_theme=light; Path=/; SameSite=Lax; Secure; Max-Age=31536000
   the server-side resolution matched. This is the only `dar_*`
   cookie the package writes; not a session-shaped value, no PII.
 - Lifetime one year. Cleared via the user-menu "Reset to system".
+- `Secure` is set **only when `request.is_secure()` returns True**
+  (i.e. HTTPS). On plain-HTTP dev environments the flag is omitted
+  so the cookie still round-trips. The cookie's role is theme
+  persistence only; absence of `Secure` on plain HTTP does not
+  introduce a new auth surface — the theme value is not
+  session-derived and carries no PII. (Security-lane note added
+  2026-05-26 as part of the PR #102 follow-up.)
 
 ---
 
