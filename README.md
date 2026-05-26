@@ -74,39 +74,6 @@ DJANGO_ADMIN_REACT = {
 
 ---
 
-## Screenshots
-
-> **Captured live** with `scripts/screenshots.sh` from
-> `examples/project/` — real pixels, not mockups. The React SPA
-> shell is in flight; until then, the images below show the
-> **legacy HTML admin** running against the example apps — i.e.,
-> the experience `django-admin-react` modernises. Once the SPA
-> renders, this section regenerates from the same script.
-
-| Login (the entry door)                            | Admin index (legacy)                                    |
-| ------------------------------------------------- | ------------------------------------------------------- |
-| ![Login](docs/screenshots/01-admin-login.png)     | ![Admin index](docs/screenshots/02-admin-index.png)     |
-
-| Library / Authors — list view                                  | Library / Author — detail view                                  |
-| -------------------------------------------------------------- | --------------------------------------------------------------- |
-| ![Author list](docs/screenshots/03-admin-library-list.png)     | ![Author detail](docs/screenshots/05-admin-library-detail.png)  |
-
-| Mobile (375 px)                                                       | API: `GET /api/v1/registry/` JSON                       |
-| --------------------------------------------------------------------- | ------------------------------------------------------- |
-| ![Mobile list](docs/screenshots/04-admin-library-list-mobile.png)     | ![Registry JSON](docs/screenshots/06-registry-api-json.png) |
-
-> **Note for the next PyPI release:** these image refs need to be
-> absolute URLs (`https://raw.githubusercontent.com/.../main/docs/screenshots/...`)
-> for the PyPI page to render them. The switch happens in the
-> `0.1.0a2` release PR, which also requires the repo to be public so
-> `raw.githubusercontent.com` resolves without auth. Until then,
-> relative paths render correctly on the GitHub README.
-
-Every screenshot uses a deterministic synthetic seed (no real
-people, accounts, or PII).
-
----
-
 ## Extend without writing React
 
 Everything below is **just `ModelAdmin`**. No JavaScript. No new
