@@ -34,6 +34,23 @@ function detectMount(): string {
 const mount = detectMount();
 const client = new ApiClient({ mount });
 
+// PWA (#86): register the hand-rolled service worker the package serves
+// at `<mount>sw.js`, scoped to the mount so it never claims sibling
+// Django views. Best-effort — the app works fully without it, and the
+// SW itself honors `Cache-Control: no-store` so authenticated reads are
+// never cached. The `Service-Worker-Allowed: <mount>` header (set by
+// the backend ServiceWorkerView) is what permits the mount scope.
+function registerServiceWorker(mountPath: string): void {
+  if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
+  window.addEventListener('load', () => {
+    void navigator.serviceWorker.register(`${mountPath}sw.js`, { scope: mountPath }).catch(() => {
+      /* registration is best-effort; offline/install is a progressive
+         enhancement, not a requirement. */
+    });
+  });
+}
+registerServiceWorker(mount);
+
 const rootEl = document.getElementById('root');
 if (!rootEl) throw new Error('#root element not found');
 

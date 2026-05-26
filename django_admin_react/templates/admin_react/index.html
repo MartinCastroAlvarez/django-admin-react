@@ -12,6 +12,13 @@
     {% else %}
       <link rel="icon" href="data:," />
     {% endif %}
+    {# PWA (#86): the manifest + SW are served by the package at the
+       mount (pwa.py); link the manifest + PWA meta so the browser
+       offers "Install". The SW is registered from main.tsx. #}
+    <link rel="manifest" href="{{ mount_point }}web.manifest" />
+    <meta name="theme-color" content="#ffffff" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="{{ brand_title }}" />
     {% csrf_token %}
     {% if bundle %}
       {% for css_path in bundle.css %}

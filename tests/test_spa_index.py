@@ -103,9 +103,9 @@ def test_spa_shell_is_not_cacheable(superuser_client: Client) -> None:
     """
     response = superuser_client.get(ROOT_URL)
     cache_control = response.headers.get("Cache-Control", "")
-    assert "no-cache" in cache_control or "no-store" in cache_control, (
-        f"SPA shell must send no-cache/no-store; got {cache_control!r}"
-    )
+    assert (
+        "no-cache" in cache_control or "no-store" in cache_control
+    ), f"SPA shell must send no-cache/no-store; got {cache_control!r}"
 
 
 # --------------------------------------------------------------------------- #
@@ -270,3 +270,13 @@ def test_react_login_on_does_not_change_staff_path(superuser_client: Client) -> 
             assert response.status_code == 200
         finally:
             _reload_conf()
+
+
+@pytest.mark.django_db
+def test_shell_links_pwa_manifest(superuser_client: Client) -> None:
+    """The SPA shell links the package-served manifest so the browser
+    offers "Install" (#86 frontend). Mount-relative href."""
+    body = superuser_client.get(ROOT_URL).content.decode("utf-8")
+    assert 'rel="manifest"' in body
+    assert 'href="/admin-react/web.manifest"' in body
+    assert 'name="theme-color"' in body
