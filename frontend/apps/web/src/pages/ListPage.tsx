@@ -13,7 +13,6 @@ import {
   useApiClient,
   useList,
   type ActionDescriptor,
-  type DateHierarchy,
   type FilterDescriptor,
   type FilterOption,
   type ListRow,
@@ -374,42 +373,6 @@ export function ListPage() {
         </div>
       )}
 
-      {/* date_hierarchy drill-down strip (#160 row 2): year → month →
-          day. Clicking a bucket sets ?year/?month/?day; the breadcrumb
-          drills back up, clearing deeper levels. */}
-      {data.date_hierarchy && (
-        <DateHierarchyStrip
-          dh={data.date_hierarchy}
-          onDrill={(level, value) =>
-            patchParams((next) => {
-              next.set(level, String(value));
-              // Setting a level clears the deeper ones.
-              if (level === 'year') {
-                next.delete('month');
-                next.delete('day');
-              } else if (level === 'month') {
-                next.delete('day');
-              }
-            })
-          }
-          onUp={(level) =>
-            patchParams((next) => {
-              // Going up to <level> clears it and everything below.
-              if (level === 'all') {
-                next.delete('year');
-                next.delete('month');
-                next.delete('day');
-              } else if (level === 'year') {
-                next.delete('month');
-                next.delete('day');
-              } else if (level === 'month') {
-                next.delete('day');
-              }
-            })
-          }
-        />
-      )}
-
       {/* Table is always full-width now — filters live in the modal.
           Row checkboxes appear only when the model has bulk actions
           the user can run (#182). */}
@@ -643,93 +606,6 @@ function emptyLabel(hasQuery: boolean, chipCount: number, hasFilters: boolean): 
     return 'No objects in the default view. This model has filters — some rows may be hidden by a default view (e.g. test or archived data). Open Filter to adjust.';
   }
   return 'No objects yet.';
-}
-
-const MONTH_NAMES = [
-  'Jan',
-  'Feb',
-  'Mar',
-  'Apr',
-  'May',
-  'Jun',
-  'Jul',
-  'Aug',
-  'Sep',
-  'Oct',
-  'Nov',
-  'Dec',
-];
-
-interface DateHierarchyStripProps {
-  dh: DateHierarchy;
-  onDrill: (level: 'year' | 'month' | 'day', value: number) => void;
-  onUp: (level: 'all' | 'year' | 'month') => void;
-}
-
-function DateHierarchyStrip({ dh, onDrill, onUp }: DateHierarchyStripProps) {
-  const { year, month, day } = dh.active;
-  // The next drill level is the first granularity not yet pinned.
-  const level: 'year' | 'month' | 'day' = year == null ? 'year' : month == null ? 'month' : 'day';
-
-  const bucketLabel = (value: number): string => {
-    if (level === 'month') return MONTH_NAMES[value - 1] ?? String(value);
-    return String(value);
-  };
-
-  const crumbClass = 'text-blue-600 hover:underline';
-  const sep = <span className="text-gray-300">›</span>;
-
-  return (
-    <div className="flex flex-wrap items-center gap-2 text-sm">
-      {/* Breadcrumb of the active path. */}
-      <div className="flex items-center gap-2">
-        <button type="button" className={crumbClass} onClick={() => onUp('all')}>
-          All dates
-        </button>
-        {year != null && (
-          <>
-            {sep}
-            <button type="button" className={crumbClass} onClick={() => onUp('year')}>
-              {year}
-            </button>
-          </>
-        )}
-        {month != null && (
-          <>
-            {sep}
-            <button type="button" className={crumbClass} onClick={() => onUp('month')}>
-              {MONTH_NAMES[month - 1] ?? month}
-            </button>
-          </>
-        )}
-        {day != null && (
-          <>
-            {sep}
-            <span className="text-gray-700">{day}</span>
-          </>
-        )}
-      </div>
-
-      {/* Next-level buckets (hidden once we're at day granularity). */}
-      {day == null && dh.buckets.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1">
-          {sep}
-          {dh.buckets.map((b) => (
-            <button
-              key={b.value}
-              type="button"
-              onClick={() => onDrill(level, b.value)}
-              className="rounded px-2 py-0.5 text-xs text-gray-700 hover:bg-gray-100"
-              title={`${b.count} object${b.count === 1 ? '' : 's'}`}
-            >
-              {bucketLabel(b.value)}
-              <span className="ml-1 text-gray-400">({b.count})</span>
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
 }
 
 interface PaginationProps {
