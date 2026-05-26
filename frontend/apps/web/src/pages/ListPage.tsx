@@ -241,7 +241,6 @@ export function ListPage() {
       <header className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold">
-            <span className="capitalize">{appLabel}</span> ·{' '}
             {data.verbose_name_plural
               ? capitalize(data.verbose_name_plural)
               : data.object_name || modelName}
