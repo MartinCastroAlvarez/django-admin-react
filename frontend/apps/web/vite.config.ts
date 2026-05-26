@@ -28,17 +28,21 @@ export default defineConfig(({ command }) => ({
     },
   },
   build: {
-    outDir: path.resolve(
-      __dirname,
-      "../../../django_admin_react/static/admin_react",
-    ),
+    outDir: path.resolve(__dirname, "../../../django_admin_react/static/admin_react"),
     emptyOutDir: true,
     sourcemap: true,
+    // Emit `.vite/manifest.json` so Django's SpaIndexView can map
+    // the entry to its hashed JS / CSS filenames at render time.
+    manifest: true,
     rollupOptions: {
+      // Listing `index.html` as input makes Vite treat it as the
+      // entry — this is what triggers `manifest.json` to include
+      // an `index.html` record, which our Django view looks up.
+      input: path.resolve(__dirname, "index.html"),
       output: {
-        // Predictable filenames so Django's collectstatic doesn't break
-        // on hash churn. The wheel ships the latest hashed bundle and
-        // the index.html references it.
+        // Hashed filenames so Django's collectstatic can serve them
+        // with long Cache-Control. The wheel ships the manifest and
+        // the bundle in lockstep.
         entryFileNames: "assets/[name]-[hash].js",
         chunkFileNames: "assets/[name]-[hash].js",
         assetFileNames: "assets/[name]-[hash][extname]",

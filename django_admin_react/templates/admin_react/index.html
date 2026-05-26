@@ -1,24 +1,33 @@
-<!doctype html>
+{% load static %}<!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="dar-mount" content="{{ mount_point }}" />
-    {% csrf_token %}
-    <title>Admin</title>
+    <title>Django Admin</title>
     <link rel="icon" href="data:," />
-    <!--
-      This template is a placeholder. PR #6 will:
-        - Inject the resolved mount point into the dar-mount meta tag.
-        - Reference the built React bundle from
-          {% raw %}{% static "admin_react/index.<hash>.js" %}{% endraw %}.
-        - Set CSRF cookie via Django's middleware (the {% csrf_token %}
-          above is enough for that on a rendered template).
-    -->
+    {% csrf_token %}
+    {% if bundle %}
+      {% for css_path in bundle.css %}
+        <link rel="stylesheet" href="{% static 'admin_react/' %}{{ css_path }}" />
+      {% endfor %}
+      <script type="module" src="{% static 'admin_react/' %}{{ bundle.file }}"></script>
+    {% endif %}
   </head>
-  <body>
-    <div id="dar-root">
-      <noscript>This page requires JavaScript.</noscript>
+  <body class="bg-gray-50 text-gray-900 antialiased">
+    <div id="root">
+      {% if not bundle %}
+        <main style="max-width: 60ch; margin: 4rem auto; font-family: system-ui, sans-serif; line-height: 1.5;">
+          <h1>django-admin-react</h1>
+          <p>The React bundle is not built yet.</p>
+          <p>From the repo root, run:</p>
+          <pre style="background:#f3f4f6;padding:.5rem .75rem;border-radius:.25rem;">pnpm install
+pnpm run build:vite</pre>
+          <p>Then refresh this page.</p>
+        </main>
+      {% else %}
+        <noscript>This page requires JavaScript.</noscript>
+      {% endif %}
     </div>
   </body>
 </html>
