@@ -255,11 +255,23 @@ Rules:
   - `boolean`
   - `date`, `datetime`, `time`
   - `uuid`
-  - `binary` (base64-encoded bytes)
-  - `json` (pass-through dict; values recursively serialised)
+  - `binary` (base64-encoded bytes). **Read-only in v1.** The SPA renders
+    the value as a hex preview + byte count; writes to a `BinaryField`
+    from the SPA return `400 bad_request`.
+  - `json` (raw object on the wire — the SPA does `JSON.stringify` for
+    display and `JSON.parse` for writes; the server re-validates via
+    Django's `JSONField.to_python` so the wire format is canonical
+    JSON, not Python repr).
   - `array` (pass-through list; elements recursively serialised — for
-    `django.contrib.postgres.fields.ArrayField`)
-  - `range` (postgres range types — `DateRangeField`, `IntegerRangeField`, …)
+    `django.contrib.postgres.fields.ArrayField`).
+  - `range` (postgres range types — `DateRangeField`, `IntegerRangeField`,
+    `DateTimeRangeField`, `DecimalRangeField`). Wire shape:
+    `{"subtype": "daterange"|"intrange"|"datetimerange"|"numrange",
+    "value": {"lower": ..., "upper": ..., "bounds": "[)"}}`. The
+    `bounds` string uses Postgres's four-char closed vocabulary —
+    one of `"[]"`, `"[)"`, `"(]"`, `"()"`. `lower` and `upper` are
+    serialised in the inner subtype's format (e.g., `date` for
+    `daterange`, ISO 8601 for `datetimerange`).
   - `choice`
   - `foreignkey`
   - `unsupported` (manytomany and unknown types in v1; client renders a
@@ -299,8 +311,16 @@ Rules:
   consumer.
 - The `serializer` argument is optional; without it, the default
   Python-type dispatch in `serialize_value` runs.
-- Coin a new `vocab_type` label (e.g. `"money"`) only if you also
-  ship a matching SPA widget via the frontend extension surface.
+- **Reusing an existing `vocab_type`** (the example above maps
+  `MoneyField` → `"decimal"`) works out of the box — the SPA already
+  has a `decimal` widget.
+- **Coining a brand-new `vocab_type`** (e.g. `"money"`) requires the
+  consumer to also ship a matching SPA renderer via the frontend
+  extension surface — see issue
+  [#65](https://github.com/MartinCastroAlvarez/django-admin-react/issues/65).
+  Without a matching widget the SPA falls back to rendering the value
+  as a read-only `unsupported` tile, mirroring the v1 fallback for
+  manytomany.
 
 ---
 
