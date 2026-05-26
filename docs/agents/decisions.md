@@ -27,7 +27,7 @@ Newest decisions on top.
   Announcements, Q&A, Ideas, Show & Tell). Per-PR reviews move to PR
   review comments. The claim / counter-claim / status-update pattern
   stays in `forum/` because it's git-resident state by design.
-  Migration plan: `forum/PROCESS-projects-board-and-discussions-2026-05-26.md`.
+  Migration plan: [Discussion #71](https://github.com/MartinCastroAlvarez/django-admin-react/discussions/71).
 - **[PROCESS] Consumer feedback drops are recorded under
   `docs/consumer/`.** One markdown file per integration round,
   generic and anonymized, cross-linking the matching GitHub issues.
