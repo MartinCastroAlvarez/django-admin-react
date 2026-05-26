@@ -10,6 +10,7 @@ export type { ApiProviderProps } from './api-context';
 export { ApiClient, ApiError } from '@dar/api';
 export type {
   ActionDescriptor,
+  ActionRunResponse,
   ApiClientConfig,
   ColumnDescriptor,
   CreatePayload,
@@ -27,7 +28,6 @@ export type {
   HtmlValue,
   ListResponse,
   ListRow,
-  LoginResponse,
   Permissions,
   RegistryAppEntry,
   RegistryModelEntry,
@@ -45,8 +45,8 @@ export type { ListState } from './list-context';
 export { useDetail } from './detail-context';
 export type { DetailState } from './detail-context';
 
-export { createObject, updateObject, deleteObject } from './mutations';
-export type { CreateArgs, UpdateArgs, DeleteArgs } from './mutations';
+export { createObject, updateObject, deleteObject, runAction } from './mutations';
+export type { CreateArgs, UpdateArgs, DeleteArgs, RunActionArgs } from './mutations';
 
 export { renderValue, isHtmlValue, isForeignKeyValue } from './format';
 

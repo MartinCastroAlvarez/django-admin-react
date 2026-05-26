@@ -5,6 +5,7 @@
 // here. See `CLAUDE.md` §7.
 
 import type {
+  ActionRunResponse,
   CreatePayload,
   CreateResponse,
   DetailResponse,
@@ -174,5 +175,26 @@ export class ApiClient {
 
   delete(appLabel: string, modelName: string, pk: string | number): Promise<void> {
     return this.request<void>('DELETE', `${appLabel}/${modelName}/${pk}/`);
+  }
+
+  /**
+   * Run a bulk action over the selected pks
+   * (POST `.../actions/<name>/`, body `{ pks, confirmed }`). The
+   * backend re-resolves the action via `ModelAdmin.get_actions` and
+   * runs it over `get_queryset` narrowed to `pk__in`, re-checking
+   * permissions — the client never bypasses that gate.
+   */
+  runAction(
+    appLabel: string,
+    modelName: string,
+    actionName: string,
+    pks: Array<string | number>,
+    confirmed = false,
+  ): Promise<ActionRunResponse> {
+    return this.request<ActionRunResponse>(
+      'POST',
+      `${appLabel}/${modelName}/actions/${actionName}/`,
+      { pks, confirmed },
+    );
   }
 }

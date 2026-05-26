@@ -143,6 +143,16 @@ export interface ActionDescriptor {
   requires_confirmation?: boolean;
 }
 
+/** Result of running an action (POST `.../actions/<name>/`). */
+export interface ActionRunResponse {
+  executed: boolean;
+  action: string;
+  /** The pks the action ran over (echoed back). */
+  pks?: Array<string | number>;
+  /** Set when the action returned an `HttpResponseRedirect`. */
+  redirect?: string;
+}
+
 export interface ListResponse {
   app_label: string;
   /** Lowercase, no separators — used to build URLs. Do not display. */

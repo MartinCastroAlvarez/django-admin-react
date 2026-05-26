@@ -10,6 +10,7 @@ import { ListFilter } from 'lucide-react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import {
+  runAction,
   useApiClient,
   useList,
   type FilterDescriptor,
@@ -59,6 +60,12 @@ export function ListPage() {
   // Filters live in a modal/bottom-sheet behind a button so they never
   // occupy fixed horizontal space on mobile or desktop (#177).
   const [filterOpen, setFilterOpen] = useState(false);
+  // Bulk-action row selection (#182). Holds the selected pks; the
+  // action toolbar appears when ≥1 row is selected.
+  const [selectedPks, setSelectedPks] = useState<Set<string | number>>(new Set());
+  const [bulkAction, setBulkAction] = useState('');
+  const [running, setRunning] = useState(false);
+  const [bulkError, setBulkError] = useState<string | null>(null);
 
   function patchParams(mutate: (next: URLSearchParams) => void): void {
     const next = new URLSearchParams(searchParams);
@@ -105,6 +112,71 @@ export function ListPage() {
   const filters = data.filters ?? [];
   const hasFilters = filters.length > 0;
   const chips = buildChips(filters, activeFilters);
+  const actions = data.actions ?? [];
+  const rows = data.results;
+
+  // --- bulk-action selection (#182) -------------------------------- //
+  const allSelected = rows.length > 0 && rows.every((r) => selectedPks.has(r.pk));
+  const someSelected = rows.some((r) => selectedPks.has(r.pk));
+  function toggleRow(row: ListRow): void {
+    setSelectedPks((prev) => {
+      const next = new Set(prev);
+      if (next.has(row.pk)) next.delete(row.pk);
+      else next.add(row.pk);
+      return next;
+    });
+  }
+  function toggleAll(): void {
+    setSelectedPks((prev) => {
+      if (rows.every((r) => prev.has(r.pk))) {
+        const next = new Set(prev);
+        rows.forEach((r) => next.delete(r.pk));
+        return next;
+      }
+      return new Set([...prev, ...rows.map((r) => r.pk)]);
+    });
+  }
+
+  async function applyBulkAction(): Promise<void> {
+    const descriptor = actions.find((a) => a.name === bulkAction);
+    if (!descriptor || selectedPks.size === 0) return;
+    if (
+      descriptor.requires_confirmation &&
+      !window.confirm(`Run "${descriptor.label}" on ${selectedPks.size} selected object(s)?`)
+    ) {
+      return;
+    }
+    setRunning(true);
+    setBulkError(null);
+    try {
+      const result = await runAction({
+        client,
+        appLabel,
+        modelName,
+        actionName: bulkAction,
+        pks: [...selectedPks],
+        confirmed: true,
+      });
+      if (result.redirect) {
+        window.location.href = result.redirect;
+        return;
+      }
+      // Reload to reflect the action's effect (matches the admin's
+      // post-action full reload). Clears selection implicitly.
+      window.location.reload();
+    } catch (e) {
+      setBulkError(e instanceof Error ? e.message : 'The action failed.');
+      setRunning(false);
+    }
+  }
+
+  const selection = {
+    isSelected: (row: ListRow) => selectedPks.has(row.pk),
+    onToggle: toggleRow,
+    allSelected,
+    someSelected,
+    onToggleAll: toggleAll,
+  };
 
   return (
     <div className="space-y-4">
@@ -184,6 +256,42 @@ export function ListPage() {
         </div>
       )}
 
+      {/* Bulk-action toolbar — appears when rows are selected (#182). */}
+      {actions.length > 0 && selectedPks.size > 0 && (
+        <div className="flex flex-wrap items-center gap-2 rounded border border-gray-200 bg-gray-50 px-3 py-2">
+          <span className="text-sm text-gray-600">{selectedPks.size} selected</span>
+          <select
+            value={bulkAction}
+            onChange={(e) => setBulkAction(e.target.value)}
+            className="rounded border border-gray-300 px-2 py-1 text-sm"
+            aria-label="Bulk action"
+          >
+            <option value="">Action…</option>
+            {actions.map((a) => (
+              <option key={a.name} value={a.name}>
+                {a.label}
+              </option>
+            ))}
+          </select>
+          <button
+            type="button"
+            disabled={!bulkAction || running}
+            onClick={applyBulkAction}
+            className="rounded bg-blue-600 px-3 py-1 text-sm font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {running ? 'Running…' : 'Go'}
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelectedPks(new Set())}
+            className="text-sm text-gray-500 underline hover:text-gray-700"
+          >
+            Clear selection
+          </button>
+          {bulkError && <span className="text-sm text-red-600">{bulkError}</span>}
+        </div>
+      )}
+
       {/* Table is always full-width now — filters live in the modal. */}
       <Card>
         <Table
@@ -192,6 +300,7 @@ export function ListPage() {
           rowKey={(r) => r.pk}
           onRowClick={(row) => navigate(`/${appLabel}/${modelName}/${row.pk}`)}
           emptyLabel={q || chips.length ? 'No results match these filters.' : 'No objects yet.'}
+          selection={actions.length > 0 ? selection : undefined}
         />
       </Card>
       <Pagination page={data.page} totalPages={totalPages} onChange={setPage} />

@@ -5,7 +5,7 @@
 //  - debounced batching for rapid edits;
 //  - cache invalidation on success.
 
-import type { ApiClient, CreatePayload, UpdatePayload } from '@dar/api';
+import type { ActionRunResponse, ApiClient, CreatePayload, UpdatePayload } from '@dar/api';
 
 export interface CreateArgs {
   client: ApiClient;
@@ -39,4 +39,23 @@ export function updateObject(args: UpdateArgs) {
 
 export function deleteObject(args: DeleteArgs) {
   return args.client.delete(args.appLabel, args.modelName, args.pk);
+}
+
+export interface RunActionArgs {
+  client: ApiClient;
+  appLabel: string;
+  modelName: string;
+  actionName: string;
+  pks: Array<string | number>;
+  confirmed?: boolean;
+}
+
+export function runAction(args: RunActionArgs): Promise<ActionRunResponse> {
+  return args.client.runAction(
+    args.appLabel,
+    args.modelName,
+    args.actionName,
+    args.pks,
+    args.confirmed ?? false,
+  );
 }
