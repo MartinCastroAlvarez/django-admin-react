@@ -58,7 +58,35 @@ export function renderValue(value: FieldValue | undefined): string {
   // Safe-HTML envelope: when only a string is needed (e.g. a title),
   // strip tags to a plain-text approximation. Markup rendering is the
   // caller's job via `isHtmlValue` + dangerouslySetInnerHTML.
-  if (isHtmlValue(value)) return value.html.replace(/<[^>]*>/g, '');
+  if (isHtmlValue(value)) return stripTags(value.html);
   if (isForeignKeyValue(value)) return value.label;
   return String(value);
+}
+
+/**
+ * Strip HTML tags to a plain-text approximation, safely.
+ *
+ * Used only to render markup as *text* (e.g. a `title` attribute);
+ * React escapes the returned string when it's a text child, so this is
+ * not itself a security boundary. The implementation is deliberately:
+ *
+ * - **ReDoS-free** — the character class `[^<>]` excludes *both* angle
+ *   brackets, so the match is linear (no ambiguous overlap that a
+ *   crafted input could force into polynomial backtracking).
+ * - **Complete** — a single pass can leave a residual tag on
+ *   overlapping/nested input like `<<b>script>`; looping until the
+ *   string is stable guarantees no tag survives.
+ *
+ * (Replaces the prior `replace(/<[^>]*>/g, '')`, which CodeQL flagged
+ * for both polynomial-ReDoS and incomplete multi-character
+ * sanitization.)
+ */
+function stripTags(html: string): string {
+  let previous: string;
+  let stripped = html;
+  do {
+    previous = stripped;
+    stripped = stripped.replace(/<[^<>]*>/g, '');
+  } while (stripped !== previous);
+  return stripped;
 }
