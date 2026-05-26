@@ -102,9 +102,84 @@ def serialize_value(value: Any, field: Field | None = None) -> Any:
         # JSONField: pass through, but recursively serialize values
         # in case the dict carries e.g. dates that JSON would reject.
         return {str(k): serialize_value(v) for k, v in value.items()}
+    if _looks_like_range(value):
+        # PostgreSQL range fields. The structured envelope is documented
+        # in docs/api-contract.md §4 (Closes #141 — contract used to say
+        # this but no code emitted it; the str() fallback below emitted
+        # the psycopg ``Range.__str__`` form instead).
+        return _serialize_range_value(value, field)
     if isinstance(value, Model):
         return {"id": value.pk, "label": label_for(value)}
     return str(value)
+
+
+# --------------------------------------------------------------------------- #
+# PostgreSQL range support — see docs/api-contract.md §4 (Closes #141).      #
+# --------------------------------------------------------------------------- #
+_RANGE_SUBTYPE_BY_INTERNAL: Final[dict[str, str]] = {
+    "DateRangeField": "daterange",
+    "DateTimeRangeField": "datetimerange",
+    "DecimalRangeField": "numrange",
+    "IntegerRangeField": "intrange",
+    "BigIntegerRangeField": "intrange",
+}
+
+
+def _looks_like_range(value: Any) -> bool:
+    """Duck-test for a psycopg ``Range``-shaped value.
+
+    ``psycopg2.extras.Range`` and ``psycopg.types.range.Range`` both
+    expose ``lower``, ``upper``, ``lower_inc``, ``upper_inc``,
+    ``isempty``. We duck-type rather than ``isinstance`` so the
+    package never imports psycopg at module load — the consumer's
+    ``django.contrib.postgres`` install transitively makes it
+    available at runtime when needed, and the test suite can mint
+    Range-shaped fixtures without forcing psycopg as a dev
+    dependency.
+    """
+    return all(
+        hasattr(value, attr)
+        for attr in ("lower", "upper", "lower_inc", "upper_inc", "isempty")
+    )
+
+
+def _serialize_range_value(value: Any, field: Field | None) -> dict[str, Any]:
+    """Build the structured range envelope documented in api-contract §4.
+
+    Closes [#141]. The contract specifies:
+
+    .. code-block:: json
+
+        {"subtype": "daterange"|"datetimerange"|"intrange"|"numrange",
+         "value": {"lower": ..., "upper": ..., "bounds": "[)"},
+         "empty": true   // only when value is None}
+
+    ``subtype`` derives from the field's Django internal type so the
+    SPA can pick the right inner widget (date vs. datetime vs.
+    number); without a ``field`` hint we fall back to the generic
+    ``"range"`` label that ``field_type_for`` already uses for the
+    type-mapping. ``bounds`` is reconstructed from ``lower_inc`` /
+    ``upper_inc`` because that's the portable representation across
+    psycopg2 and psycopg3 (both libraries expose those booleans;
+    only psycopg2 exposes the private ``_bounds`` string directly).
+    The closed four-char vocabulary is ``"[]"``, ``"[)"``, ``"(]"``,
+    ``"()"`` — the same vocabulary the contract documents.
+    """
+    subtype = "range"
+    if field is not None:
+        subtype = _RANGE_SUBTYPE_BY_INTERNAL.get(field.get_internal_type(), "range")
+    if bool(getattr(value, "isempty", False)):
+        return {"subtype": subtype, "value": None, "empty": True}
+    lower_char = "[" if value.lower_inc else "("
+    upper_char = "]" if value.upper_inc else ")"
+    return {
+        "subtype": subtype,
+        "value": {
+            "lower": serialize_value(value.lower),
+            "upper": serialize_value(value.upper),
+            "bounds": lower_char + upper_char,
+        },
+    }
 
 
 def serialize_fk_value(value: Model | None) -> dict[str, Any] | None:
