@@ -5,7 +5,12 @@ import { BrowserRouter } from 'react-router-dom';
 import { ApiClient, ApiProvider, RegistryProvider } from '@dar/data';
 
 import { App } from './App';
+import { initTheme } from './theme';
 import './index.css';
+
+// Apply the saved (or system-default) light/dark theme before React
+// mounts so the first paint is already in the right theme — no flash.
+initTheme();
 
 // The mount is the consumer-chosen URL prefix (e.g. `/admin-react/`,
 // `/admin2/`, `/staff/`). The backend's ``SpaIndexView`` writes it to

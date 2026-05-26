@@ -1,9 +1,11 @@
 import type { PropsWithChildren } from 'react';
 import { useEffect, useMemo, useState } from 'react';
-import { Download, Menu } from 'lucide-react';
+import { Download, Menu, Settings } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import { useRegistry } from '@dar/data';
+
+import { SettingsModal } from './components/SettingsModal';
 
 // The browser's `beforeinstallprompt` event (Chromium). Captured so we
 // can show an explicit "Install" affordance and call `.prompt()` on
@@ -116,6 +118,8 @@ export function Layout({ children }: PropsWithChildren) {
   // overlay drawer on mobile so it never eats horizontal space on a
   // phone. ``drawerOpen`` only affects the mobile presentation.
   const [drawerOpen, setDrawerOpen] = useState(false);
+  // Settings dialog (cog) — appearance / dark-mode toggle (#84).
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const apps = (data?.apps ?? []) as RegistryApp[];
   const totalModels = useMemo(() => apps.reduce((n, app) => n + app.models.length, 0), [apps]);
@@ -193,16 +197,27 @@ export function Layout({ children }: PropsWithChildren) {
               {data.user.is_superuser ? ' · superuser' : ''}
             </div>
           )}
-          {canInstall && (
+          <div className="mt-3 flex items-center gap-2">
             <button
               type="button"
-              onClick={promptInstall}
-              className="mt-3 inline-flex items-center gap-1.5 rounded border border-gray-700 px-2 py-1 text-xs text-gray-200 hover:bg-gray-800"
+              onClick={() => setSettingsOpen(true)}
+              aria-label="Settings"
+              className="inline-flex items-center gap-1.5 rounded border border-gray-700 px-2 py-1 text-xs text-gray-200 hover:bg-gray-800"
             >
-              <Download className="h-3.5 w-3.5" aria-hidden />
-              Install app
+              <Settings className="h-3.5 w-3.5" aria-hidden />
+              Settings
             </button>
-          )}
+            {canInstall && (
+              <button
+                type="button"
+                onClick={promptInstall}
+                className="inline-flex items-center gap-1.5 rounded border border-gray-700 px-2 py-1 text-xs text-gray-200 hover:bg-gray-800"
+              >
+                <Download className="h-3.5 w-3.5" aria-hidden />
+                Install app
+              </button>
+            )}
+          </div>
         </div>
 
         {showFilter && (
@@ -259,6 +274,8 @@ export function Layout({ children }: PropsWithChildren) {
 
       {/* Content. Extra top padding on mobile clears the fixed top bar. */}
       <main className="flex-1 overflow-y-auto p-6 pt-20 md:pt-6">{children}</main>
+
+      {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
     </div>
   );
 }
