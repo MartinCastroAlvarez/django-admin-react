@@ -163,6 +163,73 @@ Read in this order:
 - `docs/agents/pr-workflow.md`, `docs/agents/autonomy-policy.md`
   (foundation — propose via PR)
 
+## Standing priority order (per repo owner, 2026-05-26)
+
+When a Security session is choosing what to work on next, walk these
+layers top-down. Finish (or explicitly de-claim) actionable work in
+the current layer before descending. Within each layer, prefer items
+where the Security lane is the **gating** reviewer — Tier 3 `[S]` PRs
+and anything touching CSRF, session, login, the serializer denylist,
+or `RESERVED_APP_LABELS`.
+
+1. **Open PRs — review and approve.** Highest priority. The
+   three-role approval set is the merge gate; an open PR without
+   the Security `[S]` review blocks itself when `autonomy-policy.md`
+   §1.3 applies. Use `pr-workflow.md` §5.1 as the checklist; record
+   the verdict as a `gh pr review --comment` (same-login `--approve`
+   is blocked by the GitHub UI, so the substance in the comment is
+   what counts per `autonomy-policy.md` §5).
+   - **Tier 5** PRs (touch `SECURITY.md`, `docs/api-contract.md`,
+     `LICENSE`, runtime/dev deps, `.github/workflows/`, CSRF or
+     permission code, the serializer denylist): post the Security
+     verdict; **do not merge**; the human merges.
+   - **Tier 3** PRs (backend security-relevant): the `[S]` review
+     is gating — without it the two-agent threshold can't be met.
+   - Track in-flight PRs the Security lane is mid-cycle on; do not
+     pick up a card in a later layer until they're closed out.
+
+2. **Issues — triage and respond.** Walk the open Issue list.
+   Security-relevant issues (any `incident:*` label, `bug` on the
+   security surface, advisories from Dependabot or upstream): own
+   them — file or pick up. For non-security issues that surface a
+   security implication (deps, secrets, hosting, history), drop a
+   Security note and tag the appropriate lane. Close issues that
+   PRs have already addressed (cite the closing PR + a one-line
+   audit summary).
+
+3. **GitHub Projects board.** Pick the next unclaimed Security-area
+   card. If no Security card is ready, scan for cross-lane work
+   where Security review is gating (Tier 3+ PRs in progress on the
+   board, or cards with the `Security` Area field set).
+
+4. **Discussions.** Sweep open Discussions (Q&A, Announcements).
+   Answer Q&A items in the Security lane; leave a one-comment ack
+   on Announcements that touch security posture (release alphas,
+   audit drops, consumer feedback). New Q&A from the Security lane
+   itself: open a Discussion rather than commit a markdown doc.
+
+5. **Acceptance criteria — `ACCEPTANCE.md` §4.** When nothing in
+   layers 1–4 is actionable, drive open §4 rows toward measurable
+   green. This is the durable backlog and the release gate; work
+   on it whenever the higher-priority surface is quiet. Examples:
+   pending hardening rows, threat-model docs (`docs/threat-model.md`),
+   periodic git-history hygiene scans, dep-audit cadence.
+
+**Natural-stopping rule.** If layer 1 produces no actionable PR
+(everything is awaiting human merge or blocked on another lane),
+*say so explicitly* in the session-end summary rather than churn
+out filler. The repo owner asked for substance, not motion. The
+same rule applies at every layer: the absence of actionable work
+is a valid session outcome.
+
+**Domain-specific framing.** The Security & Compliance Lead's
+remit explicitly includes maintainability and audit-readiness for
+open-source (see "Role" above, plus `code quality + audit-readiness`
+bullet). When reviewing in layer 1, treat readability gaps,
+docstring drift, and dead code as Security-blocking findings, not
+"nits" — an unreadable codebase becomes an unauditable one once
+public.
+
 ## Current goal
 
 **Define what "production-ready from a security perspective" means
