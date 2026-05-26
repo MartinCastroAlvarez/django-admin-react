@@ -10,11 +10,18 @@
 //   2. A background fetch runs in `useEffect` and updates state with
 //      the canonical response.
 //   3. `refresh()` re-fetches on demand (e.g. after a write).
+//   4. The view stays live without a manual page reload: it
+//      re-validates in the background when the tab regains focus
+//      (`refetchOnFocus`, default on) and, when a caller opts in, on a
+//      polling interval (`refetchInterval`). Background re-validation
+//      does NOT toggle `loading`, so the on-screen value never flickers
+//      to a spinner while the user is reading, and a failed poll keeps
+//      the last good data instead of blanking the screen.
 //
 // Storage failures (private mode, quota exceeded) degrade silently:
 // caching is an optimization, not a correctness layer.
 
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 export interface SwrState<T> {
   /** True while a network fetch is in flight and no cached value exists. */
@@ -34,6 +41,18 @@ export interface UseSwrCacheArgs<T> {
   fetcher: () => Promise<T>;
   /** Dependencies that trigger a re-fetch when changed. */
   deps?: ReadonlyArray<unknown>;
+  /**
+   * Background poll cadence in ms. When > 0 the value is silently
+   * re-fetched on this interval so the view tracks server-side changes
+   * without a manual reload. `0` / omitted disables polling.
+   */
+  refetchInterval?: number;
+  /**
+   * Silently re-fetch when the tab/window regains focus or becomes
+   * visible again. Default `true` — coming back to the admin shows
+   * current data, not whatever was cached when you left.
+   */
+  refetchOnFocus?: boolean;
 }
 
 function readCache<T>(key: string): T | null {
@@ -56,24 +75,34 @@ function writeCache<T>(key: string, value: T | null): void {
   }
 }
 
-export function useSwrCache<T>({ cacheKey, fetcher, deps = [] }: UseSwrCacheArgs<T>): SwrState<T> {
+export function useSwrCache<T>({
+  cacheKey,
+  fetcher,
+  deps = [],
+  refetchInterval = 0,
+  refetchOnFocus = true,
+}: UseSwrCacheArgs<T>): SwrState<T> {
   const cached = useMemo<T | null>(() => readCache<T>(cacheKey), [cacheKey]);
   const [data, setData] = useState<T | null>(cached);
   const [loading, setLoading] = useState<boolean>(cached === null);
   const [error, setError] = useState<Error | null>(null);
 
-  const refresh = useMemo(
-    () => async () => {
-      setLoading(true);
-      setError(null);
+  // Single fetch path. `showLoading` is true only for foreground
+  // fetches (mount, deps change, explicit refresh) — background
+  // re-validation passes false so it never flips the spinner on, and a
+  // failed background fetch leaves the last good data on screen.
+  const run = useCallback(
+    async (showLoading: boolean) => {
+      if (showLoading) setLoading(true);
       try {
         const next = await fetcher();
         setData(next);
         writeCache(cacheKey, next);
+        setError(null);
       } catch (err) {
         setError(err instanceof Error ? err : new Error(String(err)));
       } finally {
-        setLoading(false);
+        if (showLoading) setLoading(false);
       }
     },
     // `fetcher` identity is the caller's responsibility (use useMemo).
@@ -82,9 +111,40 @@ export function useSwrCache<T>({ cacheKey, fetcher, deps = [] }: UseSwrCacheArgs
     [cacheKey, ...deps],
   );
 
+  const refresh = useCallback(() => run(true), [run]);
+
+  // Stable handle to the latest background re-validation so the
+  // interval / focus listeners don't have to re-subscribe whenever the
+  // fetcher identity changes.
+  const revalidate = useRef(() => run(false));
+  revalidate.current = () => run(false);
+
+  // Foreground fetch on mount and whenever the cache key / deps change.
   useEffect(() => {
-    void refresh();
-  }, [refresh]);
+    void run(true);
+  }, [run]);
+
+  // Background poll on the requested cadence.
+  useEffect(() => {
+    if (!refetchInterval || refetchInterval <= 0) return undefined;
+    const id = window.setInterval(() => void revalidate.current(), refetchInterval);
+    return () => window.clearInterval(id);
+  }, [refetchInterval]);
+
+  // Background re-validate when the tab regains focus / visibility.
+  useEffect(() => {
+    if (!refetchOnFocus || typeof window === 'undefined') return undefined;
+    const onFocus = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'hidden') return;
+      void revalidate.current();
+    };
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onFocus);
+    return () => {
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onFocus);
+    };
+  }, [refetchOnFocus]);
 
   return useMemo(() => ({ loading, data, error, refresh }), [loading, data, error, refresh]);
 }

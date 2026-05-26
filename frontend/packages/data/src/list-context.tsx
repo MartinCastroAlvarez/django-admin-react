@@ -79,5 +79,13 @@ export function useList(params: UseListParams): ListState {
     cacheKey,
     fetcher,
     deps: [cacheKey],
+    // Keep the list live without a manual reload: poll in the
+    // background and re-validate on focus (the hook's default).
+    refetchInterval: LIST_REFETCH_INTERVAL_MS,
   });
 }
+
+// 15s background poll — a sensible "live enough" cadence for an admin
+// list without hammering the backend. Focus re-validation (the hook
+// default) covers the come-back-to-the-tab case between polls.
+const LIST_REFETCH_INTERVAL_MS = 15_000;

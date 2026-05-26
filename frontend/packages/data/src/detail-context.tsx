@@ -33,5 +33,12 @@ export function useDetail(params: UseDetailParams): DetailState {
     cacheKey,
     fetcher,
     deps: [cacheKey],
+    // Keep the detail view live without a manual reload: poll in the
+    // background and re-validate on focus (the hook's default). The
+    // edit form copies values into local state, so a background refresh
+    // never disturbs an in-progress edit.
+    refetchInterval: DETAIL_REFETCH_INTERVAL_MS,
   });
 }
+
+const DETAIL_REFETCH_INTERVAL_MS = 15_000;
