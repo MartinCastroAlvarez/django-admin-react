@@ -30,6 +30,10 @@ from pathlib import Path
 from typing import Any
 
 from django.conf import settings
+from django.contrib.auth.forms import AuthenticationForm
+from django.contrib.auth.views import LoginView
+from django.contrib.auth.views import LogoutView
+from django.core.exceptions import ValidationError
 from django.http import HttpRequest
 from django.http import HttpResponse
 from django.middleware.csrf import get_token
@@ -37,6 +41,7 @@ from django.shortcuts import redirect
 from django.shortcuts import render
 from django.urls import NoReverseMatch
 from django.urls import reverse
+from django.urls import reverse_lazy
 from django.views.generic import View
 
 from django_admin_react import conf as dar_conf
@@ -80,6 +85,81 @@ class SpaIndexView(View):
                 "brand_logo_url": dar_conf.BRAND_LOGO_URL,
             },
         )
+
+
+class DarStaffAuthenticationForm(AuthenticationForm):
+    """Login form that admits only **active staff** users.
+
+    Mirrors ``django.contrib.admin.forms.AdminAuthenticationForm`` (the
+    same ``is_active and is_staff`` gate) but does **not** import
+    ``django.contrib.admin`` — so the package's own login keeps working
+    even when the consumer has removed ``django.contrib.admin`` from
+    ``INSTALLED_APPS`` (issue: "when the Django admin is off, the
+    django-admin-react login replaces it").
+
+    Rejecting non-staff at the form level (rather than letting login
+    succeed then 403-ing at the SPA) avoids a redirect loop:
+    login → SPA → not-authorized → login → …
+    """
+
+    error_messages = {
+        **AuthenticationForm.error_messages,
+        "invalid_login": (
+            "Please enter the correct username and password for a staff "
+            "account. Note that both fields may be case-sensitive."
+        ),
+    }
+
+    def confirm_login_allowed(self, user: Any) -> None:
+        """Reject inactive or non-staff users with the generic message."""
+        if not user.is_active or not user.is_staff:
+            raise ValidationError(
+                self.error_messages["invalid_login"],
+                code="invalid_login",
+            )
+
+
+class DarLoginView(LoginView):
+    """The package's own login page — Django's ``LoginView`` + a staff form.
+
+    Reuses Django's session auth end-to-end (no parallel auth system,
+    per ``SECURITY.md``): ``LoginView`` runs ``authenticate`` +
+    ``login``, CSRF is enforced by Django's middleware on the POST, and
+    the session cookie is the same one the rest of the package reads.
+
+    Mounted at ``<mount>/login/`` (see ``urls.py``). ``_redirect_to_login``
+    falls back to this when no admin / custom ``LOGIN_URL`` is available,
+    so a consumer who turns the legacy admin off still gets a working,
+    package-branded login.
+    """
+
+    template_name = "admin_react/login.html"
+    authentication_form = DarStaffAuthenticationForm
+    # NOT ``redirect_authenticated_user = True``: an authenticated but
+    # non-staff user would be bounced login → SPA (which 403s non-staff
+    # and redirects back to login) → login → … in an infinite loop.
+    # Leaving it False makes the login page simply render for an
+    # already-authenticated user, breaking the loop. (Proper
+    # "you need staff access" messaging for that case is ACCEPTANCE
+    # §2.3 O-5 — a separate SpaIndexView follow-up.)
+    redirect_authenticated_user = False
+
+    def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
+        """Add the brand title so the login page matches the SPA shell."""
+        context = super().get_context_data(**kwargs)
+        context["brand_title"] = _resolve_brand_title(get_admin_site())
+        context["brand_logo_url"] = dar_conf.BRAND_LOGO_URL
+        return context
+
+
+class DarLogoutView(LogoutView):
+    """Logout endpoint that returns to the package's own login page.
+
+    Mounted at ``<mount>/logout/``. ``next_page`` resolves lazily to the
+    package login so logout works without the legacy admin.
+    """
+
+    next_page = reverse_lazy("django_admin_react:login")
 
 
 # --------------------------------------------------------------------------- #
@@ -193,7 +273,17 @@ def _redirect_to_login(request: HttpRequest) -> HttpResponse:
         if configured and configured != "/accounts/login/":
             login_url = str(configured)
 
-    # 3. Stock admin login.
+    # 3. The package's OWN login page. Always resolvable (it's in this
+    #    package's urlpatterns), so it's the reliable fallback when the
+    #    consumer has turned the legacy admin off — the django-admin-
+    #    react login replaces the admin login automatically.
+    if login_url is None:
+        try:
+            login_url = reverse("django_admin_react:login")
+        except NoReverseMatch:
+            login_url = None
+
+    # 4. Stock admin login.
     if login_url is None:
         try:
             login_url = reverse("admin:login")
