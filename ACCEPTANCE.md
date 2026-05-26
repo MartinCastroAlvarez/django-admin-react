@@ -117,9 +117,9 @@ nothing in §1.1 overrides it. The criteria below are necessary
   whose owner is this role is **not** a drained queue. Move the
   card or post a status comment first.
 - The user has signalled an unfixed real-world bug
-  (laminr `/admin2/` rendering, missing data in the SPA, etc.) —
-  rest is not appropriate until the bug closes, regardless of the
-  PR queue state.
+  (e.g. a production consumer's `/admin2/` mount not rendering,
+  missing data in the SPA, etc.) — rest is not appropriate until
+  the bug closes, regardless of the PR queue state.
 
 ---
 

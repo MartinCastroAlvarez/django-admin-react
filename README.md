@@ -143,8 +143,8 @@ the brand title in the sidebar.
 ```python
 # settings.py
 DJANGO_ADMIN_REACT = {
-    "BRAND_TITLE":    "Laminr",
-    "BRAND_LOGO_URL": "/static/laminr/logo.svg",
+    "BRAND_TITLE":    "Acme",
+    "BRAND_LOGO_URL": "/static/acme/logo.svg",
 }
 ```
 
