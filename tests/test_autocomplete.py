@@ -179,3 +179,50 @@ def test_cache_control_no_store(superuser_client: Client) -> None:
     with admin_attr(User, search_fields=("username",)):
         response = superuser_client.get(AUTOCOMPLETE_URL)
     assert response["Cache-Control"] == "no-store"
+
+
+@pytest.mark.django_db
+def test_distinct_applied_when_search_may_duplicate(superuser_client: Client) -> None:
+    """When the admin's ``get_search_results`` signals possible
+    duplicates (a relation-spanning search), the view de-duplicates with
+    ``.distinct()`` (autocomplete.py:105) — so a typeahead never shows
+    the same row twice."""
+    User = get_user_model()
+    User.objects.create_user(username="alice", password="x")  # noqa: S106
+    with (
+        admin_attr(User, search_fields=("username",)),
+        admin_override(
+            User,
+            get_search_results=lambda self, request, queryset, search_term: (queryset, True),
+        ),
+    ):
+        response = superuser_client.get(AUTOCOMPLETE_URL + "?q=al")
+    assert response.status_code == 200
+    labels = [r["label"] for r in response.json()["results"]]
+    assert len(labels) == len(set(labels))  # de-duplicated
+
+
+@pytest.mark.django_db
+def test_page_size_non_int_falls_back_to_default(superuser_client: Client) -> None:
+    """``?page_size=abc`` must not 500 — it falls back to the
+    autocomplete default (autocomplete.py:159-160)."""
+    from django_admin_react.api.views.autocomplete import _AUTOCOMPLETE_DEFAULT_PAGE_SIZE
+
+    User = get_user_model()
+    with admin_attr(User, search_fields=("username",)):
+        response = superuser_client.get(AUTOCOMPLETE_URL + "?page_size=abc")
+    assert response.status_code == 200
+    assert response.json()["pagination"]["page_size"] == _AUTOCOMPLETE_DEFAULT_PAGE_SIZE
+
+
+@pytest.mark.django_db
+def test_page_size_below_one_falls_back_to_default(superuser_client: Client) -> None:
+    """``?page_size=0`` (or negative) falls back to the default rather
+    than an empty/invalid window (autocomplete.py:162)."""
+    from django_admin_react.api.views.autocomplete import _AUTOCOMPLETE_DEFAULT_PAGE_SIZE
+
+    User = get_user_model()
+    with admin_attr(User, search_fields=("username",)):
+        response = superuser_client.get(AUTOCOMPLETE_URL + "?page_size=0")
+    assert response.status_code == 200
+    assert response.json()["pagination"]["page_size"] == _AUTOCOMPLETE_DEFAULT_PAGE_SIZE
