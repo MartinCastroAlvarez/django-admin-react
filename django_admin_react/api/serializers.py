@@ -196,11 +196,26 @@ def _serialize_range_value(value: Any, field: Field | None) -> dict[str, Any]:
     }
 
 
-def serialize_fk_value(value: Model | None) -> dict[str, Any] | None:
-    """Serialize an FK as ``{"id": pk, "label": str(obj)}`` or ``None``."""
+def serialize_fk_value(value: Model | None, *, admin_site: Any = None) -> dict[str, Any] | None:
+    """Serialize an FK as ``{"id": pk, "label": str(obj)}`` or ``None``.
+
+    When ``admin_site`` is provided **and** the related model is
+    registered on it, the envelope also carries
+    ``to: {"app_label": <real>, "model_name": ...}`` so the SPA can
+    render the cell as a navigable link to the related object's detail
+    page (#184). The target is **omitted** when the related model isn't
+    registered — surfacing a link the detail endpoint would 404 on (and
+    leaking adjacency to an unregistered model) is the exact posture
+    #89 removed from filter descriptors. ``app_label`` is the real
+    ``_meta.app_label`` the detail URL resolves against.
+    """
     if value is None:
         return None
-    return {"id": value.pk, "label": label_for(value)}
+    out: dict[str, Any] = {"id": value.pk, "label": label_for(value)}
+    if admin_site is not None and type(value) in getattr(admin_site, "_registry", {}):
+        meta = value._meta
+        out["to"] = {"app_label": meta.app_label, "model_name": meta.model_name}
+    return out
 
 
 def label_for(obj: Model) -> str:

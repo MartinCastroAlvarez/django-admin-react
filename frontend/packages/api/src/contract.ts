@@ -85,6 +85,15 @@ export interface ColumnDescriptor {
 export interface ForeignKeyValue {
   id: number | string;
   label: string;
+  /**
+   * The related model's `(real_app_label, model_name)` — present only
+   * when that model is registered on the admin site (#184). When set,
+   * the SPA renders the cell as a navigable link to
+   * `<mount>/<app_label>/<model_name>/<id>`; when absent (unregistered
+   * related model) the cell is plain text, never a link the detail
+   * endpoint would 404 on.
+   */
+  to?: { app_label: string; model_name: string };
 }
 
 /**

@@ -112,7 +112,10 @@ class ListView(View):
         list_display = list(model_admin.get_list_display(request))
         columns = _columns_payload(model_admin, list_display, request)
 
-        results = [_row_for(obj, model_admin, list_display, request) for obj in queryset[start:end]]
+        results = [
+            _row_for(obj, model_admin, list_display, request, admin_site)
+            for obj in queryset[start:end]
+        ]
 
         body: dict[str, Any] = {
             "app_label": model._meta.app_label,
@@ -267,6 +270,7 @@ def _row_for(
     model_admin: ModelAdmin,
     list_display: list[str],
     request: HttpRequest,
+    admin_site: Any = None,
 ) -> dict[str, Any]:
     """Build one ``results[]`` entry for the list response.
 
@@ -283,11 +287,11 @@ def _row_for(
             _f, _attr, value = lookup_field(name, obj, model_admin)
         except Exception:  # pragma: no cover — defensive
             value = ""
-        fields[name] = _serialize_list_value(obj, name, value)
+        fields[name] = _serialize_list_value(obj, name, value, admin_site)
     return {"pk": obj.pk, "label": label_for(obj), "fields": fields}
 
 
-def _serialize_list_value(obj: Model, name: str, value: Any) -> Any:
+def _serialize_list_value(obj: Model, name: str, value: Any, admin_site: Any = None) -> Any:
     """Serialize a single ``list_display`` cell.
 
     FK fields go through the FK envelope (``{"id", "label"}``);
@@ -300,5 +304,5 @@ def _serialize_list_value(obj: Model, name: str, value: Any) -> Any:
     """
     model_field = safe_get_field(obj, name)
     if isinstance(model_field, ForeignKey):
-        return serialize_fk_value(value)
+        return serialize_fk_value(value, admin_site=admin_site)
     return serialize_value(value, field=model_field)

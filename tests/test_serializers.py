@@ -176,3 +176,38 @@ class TestSerializeFKValue:
 
         result = serialize_fk_value(_FakeModel())  # type: ignore[arg-type]
         assert result == {"id": 42, "label": "the label"}
+
+
+# --------------------------------------------------------------------------- #
+# serialize_fk_value `to` target (#184 — navigable FK cells)                  #
+# --------------------------------------------------------------------------- #
+class TestSerializeFKTarget:
+    """`to` is included only when the related model is admin-registered."""
+
+    @pytest.mark.django_db
+    def test_to_present_when_related_model_registered(self) -> None:
+        from django.contrib import admin
+        from django.contrib.auth.models import Group  # pylint: disable=imported-auth-user
+
+        out = serialize_fk_value(Group(name="x"), admin_site=admin.site)
+        assert out is not None
+        assert out["to"] == {"app_label": "auth", "model_name": "group"}
+
+    def test_to_absent_without_admin_site(self) -> None:
+        from django.contrib.auth.models import Group  # pylint: disable=imported-auth-user
+
+        out = serialize_fk_value(Group(name="x"))
+        assert out is not None
+        assert "to" not in out
+
+    def test_to_absent_when_related_model_unregistered(self) -> None:
+        """Mirrors the #89 posture: never surface a target the SPA can't
+        reach (and never leak adjacency to an unregistered model)."""
+        from django.contrib.auth.models import Group  # pylint: disable=imported-auth-user
+
+        class _EmptySite:
+            _registry: dict = {}
+
+        out = serialize_fk_value(Group(name="x"), admin_site=_EmptySite())
+        assert out is not None
+        assert "to" not in out
