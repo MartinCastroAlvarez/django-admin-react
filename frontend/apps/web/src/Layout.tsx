@@ -1,5 +1,5 @@
 import type { PropsWithChildren } from 'react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { useRegistry } from '@dar/data';
@@ -68,6 +68,10 @@ function filterApps(apps: RegistryApp[], query: string): RegistryApp[] {
 export function Layout({ children }: PropsWithChildren) {
   const { data } = useRegistry();
   const [query, setQuery] = useState('');
+  // The sidebar is a static column on desktop (≥ md) and a slide-in
+  // overlay drawer on mobile so it never eats horizontal space on a
+  // phone. ``drawerOpen`` only affects the mobile presentation.
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   const apps = (data?.apps ?? []) as RegistryApp[];
   const totalModels = useMemo(
@@ -80,25 +84,70 @@ export function Layout({ children }: PropsWithChildren) {
     [apps, query, showFilter],
   );
 
+  // Close the mobile drawer on Escape.
+  useEffect(() => {
+    if (!drawerOpen) return undefined;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setDrawerOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [drawerOpen]);
+
+  const closeDrawer = () => setDrawerOpen(false);
+
   return (
     <div className="flex h-full min-h-screen">
-      <aside className="w-64 shrink-0 bg-gray-900 text-gray-100 p-4 overflow-y-auto">
+      {/* Mobile top bar — hamburger + brand. Hidden on desktop. */}
+      <header className="md:hidden fixed inset-x-0 top-0 z-30 flex h-14 items-center gap-3 bg-gray-900 px-4 text-gray-100">
+        <button
+          type="button"
+          aria-label="Open navigation"
+          aria-expanded={drawerOpen}
+          onClick={() => setDrawerOpen(true)}
+          className="-ml-2 rounded p-2 hover:bg-gray-800"
+        >
+          <span className="mb-1 block h-0.5 w-5 bg-current" />
+          <span className="mb-1 block h-0.5 w-5 bg-current" />
+          <span className="block h-0.5 w-5 bg-current" />
+        </button>
+        <Link to="/" onClick={closeDrawer} className="flex items-center gap-2 font-semibold">
+          {BRAND_LOGO_URL && <img src={BRAND_LOGO_URL} alt="" className="h-5 w-5 rounded" />}
+          <span className="truncate">{BRAND_TITLE}</span>
+        </Link>
+      </header>
+
+      {/* Backdrop — only on mobile while the drawer is open. */}
+      {drawerOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 md:hidden"
+          onClick={closeDrawer}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Sidebar: static column on desktop; off-canvas drawer on mobile. */}
+      <aside
+        className={[
+          'w-64 shrink-0 overflow-y-auto bg-gray-900 p-4 text-gray-100',
+          // Mobile: fixed off-canvas drawer that slides in.
+          'fixed inset-y-0 left-0 z-50 transform transition-transform duration-200',
+          drawerOpen ? 'translate-x-0' : '-translate-x-full',
+          // Desktop: pinned, always visible, in normal flow.
+          'md:static md:z-auto md:translate-x-0',
+        ].join(' ')}
+      >
         <div className="mb-6">
           <Link
             to="/"
-            className="flex items-center gap-2 font-semibold text-lg hover:text-white"
+            onClick={closeDrawer}
+            className="flex items-center gap-2 text-lg font-semibold hover:text-white"
           >
-            {BRAND_LOGO_URL && (
-              <img
-                src={BRAND_LOGO_URL}
-                alt=""
-                className="h-6 w-6 rounded shrink-0"
-              />
-            )}
+            {BRAND_LOGO_URL && <img src={BRAND_LOGO_URL} alt="" className="h-6 w-6 shrink-0 rounded" />}
             <span>{BRAND_TITLE}</span>
           </Link>
           {data?.user && (
-            <div className="text-xs text-gray-400 mt-1">
+            <div className="mt-1 text-xs text-gray-400">
               {data.user.display_name}
               {data.user.is_superuser ? ' · superuser' : ''}
             </div>
@@ -124,7 +173,7 @@ export function Layout({ children }: PropsWithChildren) {
         <nav className="space-y-4">
           {visibleApps.map((app) => (
             <div key={app.app_label}>
-              <div className="text-xs uppercase tracking-wide text-gray-400 mb-1">
+              <div className="mb-1 text-xs uppercase tracking-wide text-gray-400">
                 {app.verbose_name}
               </div>
               <ul className="space-y-1">
@@ -140,7 +189,8 @@ export function Layout({ children }: PropsWithChildren) {
                     <li key={`${routeApp}.${model.model_name}`}>
                       <Link
                         to={`/${routeApp}/${model.model_name}`}
-                        className="block text-sm px-2 py-1 rounded hover:bg-gray-800"
+                        onClick={closeDrawer}
+                        className="block rounded px-2 py-1 text-sm hover:bg-gray-800"
                       >
                         {modelLabel(model)}
                       </Link>
@@ -151,13 +201,13 @@ export function Layout({ children }: PropsWithChildren) {
             </div>
           ))}
           {showFilter && visibleApps.length === 0 && (
-            <div className="text-sm text-gray-500 px-2">
-              No models match “{query}”.
-            </div>
+            <div className="px-2 text-sm text-gray-500">No models match “{query}”.</div>
           )}
         </nav>
       </aside>
-      <main className="flex-1 overflow-y-auto p-6">{children}</main>
+
+      {/* Content. Extra top padding on mobile clears the fixed top bar. */}
+      <main className="flex-1 overflow-y-auto p-6 pt-20 md:pt-6">{children}</main>
     </div>
   );
 }
