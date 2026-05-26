@@ -383,6 +383,12 @@ Rules:
     list of bare pks (or `[{id, label}, ...]` echo-back). Pure M2M
     only — M2M with a custom `through` model that has extra columns
     falls back to `unsupported` (manage via the through admin).
+  - `file` / `image` — `{name, url, size}` envelope (or `null` when
+    empty). `url` defers to the consumer's storage backend
+    (`value.url`) so signed-URL backends (S3, GCS, …) work without
+    package changes. `size` is best-effort (`null` when the backend
+    can't expose it cheaply). **v1 surfaces the read side**;
+    multipart upload + clearing is on the roadmap.
   - `unsupported` (unknown types in v1; client renders a read-only
     label and no edit control)
 - For `choice` fields the response includes `"choices": [{ "value":...,
