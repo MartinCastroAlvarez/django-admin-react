@@ -20,13 +20,11 @@ from django.urls import path
 from django.views.generic import View
 
 from django_admin_react.api.views.create import CreateView
-from django_admin_react.api.views.delete import DeleteView
+from django_admin_react.api.views.destroy import DestroyView
 from django_admin_react.api.views.detail import DetailView
 from django_admin_react.api.views.list import ListView
 from django_admin_react.api.views.registry import RegistryView
 from django_admin_react.api.views.update import UpdateView
-
-app_name = "api_v1"
 
 
 class CollectionView(View):
@@ -53,7 +51,7 @@ class InstanceView(View):
         return UpdateView.as_view()(request, *args, **kwargs)
 
     def delete(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
-        return DeleteView.as_view()(request, *args, **kwargs)
+        return DestroyView.as_view()(request, *args, **kwargs)
 
 
 urlpatterns: list = [

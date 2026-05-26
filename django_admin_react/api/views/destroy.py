@@ -30,8 +30,14 @@ from django_admin_react.api.registry import get_admin_site
 from django_admin_react.api.registry import resolve_model
 
 
-class DeleteView(View):
-    """``DELETE /api/v1/<app_label>/<model_name>/<pk>/``."""
+class DestroyView(View):
+    """``DELETE /api/v1/<app_label>/<model_name>/<pk>/``.
+
+    Class name follows DRF's verb convention (``destroy``) to avoid
+    overloading ``delete`` on the module surface; the HTTP method
+    handler below must still be named ``delete`` per Django's CBV
+    contract.
+    """
 
     http_method_names = ["delete"]
 
