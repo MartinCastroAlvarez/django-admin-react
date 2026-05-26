@@ -17,6 +17,7 @@ import {
   useApiClient,
   useDetail,
   type DetailResponse,
+  type FieldDescriptor,
   type InlineDescriptor,
   type WriteValue,
 } from '@dar/data';
@@ -24,6 +25,34 @@ import { Button, Card, EmptyState, Spinner, Table } from '@dar/ui';
 
 import { FieldInput } from '../components/FieldInput';
 import { FieldValueView } from '../components/FieldValueView';
+
+// Render a detail field's value. ForeignKey values become a navigable
+// link to the related object's detail page (#184 — Django-admin
+// parity), using the descriptor's `to` (the FK target's real
+// app_label + model_name) so the URL round-trips through resolve_model.
+// Everything else defers to FieldValueView.
+function DetailValue({ field }: { field: FieldDescriptor }) {
+  const v = field.value;
+  if (
+    field.type === 'foreignkey' &&
+    field.to &&
+    v &&
+    typeof v === 'object' &&
+    !Array.isArray(v) &&
+    'id' in v
+  ) {
+    const fk = v as { id: number | string; label: string };
+    return (
+      <Link
+        to={`/${field.to.app_label}/${field.to.model_name}/${fk.id}`}
+        className="text-blue-600 hover:underline"
+      >
+        {fk.label}
+      </Link>
+    );
+  }
+  return <FieldValueView value={field.value} />;
+}
 
 export function DetailPage() {
   const params = useParams<{ appLabel: string; modelName: string; pk: string }>();
@@ -102,7 +131,7 @@ export function DetailPage() {
                     <div key={name} className="grid grid-cols-3 gap-4 py-2 text-sm">
                       <dt className="text-gray-500">{field.label}</dt>
                       <dd className="col-span-2 whitespace-pre-wrap text-gray-900">
-                        <FieldValueView value={field.value} />
+                        <DetailValue field={field} />
                       </dd>
                     </div>
                   );
