@@ -283,3 +283,70 @@ def resolve_model(
 def model_permissions(model_admin: ModelAdmin, request: HttpRequest) -> dict[str, bool]:
     """Public alias for the four ``has_*_permission`` booleans."""
     return _model_permissions(model_admin, request)
+
+
+def save_options(
+    model_admin: ModelAdmin,
+    request: HttpRequest,
+    obj: Model | None = None,
+) -> dict[str, bool]:
+    """Visibility of the four Django save-flow buttons for this view (#154).
+
+    Mirrors the logic Django's ``admin_modify.submit_row`` template tag
+    applies, restricted to the two views this package serves:
+
+    - ``obj is not None`` → **change view** (``add=False, change=True``).
+    - ``obj is None``     → **add/create view** (``add=True, change=False``).
+
+    We compute the flags from ``ModelAdmin`` permission methods +
+    ``ModelAdmin.save_as`` rather than rendering the admin template, so
+    the package never depends on the admin template context. The flag
+    set is the source of truth for which buttons the SPA renders; the
+    SPA never invents a save routing the backend wouldn't allow.
+
+    Returned keys (all booleans):
+
+    - ``show_save`` — the plain "Save" button.
+    - ``show_save_and_continue`` — "Save and continue editing".
+    - ``show_save_and_add_another`` — "Save and add another".
+    - ``show_save_as_new`` — "Save as new" (change view only, and only
+      when ``ModelAdmin.save_as`` is True).
+    - ``save_as`` — the raw ``ModelAdmin.save_as`` flag, surfaced so the
+      SPA knows whether a "Save as new" POST creates a fresh object.
+    - ``save_as_continue`` — the raw ``ModelAdmin.save_as_continue``
+      flag (default True): after a "Save as new", whether the SPA
+      lands on the new object's change view (True) or the changelist
+      (False).
+
+    ``has_editable_inline_admin_formsets`` is **not** factored in here
+    (the package's inline write-half is tracked under #54). Until that
+    lands, ``can_save`` reduces to the object-level change/add
+    permission, which is correct for models without editable inlines —
+    the overwhelming common case.
+    """
+    is_change = obj is not None
+    is_add = not is_change
+    save_as = bool(getattr(model_admin, "save_as", False))
+    save_as_continue = bool(getattr(model_admin, "save_as_continue", True))
+
+    has_add = bool(model_admin.has_add_permission(request))
+    has_change = bool(model_admin.has_change_permission(request, obj))
+    has_view = bool(model_admin.has_view_permission(request, obj))
+
+    # Django: can_save = (has_change and change) or (has_add and add).
+    can_save = (has_change and is_change) or (has_add and is_add)
+    # Django: can_save_and_add_another = has_add and (not save_as or add) and can_save.
+    can_add_another = has_add and (not save_as or is_add) and can_save
+    # Django: can_save_and_continue = can_save and has_view (not is_popup; we never pop up).
+    can_continue = can_save and has_view
+    # Django: show_save_as_new = has_change and change and save_as.
+    show_save_as_new = has_change and is_change and save_as
+
+    return {
+        "show_save": can_save,
+        "show_save_and_continue": can_continue,
+        "show_save_and_add_another": can_add_another,
+        "show_save_as_new": show_save_as_new,
+        "save_as": save_as,
+        "save_as_continue": save_as_continue,
+    }

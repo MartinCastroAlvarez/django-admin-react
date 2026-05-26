@@ -99,3 +99,84 @@ def test_starts_from_admin_get_queryset(superuser_client: Client) -> None:
     with admin_override(Group, get_queryset=lambda self, request: Group.objects.none()):
         response = superuser_client.get(_url(g.pk))
     assert response.status_code == 404
+
+
+# --------------------------------------------------------------------------- #
+# save_options (#154 — Django save-flow button parity)                        #
+# --------------------------------------------------------------------------- #
+@pytest.mark.django_db
+def test_detail_includes_save_options_block(superuser_client: Client) -> None:
+    """The detail (change-view) response carries the four save-flow flags."""
+    g = Group.objects.create(name="example")
+    body = superuser_client.get(_url(g.pk)).json()
+    assert "save_options" in body
+    opts = body["save_options"]
+    assert set(opts.keys()) == {
+        "show_save",
+        "show_save_and_continue",
+        "show_save_and_add_another",
+        "show_save_as_new",
+        "save_as",
+        "save_as_continue",
+    }
+    assert all(isinstance(v, bool) for v in opts.values())
+
+
+@pytest.mark.django_db
+def test_save_options_change_view_superuser_defaults(superuser_client: Client) -> None:
+    """Superuser on a default ModelAdmin (save_as=False) change view:
+    Save + continue + add-another visible; save-as-new hidden."""
+    g = Group.objects.create(name="example")
+    opts = superuser_client.get(_url(g.pk)).json()["save_options"]
+    assert opts["show_save"] is True
+    assert opts["show_save_and_continue"] is True
+    assert opts["show_save_and_add_another"] is True
+    # GroupAdmin doesn't set save_as → no "Save as new".
+    assert opts["save_as"] is False
+    assert opts["show_save_as_new"] is False
+
+
+@pytest.mark.django_db
+def test_save_options_save_as_true_surfaces_save_as_new(superuser_client: Client) -> None:
+    """When ModelAdmin.save_as is True, the change view shows "Save as
+    new" and hides "Save and add another" (Django's exact behavior:
+    `not save_as or add` is False on the change view).
+
+    ``save_as`` is a plain bool attribute, not a method, so set it
+    directly rather than via ``admin_override`` (which binds callables).
+    """
+    from django.contrib import admin as _admin
+
+    g = Group.objects.create(name="example")
+    group_admin = _admin.site._registry[Group]
+    original = group_admin.save_as
+    group_admin.save_as = True
+    try:
+        opts = superuser_client.get(_url(g.pk)).json()["save_options"]
+    finally:
+        group_admin.save_as = original
+    assert opts["save_as"] is True
+    assert opts["show_save_as_new"] is True
+    assert opts["show_save_and_add_another"] is False
+
+
+@pytest.mark.django_db
+def test_save_options_no_add_permission_hides_add_another(superuser_client: Client) -> None:
+    """Without add permission, "Save and add another" is hidden but the
+    plain Save (change perm) stays."""
+    g = Group.objects.create(name="example")
+    with admin_override(Group, has_add_permission=lambda self, request: False):
+        opts = superuser_client.get(_url(g.pk)).json()["save_options"]
+    assert opts["show_save_and_add_another"] is False
+    assert opts["show_save"] is True
+
+
+@pytest.mark.django_db
+def test_save_options_no_change_permission_hides_save(superuser_client: Client) -> None:
+    """Without change permission on the object, the change-view Save is
+    hidden (can_save reduces to has_change on the change view)."""
+    g = Group.objects.create(name="example")
+    with admin_override(Group, has_change_permission=lambda self, request, obj=None: False):
+        opts = superuser_client.get(_url(g.pk)).json()["save_options"]
+    assert opts["show_save"] is False
+    assert opts["show_save_and_continue"] is False
