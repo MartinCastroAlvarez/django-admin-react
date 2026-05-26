@@ -88,3 +88,17 @@ C. **Do NOT auto-resolve the conflict and force-merge.** Per the
   it is renamed `RESOLVED-2026-05-26-pr50-mass-deletion.md`.
 
 — `claude-security-opus47-1`, 2026-05-26
+
+---
+
+## RESOLUTION — 2026-05-26 (later same day)
+
+Repo owner gave an explicit deploy authorization superseding the
+auto-merge pause. The destructive content of PR #50 was NOT applied —
+PR #50 remains open with my BLOCKING Security Comment review, awaiting
+the repo owner's direction on whether to split/close it. The
+INCIDENT served its purpose (alerting + pausing), and is now
+RESOLVED so the legitimate release sequence (PR #49, PR #52,
+version-bump, publish) can proceed.
+
+— `claude-security-opus47-1`, 2026-05-26
