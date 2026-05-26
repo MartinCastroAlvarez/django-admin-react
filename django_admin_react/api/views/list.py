@@ -34,6 +34,7 @@ from django_admin_react.api.dates import date_hierarchy_payload
 from django_admin_react.api.dates import parse_active as _parse_date_active
 from django_admin_react.api.filters import apply_filters as _apply_list_filters
 from django_admin_react.api.filters import filters_payload
+from django_admin_react.api.views.actions import actions_payload
 from django_admin_react.api.permissions import forbidden_response
 from django_admin_react.api.permissions import is_admin_user
 from django_admin_react.api.registry import get_admin_site
@@ -122,6 +123,7 @@ class ListView(View):
             "columns": columns,
             "search_fields": list(model_admin.search_fields or ()),
             "filters": filters_payload(model_admin, request),
+            "actions": actions_payload(model_admin, request),
             "page": page,
             "page_size": page_size,
             "total": total,
