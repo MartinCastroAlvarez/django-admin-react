@@ -118,6 +118,20 @@ export function ListPage() {
     setSearchParams(next);
   }
 
+  // Click-to-sort (#195): the URL `ordering` param is the source of
+  // truth (single column in v1). `-name` = name DESC, `name` = ASC.
+  // Clicking a header cycles asc → desc → unsorted.
+  function toggleSort(key: string): void {
+    patchParams((next) => {
+      const current = searchParams.get('ordering') ?? '';
+      if (current === key)
+        next.set('ordering', `-${key}`); // asc → desc
+      else if (current === `-${key}`)
+        next.delete('ordering'); // desc → off
+      else next.set('ordering', key); // unsorted/other → asc
+    });
+  }
+
   function toggleRow(key: string | number): void {
     setSelected((prev) => {
       const next = new Set(prev);
@@ -180,6 +194,12 @@ export function ListPage() {
   const chips = buildChips(filters, activeFilters);
   const actions = data.actions ?? [];
   const canRunActions = actions.length > 0 && data.permissions.change;
+
+  // Derive the active sort (single column in v1) from the URL. `sortKey`
+  // is '' when unsorted (no column header matches it → no caret shown).
+  const ordering = searchParams.get('ordering') ?? '';
+  const sortKey = ordering.replace(/^-/, '');
+  const sortDirection: 'asc' | 'desc' = ordering.startsWith('-') ? 'desc' : 'asc';
 
   return (
     <div className="space-y-4">
@@ -349,6 +369,9 @@ export function ListPage() {
           rows={data.results}
           rowKey={(r) => r.pk}
           onRowClick={(row) => navigate(`/${appLabel}/${modelName}/${row.pk}`)}
+          onSort={toggleSort}
+          sortKey={sortKey}
+          sortDirection={sortDirection}
           emptyLabel={emptyLabel(Boolean(q), chips.length, hasFilters)}
           selectable={canRunActions}
           selectedKeys={selected}
