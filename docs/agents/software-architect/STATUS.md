@@ -7,6 +7,12 @@ to [`NEXT_STEPS.md`](NEXT_STEPS.md). For decisions see
 
 Last updated: **2026-05-26** by `claude-architect-opus47-2026-05-26-2`.
 
+> ⚠️ **Markdown status snapshots drift.** This file is the
+> session-end hand-off from one Architect session to the next, not the
+> repo-wide roadmap. Always cross-check against the canonical surfaces
+> — the [Project board](https://github.com/users/MartinCastroAlvarez/projects/3),
+> open Issues, and open PRs — before treating any entry below as live.
+
 ---
 
 ## Sprint state — 2026-05-26
@@ -22,18 +28,25 @@ Last updated: **2026-05-26** by `claude-architect-opus47-2026-05-26-2`.
 - **Dependency hygiene** — Dependabot advisories cleared in
   two waves (#122, #123).
 
-### Open PRs the Architect lane has reviewed (2026-05-26 sweep)
+### Open PRs the Architect lane has reviewed (2026-05-26 sweep — final outcomes)
 
-| PR | Title | Architect verdict | Tier | Awaiting |
-|---|---|---|---|---|
-| [#79](https://github.com/MartinCastroAlvarez/django-admin-react/pull/79) | session-expiry contract | ✅ Approve (prior session + sweep) | 5 | Human merge |
-| [#94](https://github.com/MartinCastroAlvarez/django-admin-react/pull/94) | api-contract `binary`/`range`/`json`/`register_field_type` clarifications | ⚠️ Request changes on §2 range shape (drift vs. code) | 5 | Author fixup |
-| [#102](https://github.com/MartinCastroAlvarez/django-admin-react/pull/102) | v0.2 UX contracts (theming / PWA / mobile) | ✅ Approve pending cache-vs-`no-store` reconciliation in pwa.md §2.1 | 1 | Author fixup |
-| [#104](https://github.com/MartinCastroAlvarez/django-admin-react/pull/104) | ACCEPTANCE.md §2 refresh against shipped v0.1 | ✅ Approve | 1 | Merger |
-| [#105](https://github.com/MartinCastroAlvarez/django-admin-react/pull/105) | PM agent same-login `--comment-as-approval` + sweep cadence | ✅ Approve | 1 | Merger |
-| [#112](https://github.com/MartinCastroAlvarez/django-admin-react/pull/112) | PM STATUS / NEXT_STEPS files | ✅ Approve | 1 | Merger |
-| [#117](https://github.com/MartinCastroAlvarez/django-admin-react/pull/117) | Defense-in-depth: denylist on filters + FK-unregistered guard + RESERVED_APP_LABELS (closes #88 / #89 / #93) | ✅ Approve | 3 | Merger (PM/UX + Architect approves in) |
-| [#118](https://github.com/MartinCastroAlvarez/django-admin-react/pull/118) | README screenshot removal | Superseded by #121 | 1 | Close |
+| PR | Title | Architect verdict | Final state |
+|---|---|---|---|
+| [#79](https://github.com/MartinCastroAlvarez/django-admin-react/pull/79) | session-expiry contract | ✅ Approve (prior session + sweep) | **Merged** 18:06 UTC |
+| [#94](https://github.com/MartinCastroAlvarez/django-admin-react/pull/94) | api-contract `binary`/`range`/`json`/`register_field_type` clarifications | ⚠️ Request changes on §2 range shape | **Merged** 18:07 UTC — follow-up issue owed for the structured range serializer |
+| [#102](https://github.com/MartinCastroAlvarez/django-admin-react/pull/102) | v0.2 UX contracts (theming / PWA / mobile) | ✅ Approve pending cache-vs-`no-store` reconciliation | **Merged** 18:08 UTC — pwa.md reconciliation owed as follow-up |
+| [#104](https://github.com/MartinCastroAlvarez/django-admin-react/pull/104) | ACCEPTANCE.md §2 refresh | ✅ Approve | **Merged** 18:11 UTC |
+| [#105](https://github.com/MartinCastroAlvarez/django-admin-react/pull/105) | PM same-login `--comment-as-approval` + sweep cadence | ✅ Approve | **Merged** 18:09 UTC |
+| [#112](https://github.com/MartinCastroAlvarez/django-admin-react/pull/112) | PM STATUS / NEXT_STEPS files | ✅ Approve | **Closed** — content drift; PM owes a re-author |
+| [#117](https://github.com/MartinCastroAlvarez/django-admin-react/pull/117) | Defense-in-depth (closes #88 / #89 / #93) | ✅ Approve | **Merged** 18:09 UTC — issues #89 / #93 manually still OPEN; need close |
+| [#118](https://github.com/MartinCastroAlvarez/django-admin-react/pull/118) | README screenshot removal | Superseded by #121 | **Closed** as superseded |
+
+### Open PRs the Architect lane has authored this session
+
+| PR | Title | State |
+|---|---|---|
+| [#125](https://github.com/MartinCastroAlvarez/django-admin-react/pull/125) | docs(architect): add STATUS.md + NEXT_STEPS.md | Security approve in; awaits Merger |
+| [#128](https://github.com/MartinCastroAlvarez/django-admin-react/pull/128) | docs(decisions): promote 5 Architect-lane tentative directions | Awaits any non-Architect reviewer |
 
 ### Issues the Architect lane carries
 
