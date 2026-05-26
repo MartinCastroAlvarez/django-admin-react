@@ -7,15 +7,28 @@ import { ApiClient, ApiProvider, RegistryProvider } from '@dar/data';
 import { App } from './App';
 import './index.css';
 
-// The mount is reconstructed from `window.location.pathname` at boot.
-// Any segment up to and including `admin-react/` is the consumer-
-// configured prefix. If we can't detect it, we fall back to "/".
+// The mount is the consumer-chosen URL prefix (e.g. `/admin-react/`,
+// `/admin2/`, `/staff/`). The backend's ``SpaIndexView`` writes it to
+// the ``index.html`` template as ``<meta name="dar-mount" content="...">``;
+// reading that meta tag is the ground-truth signal.
+//
+// Issue #113: the previous implementation regexed
+// ``window.location.pathname`` with ``/^(.*?\/)/`` which always
+// captures just ``/`` (the first slash followed by anything). For
+// ``/admin2/`` that returned ``/`` instead of ``/admin2/``, leaving
+// BrowserRouter with the wrong basename so every route fell through
+// to the ``*`` ("Page not found") fallback.
 function detectMount(): string {
-  const path = window.location.pathname;
-  // Look for the most common signal: a path containing "admin-react".
-  // The package's RegistryView later corrects this if needed.
-  const match = path.match(/^(.*?\/)/);
-  return match?.[1] ?? '/';
+  if (typeof document !== 'undefined') {
+    const meta = document.querySelector<HTMLMetaElement>('meta[name="dar-mount"]');
+    if (meta?.content) {
+      return meta.content;
+    }
+  }
+  // Defensive fallback when the meta tag is missing (dev / SSR /
+  // test). The previous regex was load-bearing and broken; this
+  // fallback only fires when there's no meta tag at all.
+  return '/';
 }
 
 const mount = detectMount();
