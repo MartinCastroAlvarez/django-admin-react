@@ -32,9 +32,11 @@ from django.db.models import ManyToManyField
 from django.db.models import Model
 from django.http import HttpRequest
 
+from django_admin_react.api.serializers import field_type_for
 from django_admin_react.api.serializers import filter_sensitive
 from django_admin_react.api.serializers import is_sensitive_field_name
 from django_admin_react.api.serializers import label_for
+from django_admin_react.api.serializers import safe_get_field
 from django_admin_react.api.serializers import serialize_fk_value
 from django_admin_react.api.serializers import serialize_value
 
@@ -192,7 +194,17 @@ def _fields_meta(
     visible_fields: list[str],
     request: HttpRequest,
 ) -> list[dict[str, Any]]:
-    """Per-field metadata for the inline header — minimal shape."""
+    """Per-field metadata for the inline header.
+
+    Carries ``type`` + ``required`` (in addition to ``name`` / ``label``
+    / ``readonly``) so the SPA can render a *typed* input per inline
+    field in edit mode — the prerequisite for inline editing (#54
+    write-half UI). ``type`` reuses the same closed vocabulary
+    (``field_type_for``) the top-level detail descriptor uses, so the
+    frontend can route inline fields through the same ``FieldInput``
+    component. Additive — existing read-only consumers ignore the new
+    keys.
+    """
     readonly = set(inline.get_readonly_fields(request, None) or ())
     out: list[dict[str, Any]] = []
     for name in visible_fields:
@@ -200,11 +212,19 @@ def _fields_meta(
             label = label_for_field(name, child_model, inline)
         except Exception:  # pragma: no cover
             label = name
+        model_field = safe_get_field(child_model, name)
+        field_type = field_type_for(model_field) if model_field is not None else "unsupported"
+        # ``required`` mirrors the form layer: a field is required when
+        # it is not ``blank``. ``safe_get_field`` returning ``None`` (a
+        # method-only ``list_display`` entry) → not required / unsupported.
+        required = bool(model_field is not None and not getattr(model_field, "blank", True))
         out.append(
             {
                 "name": name,
                 "label": str(label),
                 "readonly": name in readonly,
+                "type": field_type,
+                "required": required,
             }
         )
     return out

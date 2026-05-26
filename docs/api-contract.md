@@ -603,13 +603,19 @@ inlines declared).
   surface to a model the user can't see, per Rule 5).
 - **`fields`** is the inline's visible-fields set (`get_fields` minus
   `get_exclude` minus the implicit parent FK minus the sensitive-name
-  denylist).
+  denylist). Each entry is `{name, label, readonly, type, required}` —
+  `type` reuses the §4 field-type vocabulary and `required` mirrors the
+  form layer (`not field.blank`), so the SPA renders a typed input per
+  inline field in edit mode (same `FieldInput` widget as top-level
+  fields). `type` / `required` are additive — pre-enrichment clients
+  that only read `name`/`label` keep working.
 - **`rows`** are the existing children gated by the inline's own
   `get_queryset` (Rule 10).
 
-**Write support is deferred** to a follow-up — this v1 closes the read
-half so the SPA can show inlines today. The SPA can fall back to the
-child's own detail URL for edits in the interim.
+**Write support** is the inline write path documented in §5.2.1 — a
+`PATCH` body's `inlines` object round-trips children through the
+formset. The read shape above + the `type`/`required` field metadata
+are what the SPA needs to render the editable inline forms.
 
 ---
 

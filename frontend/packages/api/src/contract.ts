@@ -229,11 +229,20 @@ export interface FieldsetDescriptor {
   fields: string[];
 }
 
-/** One field's header metadata inside an inline (read half). */
+/** One field's header metadata inside an inline.
+ *
+ * `type` + `required` (added for #54 inline editing) reuse the same
+ * closed vocabulary as the top-level `FieldDescriptor`, so the SPA can
+ * route an inline field through the same `FieldInput` widget in edit
+ * mode. Both are optional for backward-compat with the read-only
+ * detail rendering shipped before the enrichment.
+ */
 export interface InlineFieldMeta {
   name: string;
   label: string;
   readonly: boolean;
+  type?: FieldType;
+  required?: boolean;
 }
 
 /** One existing child row of an inline. */
