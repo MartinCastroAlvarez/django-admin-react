@@ -423,7 +423,7 @@ v1 error codes:
 | 400  | `validation_failed`     | Form `is_valid()` returned False.                 |
 | 401  | `not_authenticated`     | (Reserved; the package usually redirects to login.) |
 | 403  | `forbidden`             | CSRF or `has_*_permission` failure on a request that was never authenticated, or an authenticated user that lacks the permission. |
-| 403  | `session_expired`       | Request carried a session cookie but the user resolved to anonymous. SPA should render a re-login modal and return the user to the same path after sign-in. |
+| 403  | `session_expired`       | Request carried a session cookie but the user resolved to anonymous. SPA should render a re-login modal and return the user to the same path after sign-in. See §6.1 (detection) and §10 (`?next=` + optional warning toast). |
 | 404  | `not_found`             | Model not in registry, or object not in queryset. |
 | 405  | `method_not_allowed`    | e.g., PUT or HEAD.                                |
 | 409  | `conflict`              | Reserved for optimistic concurrency in v1.x.      |
@@ -498,3 +498,75 @@ curl -H "Cookie: ..." -H "X-CSRFToken: ..." \
      -d '{"name":"Renamed"}' \
      https://example.com/admin-react/api/v1/fintech/account/17/
 ```
+
+---
+
+## 10. Session-expiry — SPA flow & optional warning
+
+This section **supplements §6.1** (which defines the detection
+logic and the `session_expired` envelope) with the SPA-side flow,
+the `?next=` round-trip posture, and the optional pre-expiry
+warning endpoints. Closes
+[#63](https://github.com/MartinCastroAlvarez/django-admin-react/issues/63);
+the wire-shape detection landed in
+[#95](https://github.com/MartinCastroAlvarez/django-admin-react/pull/95).
+
+### 10.1 `?next=` round-trip
+
+When the SPA receives `error.code: "session_expired"` (HTTP 403,
+per §6.1), it redirects the user to the configured Django admin
+login URL with a `?next=` parameter carrying the **current SPA
+route path** (not the API endpoint that returned 403). After login,
+Django's login view honours `?next=` and bounces the user back to
+the SPA, which hydrates from cache and resumes the prior view.
+
+**`?next=` whitelist:** the package never echoes `?next=` from the
+client back to a redirect response. The SPA constructs the
+`?next=<spa-path>` itself from `window.location` (same-origin by
+construction); the Django admin login view's existing
+`url_has_allowed_host_and_scheme` validation is authoritative.
+No open-redirect surface is added by the package. See
+[`SECURITY.md`](../SECURITY.md) §4.1 for the broader posture.
+
+### 10.2 Optional session-warning endpoints
+
+The package may expose two optional endpoints for a pre-expiry
+"Stay signed in" UX:
+
+| Method | Path                            | Purpose                                                  | Auth         |
+| ------ | ------------------------------- | -------------------------------------------------------- | ------------ |
+| GET    | `/api/v1/session/`              | Returns `{ "expires_at": "<ISO8601>" }` for the current user's session. | staff (same gate as `/registry/`). |
+| POST   | `/api/v1/session/touch/`        | Re-stamps the session, extending `expires_at`. Idempotent. CSRF required. | staff. |
+
+Both endpoints are **optional** — the package only mounts them when
+`DJANGO_ADMIN_REACT["SESSION_WARNING_SECONDS"]` is set to a positive
+integer. Default unset → both endpoints 404 and the SPA shows the
+re-login modal at expiry without prior warning.
+
+When enabled, the SPA polls `GET /api/v1/session/` no more than
+once per minute, and at `expires_at - SESSION_WARNING_SECONDS`
+shows a toast inviting the user to "Stay signed in" →
+`POST /api/v1/session/touch/`. Implementation slot tracked at
+[#93](https://github.com/MartinCastroAlvarez/django-admin-react/issues/93)
+(reserves the `session/` URL path against consumer app-name
+collision).
+
+### 10.3 What the package never does
+
+- Modify `SESSION_COOKIE_AGE` or any `SESSION_COOKIE_*` setting at
+  runtime. The consumer's Django settings are authoritative.
+- Issue a new session cookie outside of Django's standard login
+  flow. `/api/v1/session/touch/` only updates `request.session`'s
+  expiry; it does not create a session.
+- Echo the user's `?next=` parameter into any response body or
+  header without Django's `url_has_allowed_host_and_scheme`
+  validation upstream.
+
+### 10.4 Cross-references
+
+- Wire-shape detection: §6.1 above (landed in PR #95).
+- SPA UX flow (modal mechanics): [`docs/ux/states.md`](ux/states.md) §3.5.
+- Acceptance criteria: [`ACCEPTANCE.md`](../ACCEPTANCE.md) §2.7 N-5
+  (modal flow) + N-6 (warning toast).
+- Security posture: [`SECURITY.md`](../SECURITY.md) §4.1
+  (Authentication), §4.6 (Session, CSRF, cookies).
