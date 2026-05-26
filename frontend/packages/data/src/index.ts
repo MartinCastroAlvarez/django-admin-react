@@ -16,6 +16,8 @@ export type {
   ColumnDescriptor,
   CreatePayload,
   CreateResponse,
+  DateHierarchy,
+  DateHierarchyBucket,
   DetailResponse,
   FieldChoice,
   FieldDescriptor,
