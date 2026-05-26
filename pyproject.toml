@@ -27,10 +27,12 @@ classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 packages = [{ include = "django_admin_react" }]
+# `format = ["sdist", "wheel"]` is required for the wheel to include
+# data files; Poetry's default scope for `include` is sdist-only.
 include = [
-    "django_admin_react/templates/**/*",
-    "django_admin_react/static/**/*",
-    "LICENSE",
+    { path = "django_admin_react/templates/**/*", format = ["sdist", "wheel"] },
+    { path = "django_admin_react/static/**/*", format = ["sdist", "wheel"] },
+    { path = "LICENSE", format = ["sdist", "wheel"] },
 ]
 
 [tool.poetry.dependencies]
