@@ -116,9 +116,14 @@ export function Table<Row>({
                 {columns.map((col) => (
                   <td
                     key={col.key}
-                    className={`whitespace-nowrap px-4 py-2 ${ALIGN_CLASSES[col.align ?? 'left']}`}
+                    className={`px-4 py-2 ${ALIGN_CLASSES[col.align ?? 'left']}`}
                   >
-                    {col.render(row)}
+                    {/* Cap very wide cells (e.g. UUID `id` columns) and
+                        truncate with an ellipsis so one long column
+                        doesn't dominate the table; full value is on the
+                        detail page. `truncate` carries whitespace-nowrap
+                        so values still never split mid-word. */}
+                    <div className="max-w-[16rem] truncate">{col.render(row)}</div>
                   </td>
                 ))}
               </tr>

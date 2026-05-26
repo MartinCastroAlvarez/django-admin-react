@@ -24,7 +24,7 @@ export function FieldValueView({ value }: FieldValueViewProps) {
   // detail needs the column's FK-target metadata (tracked in #184);
   // until then the row click (→ this row's detail) is the action.
   if (isForeignKeyValue(value)) {
-    return <span className="text-blue-600 underline decoration-dotted">{value.label}</span>;
+    return <span className="font-medium text-indigo-600 hover:underline">{value.label}</span>;
   }
   return <>{renderValue(value)}</>;
 }
