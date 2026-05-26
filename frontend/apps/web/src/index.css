@@ -7,3 +7,17 @@ body,
 #root {
   height: 100%;
 }
+
+/* Hide scrollbars across the admin shell while keeping scroll fully
+   functional (wheel / trackpad / keyboard). The shell owns its own
+   scroll containers — the sidebar nav and the main content column —
+   and a visible native scrollbar is visual noise. Applies app-wide so
+   the sidebar, the page, and inner scrollers (e.g. the modal body) are
+   all clean. Cross-browser: Firefox, IE / old Edge, and WebKit. */
+* {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE / old Edge */
+}
+*::-webkit-scrollbar {
+  display: none; /* WebKit (Chrome / Safari / new Edge) */
+}
