@@ -23,13 +23,12 @@ from django.contrib.admin.options import ModelAdmin
 from django.contrib.admin.utils import label_for_field
 from django.db.models import FileField
 from django.db.models import ForeignKey
+from django.db.models import ManyToManyField
 from django.db.models import Model
 from django.http import HttpRequest
 from django.http import HttpResponse
 from django.http import JsonResponse
 from django.views.generic import View
-
-from django.db.models import ManyToManyField
 
 from django_admin_react.api.inlines import inlines_payload
 from django_admin_react.api.permissions import forbidden_response
@@ -37,6 +36,7 @@ from django_admin_react.api.permissions import is_admin_user
 from django_admin_react.api.registry import get_admin_site
 from django_admin_react.api.registry import model_permissions
 from django_admin_react.api.registry import resolve_model
+from django_admin_react.api.registry import save_options
 from django_admin_react.api.serializers import field_metadata
 from django_admin_react.api.serializers import filter_sensitive
 from django_admin_react.api.serializers import is_sensitive_field_name
@@ -122,6 +122,7 @@ def _build_payload(
         "pk": obj.pk,
         "label": label_for(obj),
         "permissions": model_permissions(model_admin, request),
+        "save_options": save_options(model_admin, request, obj),
         "fieldsets": _fieldsets_payload(model_admin, request, obj, visible_names),
         "fields": _fields_payload(model, model_admin, obj, request, visible_names),
         "inlines": inlines_payload(model_admin, obj, request),

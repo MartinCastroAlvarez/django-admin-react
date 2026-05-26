@@ -387,6 +387,14 @@ Response 200:
   "pk": 1,
   "label": "Checking — Alice",
   "permissions": { "view": true, "add": true, "change": true, "delete": false },
+  "save_options": {
+    "show_save": true,
+    "show_save_and_continue": true,
+    "show_save_and_add_another": true,
+    "show_save_as_new": false,
+    "save_as": false,
+    "save_as_continue": true
+  },
   "fieldsets": [
     {
       "title": null,
@@ -433,6 +441,24 @@ Response 200:
 
 Rules:
 
+- `save_options` mirrors Django admin's save-flow buttons (`#154`). It
+  is computed from `ModelAdmin` permission methods + `ModelAdmin.save_as`,
+  matching `django.contrib.admin`'s `submit_row` logic for the change
+  view (`add=False, change=True`):
+  - `show_save` — `has_change_permission(request, obj)` on the change
+    view.
+  - `show_save_and_continue` — `show_save and has_view_permission`.
+  - `show_save_and_add_another` — `has_add_permission and not save_as`
+    (Django suppresses "add another" on the change view when `save_as`).
+  - `show_save_as_new` — `has_change_permission and save_as`.
+  - `save_as` / `save_as_continue` — the raw `ModelAdmin` flags, so the
+    SPA knows whether a "Save as new" POST creates a fresh object and
+    where it lands afterward.
+  The SPA renders exactly the buttons that are `true`; the backend
+  re-checks the relevant `has_*_permission` on the actual POST/PATCH —
+  `save_options` is a UI hint, not the gate. Inline-formset editability
+  is not yet factored in (the inline write-half is tracked under `#54`);
+  for models without editable inlines the flags are exact.
 - Field set is derived from `ModelAdmin.get_form(request, obj)`'s declared
   fields, intersected with `ModelAdmin.get_fields(request, obj)` (or
   `get_fieldsets`). Anything in `exclude`/`get_exclude` is omitted.
