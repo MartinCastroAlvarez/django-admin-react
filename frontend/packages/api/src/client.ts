@@ -6,6 +6,7 @@
 
 import type {
   ActionRunResponse,
+  AutocompleteResponse,
   AddFormResponse,
   CreatePayload,
   CreateResponse,
@@ -214,6 +215,28 @@ export class ApiClient {
       'POST',
       `${appLabel}/${modelName}/actions/${actionName}/`,
       { pks, confirmed },
+    );
+  }
+
+  /**
+   * Typeahead for a high-cardinality FK picker (contract §3.2). The
+   * `appLabel`/`modelName` are the **target** model's; results are
+   * powered by the target admin's `search_fields` /
+   * `get_search_results`. Returns `{ results: [{id, label}], ... }`.
+   */
+  autocomplete(
+    appLabel: string,
+    modelName: string,
+    q: string,
+    page = 1,
+  ): Promise<AutocompleteResponse> {
+    const search = new URLSearchParams();
+    if (q) search.set('q', q);
+    if (page > 1) search.set('page', String(page));
+    const qs = search.toString();
+    return this.request<AutocompleteResponse>(
+      'GET',
+      `${appLabel}/${modelName}/autocomplete/${qs ? `?${qs}` : ''}`,
     );
   }
 }

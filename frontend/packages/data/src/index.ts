@@ -10,6 +10,8 @@ export type { ApiProviderProps } from './api-context';
 export { ApiClient, ApiError } from '@dar/api';
 export type {
   ActionDescriptor,
+  AutocompleteResponse,
+  AutocompleteResult,
   AddFormResponse,
   ActionRunResponse,
   ApiClientConfig,

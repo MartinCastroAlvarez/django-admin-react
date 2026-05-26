@@ -282,6 +282,17 @@ export interface AddFormResponse {
   fields: Record<string, FieldDescriptor>;
 }
 
+/** One typeahead hit from the autocomplete endpoint (contract §3.2). */
+export interface AutocompleteResult {
+  id: number | string;
+  label: string;
+}
+
+export interface AutocompleteResponse {
+  results: AutocompleteResult[];
+  pagination?: { page: number; page_size: number; has_more: boolean };
+}
+
 export interface CreateResponse {
   pk: number | string;
   label: string;
