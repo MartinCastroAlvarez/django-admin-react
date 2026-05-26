@@ -9,6 +9,7 @@ export { ApiProvider, useApiClient } from './api-context';
 export type { ApiProviderProps } from './api-context';
 export { ApiClient, ApiError } from '@dar/api';
 export type {
+  ActionDescriptor,
   ApiClientConfig,
   ColumnDescriptor,
   CreatePayload,
@@ -20,6 +21,8 @@ export type {
   FieldType,
   FieldValue,
   FieldsetDescriptor,
+  FilterDescriptor,
+  FilterOption,
   ForeignKeyValue,
   ListResponse,
   ListRow,

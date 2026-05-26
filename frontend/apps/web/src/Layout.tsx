@@ -34,8 +34,17 @@ type RegistryApp = {
   models: RegistryModel[];
 };
 
+// Capitalise the first letter only — matches Django admin's
+// `capfirst(verbose_name_plural)`. An explicit `Meta.verbose_name_plural`
+// like "Loan Package Metadata" is preserved; an auto-derived
+// "loan packages" becomes "Loan packages".
+function capfirst(value: string): string {
+  if (!value) return value;
+  return value.charAt(0).toUpperCase() + value.slice(1);
+}
+
 function modelLabel(model: RegistryModel): string {
-  return model.verbose_name_plural || model.model_name;
+  return capfirst(model.verbose_name_plural || model.model_name);
 }
 
 // Keep an app when its own label matches (show all its models) or when
