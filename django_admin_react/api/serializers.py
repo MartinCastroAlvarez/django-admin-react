@@ -10,7 +10,12 @@ Rules (binding; see ``ACCEPTANCE.md`` §3.5 and §4.7):
 - Pass-through: ``str``, ``int``, ``float``, ``bool``, ``None``.
 - ``Decimal``, ``UUID``, ``date``, ``datetime``, ``time`` → string forms.
 - ``ForeignKey`` → ``{"id": pk, "label": str(related)}``.
-- ``ManyToMany`` → ``"unsupported"`` v1.
+- ``ManyToMany`` (plain) → ``[{"id": pk, "label": str(related)}, ...]``
+  capped at ``M2M_VALUE_CAP`` items; oversize sets return
+  ``{"sample": [...], "count": N, "truncated": true}``.
+- ``ManyToMany`` (with non-auto ``through``) → ``readonly`` hint;
+  write attempts on these are rejected at the ``writable_field_names``
+  stage.
 - Anything else → ``str(value)`` (never raises).
 - Field names matching the denylist are never emitted.
 """
@@ -170,6 +175,7 @@ _TYPE_BY_INTERNAL: Final[dict[str, str]] = {
     "IPAddressField": "ip",
     "IntegerField": "integer",
     "JSONField": "json",
+    "ManyToManyField": "many_to_many",
     "OneToOneField": "foreignkey",
     "PositiveBigIntegerField": "integer",
     "PositiveIntegerField": "integer",
@@ -192,6 +198,14 @@ _TYPE_BY_INTERNAL: Final[dict[str, str]] = {
     "IntegerRangeField": "range",
     "BigIntegerRangeField": "range",
 }
+
+# Soft cap on the number of related rows embedded in an M2M field's
+# ``value``. Beyond this, the detail response returns the
+# ``{sample, count, truncated}`` envelope and the SPA paginates via
+# the related model's list endpoint. 100 keeps p99 detail payloads
+# bounded without making the common case (small tag set, role
+# membership) feel artificially limited.
+M2M_VALUE_CAP: Final[int] = 100
 
 
 # Extension surface: consumers register a custom field type via
@@ -258,17 +272,76 @@ def field_type_for(field: Field) -> str:
 
     Resolution order:
 
-    1. ``ManyToManyField`` → ``"unsupported"`` (tracked by #55).
-    2. The closed vocabulary in ``_TYPE_BY_INTERNAL``.
-    3. Custom types registered via ``register_field_type``.
-    4. ``"unsupported"`` — the SPA renders a read-only label.
+    1. The closed vocabulary in ``_TYPE_BY_INTERNAL`` (includes
+       ``many_to_many`` for ``ManyToManyField`` — closes #55).
+    2. Custom types registered via ``register_field_type`` (#60).
+    3. ``"unsupported"`` — the SPA renders a read-only label.
     """
-    if isinstance(field, ManyToManyField):
-        return "unsupported"
     internal = field.get_internal_type()
     if internal in _TYPE_BY_INTERNAL:
         return _TYPE_BY_INTERNAL[internal]
     return _CUSTOM_TYPE_BY_INTERNAL.get(internal, "unsupported")
+
+
+def is_plain_m2m(field: Field) -> bool:
+    """Return True iff ``field`` is a ``ManyToManyField`` whose ``through``
+    model is auto-created (no extra fields on the join row).
+
+    Django auto-creates a through model for every plain
+    ``ManyToManyField`` declaration. When the admin author explicitly
+    declares ``through=<Model>`` (typically to attach extra fields like
+    ``date_added``, ``role``), the through model is **not**
+    auto-created — its ``_meta.auto_created`` is ``False``.
+
+    The package supports plain M2Ms for read **and** write in v1.
+    Through-with-extras M2Ms are surfaced read-only; writes against
+    them are rejected at ``writable_field_names``. This keeps the
+    write path honest — we never silently drop the extra fields on
+    the join row.
+    """
+    if not isinstance(field, ManyToManyField):
+        return False
+    through = getattr(field.remote_field, "through", None)
+    if through is None:
+        return True
+    return bool(getattr(through._meta, "auto_created", False))
+
+
+def serialize_m2m_value(
+    field: ManyToManyField,
+    instance: Model,
+    *,
+    cap: int | None = None,
+) -> list[dict[str, Any]] | dict[str, Any]:
+    """Serialize the current set of related rows for an M2M field.
+
+    Returns a plain ``list[{id, label}]`` when the related queryset
+    has at most ``cap`` rows. Beyond ``cap``, returns the truncated
+    envelope ``{"sample": [...], "count": N, "truncated": true}`` so
+    the SPA can render a meaningful read state without forcing
+    detail pages to materialize unbounded sets (a moderation
+    workflow with 10K tagged users would otherwise N+1 in the
+    browser).
+
+    Defense in depth: any exception raised by the manager (broken
+    descriptor, half-migrated state) collapses to ``[]`` rather than
+    500-ing the detail response. The list endpoint and write path
+    have their own permission gates; serializing an empty value
+    here never leaks anything.
+    """
+    # Resolve the cap at call time (not at function-definition time) so
+    # tests can monkey-patch the module-level constant via ``mock.patch``.
+    effective_cap = cap if cap is not None else M2M_VALUE_CAP
+    try:
+        manager = getattr(instance, field.name)
+        queryset = manager.all()
+        count = queryset.count()
+        if count <= effective_cap:
+            return [{"id": obj.pk, "label": label_for(obj)} for obj in queryset]
+        sample = [{"id": obj.pk, "label": label_for(obj)} for obj in queryset[:effective_cap]]
+        return {"sample": sample, "count": count, "truncated": True}
+    except Exception:
+        return []
 
 
 def field_choices(field: Field) -> list[dict[str, Any]] | None:
@@ -309,6 +382,23 @@ def field_metadata(
         if related is not None:
             meta = related._meta
             metadata["to"] = {"app_label": meta.app_label, "model_name": meta.model_name}
+    if isinstance(field, ManyToManyField):
+        related = field.related_model
+        if related is not None:
+            meta = related._meta
+            metadata["to"] = {"app_label": meta.app_label, "model_name": meta.model_name}
+        # ``through`` is ``null`` for plain M2M, ``{app_label, model_name}``
+        # for explicit through-with-extras. The SPA uses this to choose
+        # between "edit the relation directly" and "edit via the through
+        # model's admin" (the readonly hint).
+        through = getattr(field.remote_field, "through", None)
+        if through is not None and not getattr(through._meta, "auto_created", False):
+            metadata["through"] = {
+                "app_label": through._meta.app_label,
+                "model_name": through._meta.model_name,
+            }
+        else:
+            metadata["through"] = None
     if getattr(field, "max_length", None):
         metadata["max_length"] = field.max_length
     if type_ == "decimal":

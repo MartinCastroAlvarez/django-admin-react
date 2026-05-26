@@ -97,9 +97,7 @@ class ListView(View):
         queryset_before_date_filter = queryset
         date_field = getattr(model_admin, "date_hierarchy", None)
         if date_field:
-            queryset = _apply_date_filter(
-                queryset, date_field, _parse_date_active(request)
-            )
+            queryset = _apply_date_filter(queryset, date_field, _parse_date_active(request))
 
         queryset = _apply_ordering(queryset, model_admin, request)
 

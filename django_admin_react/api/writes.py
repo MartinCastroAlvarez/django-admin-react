@@ -46,6 +46,7 @@ from django.http import HttpResponse
 from django.http import JsonResponse
 
 from django_admin_react.api.serializers import filter_sensitive
+from django_admin_react.api.serializers import is_plain_m2m
 from django_admin_react.api.serializers import is_sensitive_field_name
 from django_admin_react.api.serializers import safe_get_field
 
@@ -172,8 +173,20 @@ def writable_field_names(
 
     Computed as ``get_fields`` minus ``get_exclude`` minus
     ``get_readonly_fields`` minus the sensitive-name denylist
-    (``ACCEPTANCE.md`` §4.7 S-31) minus ``ManyToManyField``
-    (unsupported in v1 per ``docs/api-contract.md`` §4).
+    (``ACCEPTANCE.md`` §4.7 S-31).
+
+    M2M policy (closes issue #55):
+
+    - **Plain M2M** (auto-created through model) — writable. The
+      payload accepts a bare list of pks; ``form.save_m2m()`` (called
+      by the create/update view) routes the write through the
+      ``ModelForm``'s M2M handling so ``clean_<field>`` and signals
+      run.
+    - **M2M with explicit `through` model** (has extra join-row
+      fields) — **not** writable. Dropped from this set; payloads
+      mentioning it will 400 at ``reject_forbidden_keys``. The
+      detail descriptor still surfaces it as ``readonly`` so the SPA
+      can show the current set and link to the through-model admin.
 
     Defense-in-depth: even if a ``ModelAdmin`` author forgets to
     ``exclude`` a sensitive-named field, the substring match keeps
@@ -186,7 +199,10 @@ def writable_field_names(
     for name in declared:
         if name in excluded or name in readonly or is_sensitive_field_name(name):
             continue
-        if isinstance(safe_get_field(model, name), ManyToManyField):
+        model_field = safe_get_field(model, name)
+        # Drop M2M with non-auto through (explicit ``through=...`` with
+        # extras). Plain M2M (auto-created through) is writable in v1.
+        if isinstance(model_field, ManyToManyField) and not is_plain_m2m(model_field):
             continue
         out.append(name)
     return filter_sensitive(out)
@@ -295,14 +311,26 @@ def merged_initial_for_update(
     the instance's current value, then overlay the user-supplied
     payload. This mirrors what Django admin's change-view does.
 
-    FK fields are seeded with ``<name>_id`` because that is the wire
-    shape the form's choice field expects — passing the related
-    instance directly would trigger an extra DB query on a hot path.
+    Per field type:
+
+    - ``ForeignKey`` is seeded with ``<name>_id`` (avoids an extra DB
+      query for the related row on the hot path).
+    - ``ManyToManyField`` is seeded with the current pk list so a
+      PATCH that omits the M2M field leaves the relation unchanged.
+      The form's ``ModelMultipleChoiceField`` expects an iterable of
+      pks, which is what ``values_list('pk', flat=True)`` produces.
+    - Everything else is seeded with the raw attribute.
     """
     merged: dict[str, Any] = {}
     for name in writable:
-        if isinstance(safe_get_field(model, name), ForeignKey):
+        model_field = safe_get_field(model, name)
+        if isinstance(model_field, ForeignKey):
             merged[name] = getattr(obj, f"{name}_id", None)
+        elif isinstance(model_field, ManyToManyField):
+            try:
+                merged[name] = list(getattr(obj, name).values_list("pk", flat=True))
+            except Exception:
+                merged[name] = []
         else:
             merged[name] = getattr(obj, name, None)
     merged.update(coerce_fk_values(payload, model))

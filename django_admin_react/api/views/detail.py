@@ -22,6 +22,7 @@ from typing import Any
 from django.contrib.admin.options import ModelAdmin
 from django.contrib.admin.utils import label_for_field
 from django.db.models import ForeignKey
+from django.db.models import ManyToManyField
 from django.db.models import Model
 from django.http import HttpRequest
 from django.http import HttpResponse
@@ -35,10 +36,12 @@ from django_admin_react.api.registry import model_permissions
 from django_admin_react.api.registry import resolve_model
 from django_admin_react.api.serializers import field_metadata
 from django_admin_react.api.serializers import filter_sensitive
+from django_admin_react.api.serializers import is_plain_m2m
 from django_admin_react.api.serializers import is_sensitive_field_name
 from django_admin_react.api.serializers import label_for
 from django_admin_react.api.serializers import safe_get_field
 from django_admin_react.api.serializers import serialize_fk_value
+from django_admin_react.api.serializers import serialize_m2m_value
 from django_admin_react.api.serializers import serialize_value
 from django_admin_react.api.writes import load_object_or_none
 from django_admin_react.api.writes import not_found_response
@@ -218,6 +221,8 @@ def _descriptor_for(
 
     if isinstance(model_field, ForeignKey):
         value: Any = serialize_fk_value(getattr(obj, name, None))
+    elif isinstance(model_field, ManyToManyField):
+        value = serialize_m2m_value(model_field, obj)
     else:
         # Forward the model_field so consumer-registered custom
         # serializers (see #60 / ``register_field_type``) take
@@ -230,7 +235,14 @@ def _descriptor_for(
         form_field.help_text if form_field is not None else ""
     )
 
-    return field_metadata(
+    # An M2M with an explicit through-with-extras is read-only at the
+    # API layer (writes.writable_field_names drops it). Mirror that
+    # decision on the descriptor so the SPA renders a readonly hint
+    # — never a writable shuttle widget — for those fields.
+    if isinstance(model_field, ManyToManyField) and not is_plain_m2m(model_field):
+        is_readonly = True
+
+    descriptor = field_metadata(
         model_field,
         label=_field_label(model_admin, model, name),
         required=required,
@@ -238,6 +250,28 @@ def _descriptor_for(
         help_text=str(help_text),
         value=value,
     )
+
+    if isinstance(model_field, ManyToManyField):
+        descriptor["widget"] = _m2m_widget_hint(model_admin, name)
+
+    return descriptor
+
+
+def _m2m_widget_hint(model_admin: ModelAdmin, name: str) -> str:
+    """Return the M2M widget the SPA should render: select / horizontal / vertical.
+
+    Sourced from the admin's ``filter_horizontal`` / ``filter_vertical``
+    declarations — the same opt-in mechanism the legacy admin uses for
+    the two-list shuttle widget. Defaults to ``"select"`` (a single
+    multi-select control) when neither list mentions the field. This
+    keeps the SPA's rendering surface tight: three widget shapes,
+    closed vocabulary.
+    """
+    if name in (getattr(model_admin, "filter_horizontal", None) or ()):
+        return "horizontal"
+    if name in (getattr(model_admin, "filter_vertical", None) or ()):
+        return "vertical"
+    return "select"
 
 
 def _readonly_callable_descriptor(

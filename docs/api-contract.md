@@ -350,8 +350,9 @@ Rules:
   - `range` (postgres range types — `DateRangeField`, `IntegerRangeField`, …)
   - `choice`
   - `foreignkey`
-  - `unsupported` (manytomany and unknown types in v1; client renders a
-    read-only label and no edit control)
+  - `many_to_many` (see §4.2)
+  - `unsupported` (unknown types; client renders a read-only label and
+    no edit control)
 - For `choice` fields the response includes `"choices": [{ "value":...,
   "label":... }, ...]`.
 - Sensitive-shaped field names (password, secret, token, api_key, hash,
@@ -389,6 +390,72 @@ Rules:
   Python-type dispatch in `serialize_value` runs.
 - Coin a new `vocab_type` label (e.g. `"money"`) only if you also
   ship a matching SPA widget via the frontend extension surface.
+
+### 4.2 `many_to_many` fields
+
+Closes consumer feedback issue
+[#55](https://github.com/MartinCastroAlvarez/django-admin-react/issues/55).
+
+Plain `ManyToManyField`s (auto-created `through`) are read **and**
+write surfaces. M2Ms with an explicit `through=...` model that carries
+extra fields are **read-only** in v1 — the descriptor still surfaces
+them so the SPA can render the current set, but writes are rejected
+at the API layer.
+
+Descriptor shape:
+
+```json
+"tags": {
+  "type": "many_to_many",
+  "label": "Tags",
+  "required": false,
+  "readonly": false,
+  "help_text": "",
+  "widget": "select",          // or "horizontal" / "vertical"
+  "to":      { "app_label": "blog",    "model_name": "tag" },
+  "through": null,             // or { "app_label": "...", "model_name": "..." } for through-with-extras
+  "value":   [{ "id": 1, "label": "python" }, { "id": 2, "label": "django" }]
+}
+```
+
+- **`widget`** — closed three-value vocabulary: `"select"` (default
+  single multi-select control), `"horizontal"` / `"vertical"` (the
+  two-list shuttle the legacy admin renders for `filter_horizontal` /
+  `filter_vertical` declarations). The SPA picks the layout off this
+  hint.
+- **`to`** — pointer to the related model.
+- **`through`** — `null` for plain M2M; a pointer to the through-model
+  for explicit-through M2Ms. When non-null, the SPA renders the field
+  read-only and links to the through-model's admin for edits.
+- **`value`** — list of `{id, label}` for the current set, capped at
+  `100` items inline. Oversize sets return the truncated envelope:
+
+  ```json
+  "value": { "sample": [/* up to 100 items */], "count": 4823, "truncated": true }
+  ```
+
+  The SPA paginates the full set by hitting the related model's `list`
+  endpoint with the reverse relation as a filter.
+
+Write payload:
+
+```json
+PATCH /api/v1/blog/post/17/
+{ "tags": [1, 2, 3] }       // bare list of related pks
+```
+
+The package routes the write through `form.save_m2m()` — never
+`setattr(obj, "tags", [...])` or `obj.tags.set(...)` directly. This
+preserves `clean()`, `clean_<field>()`, `m2m_changed` signals, and
+any audit / history hooks the consumer's admin or signals add.
+
+Out of scope for v1:
+
+- M2Ms with `through` models that carry extra fields (read-only as
+  above; edit via the through-model admin).
+- Reverse-M2M editing (the side that doesn't declare the field).
+- M2M values in `list_display` cells (would N+1 the list page without
+  a prefetch_related pass — tracked separately).
 
 ---
 

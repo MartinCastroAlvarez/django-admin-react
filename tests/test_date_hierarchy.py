@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import datetime as dt
 from contextlib import contextmanager
+from contextlib import suppress
 
 import pytest
 from django.contrib import admin
@@ -52,10 +53,8 @@ def admin_attr(model_cls, **values):
             if original is sentinel:
                 # The attr wasn't set on the instance before — remove
                 # the override so the class-level default re-emerges.
-                try:
+                with suppress(AttributeError):
                     delattr(model_admin, name)
-                except AttributeError:
-                    pass
             else:
                 setattr(model_admin, name, original)
 
@@ -227,9 +226,7 @@ def test_out_of_range_month_is_ignored(
     """``?year=2025&month=99`` drops the month (and so the day)."""
     User = get_user_model()
     with admin_attr(User, date_hierarchy="date_joined"):
-        response = superuser_client.get(
-            USER_LIST_URL + "?year=2025&month=99&day=5"
-        )
+        response = superuser_client.get(USER_LIST_URL + "?year=2025&month=99&day=5")
     assert response.status_code == 200
     active = response.json()["date_hierarchy"]["active"]
     assert active["year"] == 2025
