@@ -312,3 +312,79 @@ def test_readonly_method_on_model_still_resolves_in_detail(superuser_client: Cli
     assert response.status_code == 200
     # `name` is a real field; resolves to the value (not null).
     assert response.json()["fields"]["name"]["value"] == "example"
+
+
+# --------------------------------------------------------------------------- #
+# ForeignKey navigation: detail FK values carry `to` (Issue #270)             #
+# --------------------------------------------------------------------------- #
+from contextlib import contextmanager  # noqa: E402
+
+
+@contextmanager
+def _registered(*model_classes):
+    """Temporarily register models on the default admin site."""
+    from django.contrib import admin as _admin
+
+    registered = []
+    try:
+        for mc in model_classes:
+            if mc not in _admin.site._registry:
+                _admin.site.register(mc)
+                registered.append(mc)
+        yield
+    finally:
+        for mc in registered:
+            _admin.site.unregister(mc)
+
+
+@pytest.mark.django_db
+def test_detail_fk_value_includes_navigation_target_when_registered(
+    superuser_client: Client,
+) -> None:
+    """A ForeignKey field in the detail response must carry the `to`
+    navigation envelope when its target model is admin-registered, so the
+    SPA renders it as a link to the related object (parity with the list
+    view + Django admin's clickable FK cells). Regression: the detail view
+    omitted `admin_site` when serializing FK values, so `to` was never
+    emitted and detail-page FKs were dead text (#270).
+    """
+    from django.contrib.auth.models import Permission
+    from django.contrib.contenttypes.models import ContentType
+
+    perm = Permission.objects.filter(content_type__isnull=False).first()
+    assert perm is not None
+
+    with _registered(Permission, ContentType):
+        response = superuser_client.get(
+            f"/admin-react/api/v1/auth/permission/{perm.pk}/"
+        )
+        assert response.status_code == 200, response.content
+        ct_value = response.json()["fields"]["content_type"]["value"]
+
+    assert ct_value is not None
+    assert ct_value["to"] == {"app_label": "contenttypes", "model_name": "contenttype"}
+
+
+@pytest.mark.django_db
+def test_detail_fk_value_omits_target_when_unregistered(
+    superuser_client: Client,
+) -> None:
+    """When the FK target model is NOT registered, `to` is omitted — a
+    link the detail endpoint would 404 on must never be surfaced (matches
+    the serializer's #89 posture)."""
+    from django.contrib.auth.models import Permission
+
+    perm = Permission.objects.filter(content_type__isnull=False).first()
+    assert perm is not None
+
+    # Register only Permission (so the endpoint resolves); ContentType stays
+    # unregistered → its FK envelope must not carry `to`.
+    with _registered(Permission):
+        response = superuser_client.get(
+            f"/admin-react/api/v1/auth/permission/{perm.pk}/"
+        )
+        assert response.status_code == 200, response.content
+        ct_value = response.json()["fields"]["content_type"]["value"]
+
+    assert ct_value is not None
+    assert "to" not in ct_value

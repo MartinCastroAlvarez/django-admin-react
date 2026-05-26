@@ -154,3 +154,52 @@ def test_inline_row_resolves_admin_display_method() -> None:
     # The admin display method resolves to its return value (was None
     # before the fix → rendered as "—").
     assert fields["shout"] == "shout-can_do"
+
+
+@pytest.mark.django_db
+def test_inline_row_fk_carries_navigation_target() -> None:
+    """An inline row's ForeignKey column carries the ``to`` navigation
+    envelope when its target model is admin-registered, so inline FK cells
+    are clickable (parity with list/detail FK cells). Regression: inlines
+    omitted ``admin_site`` when serializing FK values, so ``to`` was never
+    emitted (#270)."""
+    from contextlib import suppress
+
+    from django.contrib.auth import get_user_model
+    from django.contrib.auth.models import Permission
+    from django.contrib.contenttypes.models import ContentType
+    from django.test import RequestFactory
+
+    from django_admin_react.api.inlines import _rows_for_inline
+
+    ct = ContentType.objects.create(app_label="dar_test", model="gadget")
+    Permission.objects.create(content_type=ct, codename="poke", name="Poke")
+
+    class _PermInline(TabularInline):
+        model = Permission
+        fk_name = "content_type"
+
+    inline = _PermInline(Permission, admin.site)
+    request = RequestFactory().get("/")
+    request.user = get_user_model().objects.create_superuser(
+        username="inline-fk-su", email="fk@example.com", password="x"
+    )
+
+    # Register the FK target so `to` is emitted; clean up afterwards.
+    if ContentType not in admin.site._registry:
+        admin.site.register(ContentType)
+        added = True
+    else:
+        added = False
+    try:
+        rows = _rows_for_inline(
+            inline, ct, "content_type", ["content_type"], request, admin.site
+        )
+    finally:
+        if added:
+            with suppress(Exception):
+                admin.site.unregister(ContentType)
+
+    assert len(rows) == 1
+    fk = rows[0]["fields"]["content_type"]
+    assert fk["to"] == {"app_label": "contenttypes", "model_name": "contenttype"}
