@@ -5,13 +5,14 @@
 // controlled state local to this page; cache/network management is
 // the data layer's job.
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ListFilter } from 'lucide-react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import {
   useApiClient,
   useList,
+  type ActionDescriptor,
   type FilterDescriptor,
   type FilterOption,
   type ListRow,
@@ -46,7 +47,7 @@ export function ListPage() {
     return out;
   }, [searchParams]);
 
-  const { data, loading, error } = useList({
+  const { data, loading, error, refresh } = useList({
     client,
     appLabel,
     modelName,
@@ -59,6 +60,31 @@ export function ListPage() {
   // Filters live in a modal/bottom-sheet behind a button so they never
   // occupy fixed horizontal space on mobile or desktop (#177).
   const [filterOpen, setFilterOpen] = useState(false);
+  // Row selection (page-scoped, matches Django's changelist) drives
+  // the Actions dropdown's visibility (#182).
+  const [selected, setSelected] = useState<Set<string | number>>(new Set());
+  const [actionsOpen, setActionsOpen] = useState(false);
+  const [runningAction, setRunningAction] = useState(false);
+
+  // Debounced search: commit `q` to the URL ~300ms after the user
+  // stops typing, so the list refetches without a keystroke flood
+  // (#177 toolbar). Enter / blur still commit immediately below.
+  useEffect(() => {
+    const handle = setTimeout(() => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          if ((next.get('q') ?? '') === searchDraft) return prev;
+          if (searchDraft) next.set('q', searchDraft);
+          else next.delete('q');
+          next.delete('page');
+          return next;
+        },
+        { replace: true },
+      );
+    }, 300);
+    return () => clearTimeout(handle);
+  }, [searchDraft, setSearchParams]);
 
   function patchParams(mutate: (next: URLSearchParams) => void): void {
     const next = new URLSearchParams(searchParams);
@@ -88,6 +114,43 @@ export function ListPage() {
     setSearchParams(next);
   }
 
+  function toggleRow(key: string | number): void {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
+
+  function toggleAll(checked: boolean, pageRows: ListRow[]): void {
+    setSelected(() => (checked ? new Set(pageRows.map((r) => r.pk)) : new Set()));
+  }
+
+  async function runAction(action: ActionDescriptor): Promise<void> {
+    const pks = Array.from(selected);
+    if (pks.length === 0 || runningAction) return;
+    if (
+      action.requires_confirmation &&
+      !window.confirm(`Run “${action.label}” on ${pks.length} selected item(s)?`)
+    ) {
+      return;
+    }
+    setRunningAction(true);
+    setActionsOpen(false);
+    try {
+      const res = await client.runAction(appLabel, modelName, action.name, pks);
+      if (res.redirect) {
+        window.location.assign(res.redirect);
+        return;
+      }
+      setSelected(new Set());
+      await refresh();
+    } finally {
+      setRunningAction(false);
+    }
+  }
+
   if (loading && !data) return <Spinner label="Loading…" />;
   if (error && !data) {
     return <EmptyState title="Couldn't load the list" description={error.message} />;
@@ -105,56 +168,93 @@ export function ListPage() {
   const filters = data.filters ?? [];
   const hasFilters = filters.length > 0;
   const chips = buildChips(filters, activeFilters);
+  const actions = data.actions ?? [];
+  const canRunActions = actions.length > 0 && data.permissions.change;
 
   return (
     <div className="space-y-4">
-      <header className="flex items-end justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold">
-            <span className="capitalize">{appLabel}</span> ·{' '}
-            {data.verbose_name_plural
-              ? capitalize(data.verbose_name_plural)
-              : data.object_name || modelName}
-          </h1>
-          <p className="text-sm text-gray-500">
-            {data.total.toLocaleString()} object{data.total === 1 ? '' : 's'}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {data.search_fields.length > 0 && (
-            <form
-              className="w-56"
-              onSubmit={(e) => {
-                e.preventDefault();
-                commitSearch();
-              }}
-            >
-              <Input
-                placeholder={`Search by ${data.search_fields.join(', ')}…`}
-                value={searchDraft}
-                onChange={(e) => setSearchDraft(e.target.value)}
-                onBlur={commitSearch}
-              />
-            </form>
-          )}
-          {hasFilters && (
+      <header>
+        <h1 className="text-2xl font-semibold">
+          <span className="capitalize">{appLabel}</span> ·{' '}
+          {data.verbose_name_plural
+            ? capitalize(data.verbose_name_plural)
+            : data.object_name || modelName}
+        </h1>
+        <p className="text-sm text-gray-500">
+          {data.total.toLocaleString()} object{data.total === 1 ? '' : 's'}
+        </p>
+      </header>
+
+      {/* Toolbar row (#177 / #182): Actions dropdown (only when rows are
+          selected) + a left-aligned debounced search + the Filter
+          button that opens the modal. */}
+      <div className="flex flex-wrap items-center gap-2">
+        {canRunActions && selected.size > 0 && (
+          <div className="relative">
             <button
               type="button"
-              onClick={() => setFilterOpen(true)}
-              aria-haspopup="dialog"
-              className="inline-flex shrink-0 items-center gap-1.5 rounded border border-gray-300 px-3 py-2 text-sm hover:bg-gray-100"
+              onClick={() => setActionsOpen((o) => !o)}
+              aria-haspopup="menu"
+              aria-expanded={actionsOpen}
+              disabled={runningAction}
+              className="shrink-0 rounded border border-gray-300 px-3 py-2 text-sm hover:bg-gray-100 disabled:opacity-50"
             >
-              <ListFilter className="h-4 w-4" aria-hidden />
-              Filters
-              {chips.length > 0 && (
-                <span className="ml-0.5 rounded-full bg-blue-600 px-1.5 py-0.5 text-xs text-white">
-                  {chips.length}
-                </span>
-              )}
+              Actions · {selected.size} ▾
             </button>
-          )}
-        </div>
-      </header>
+            {actionsOpen && (
+              <div
+                role="menu"
+                className="absolute left-0 z-20 mt-1 min-w-48 rounded border border-gray-200 bg-white py-1 shadow-lg"
+              >
+                {actions.map((a) => (
+                  <button
+                    key={a.name}
+                    type="button"
+                    role="menuitem"
+                    onClick={() => void runAction(a)}
+                    className="block w-full px-3 py-2 text-left text-sm hover:bg-gray-100"
+                    title={a.description}
+                  >
+                    {a.label}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+        {data.search_fields.length > 0 && (
+          <form
+            className="w-72 max-w-full"
+            onSubmit={(e) => {
+              e.preventDefault();
+              commitSearch();
+            }}
+          >
+            <Input
+              placeholder={`Search by ${data.search_fields.join(', ')}…`}
+              value={searchDraft}
+              onChange={(e) => setSearchDraft(e.target.value)}
+              onBlur={commitSearch}
+            />
+          </form>
+        )}
+        {hasFilters && (
+          <button
+            type="button"
+            onClick={() => setFilterOpen(true)}
+            aria-haspopup="dialog"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded border border-gray-300 px-3 py-2 text-sm hover:bg-gray-100"
+          >
+            <ListFilter className="h-4 w-4" aria-hidden />
+            Filter
+            {chips.length > 0 && (
+              <span className="ml-0.5 rounded-full bg-blue-600 px-1.5 py-0.5 text-xs text-white">
+                {chips.length}
+              </span>
+            )}
+          </button>
+        )}
+      </div>
 
       {chips.length > 0 && (
         <div className="flex flex-wrap gap-2">
@@ -184,7 +284,9 @@ export function ListPage() {
         </div>
       )}
 
-      {/* Table is always full-width now — filters live in the modal. */}
+      {/* Table is always full-width now — filters live in the modal.
+          Row checkboxes appear only when the model has bulk actions
+          the user can run (#182). */}
       <Card>
         <Table
           columns={columns}
@@ -192,6 +294,10 @@ export function ListPage() {
           rowKey={(r) => r.pk}
           onRowClick={(row) => navigate(`/${appLabel}/${modelName}/${row.pk}`)}
           emptyLabel={q || chips.length ? 'No results match these filters.' : 'No objects yet.'}
+          selectable={canRunActions}
+          selectedKeys={selected}
+          onToggleRow={toggleRow}
+          onToggleAll={(checked) => toggleAll(checked, data.results)}
         />
       </Card>
       <Pagination page={data.page} totalPages={totalPages} onChange={setPage} />

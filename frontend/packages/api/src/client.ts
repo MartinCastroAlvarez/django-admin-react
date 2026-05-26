@@ -5,6 +5,7 @@
 // here. See `CLAUDE.md` §7.
 
 import type {
+  ActionRunResponse,
   CreatePayload,
   CreateResponse,
   DetailResponse,
@@ -174,5 +175,26 @@ export class ApiClient {
 
   delete(appLabel: string, modelName: string, pk: string | number): Promise<void> {
     return this.request<void>('DELETE', `${appLabel}/${modelName}/${pk}/`);
+  }
+
+  /**
+   * Run a `ModelAdmin` action over the selected rows (contract §5.4).
+   * The backend re-resolves the action name through
+   * `get_actions(request)` — the SPA name is never trusted as a
+   * callable lookup — and runs it over
+   * `get_queryset(request).filter(pk__in=pks)`.
+   */
+  runAction(
+    appLabel: string,
+    modelName: string,
+    actionName: string,
+    pks: Array<string | number>,
+    confirmed = true,
+  ): Promise<ActionRunResponse> {
+    return this.request<ActionRunResponse>(
+      'POST',
+      `${appLabel}/${modelName}/actions/${actionName}/`,
+      { pks, confirmed },
+    );
   }
 }

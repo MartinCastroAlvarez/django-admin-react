@@ -143,6 +143,15 @@ export interface ActionDescriptor {
   requires_confirmation?: boolean;
 }
 
+/** Result of running a bulk action (contract §5.4). */
+export interface ActionRunResponse {
+  executed: boolean;
+  action: string;
+  pks?: Array<string | number>;
+  /** Present when the action callable returned an HttpResponse. */
+  redirect?: string;
+}
+
 export interface ListResponse {
   app_label: string;
   /** Lowercase, no separators — used to build URLs. Do not display. */
@@ -189,6 +198,42 @@ export interface FieldsetDescriptor {
   fields: string[];
 }
 
+/** One field's header metadata inside an inline (read half). */
+export interface InlineFieldMeta {
+  name: string;
+  label: string;
+  readonly: boolean;
+}
+
+/** One existing child row of an inline. */
+export interface InlineRow {
+  pk: number | string;
+  label: string;
+  fields: Record<string, FieldValue>;
+}
+
+/**
+ * One `InlineModelAdmin` surfaced on the detail response (Issue #54).
+ * `kind` drives the SPA layout: `tabular` → table rows, `stacked` →
+ * card stack. Permissions gate the edit affordances per-inline.
+ */
+export interface InlineDescriptor {
+  name: string;
+  label: string;
+  kind: 'tabular' | 'stacked';
+  fk_name: string;
+  child: { app_label: string; model_name: string };
+  extra: number;
+  min_num: number | null;
+  max_num: number | null;
+  can_view: boolean;
+  can_add: boolean;
+  can_change: boolean;
+  can_delete: boolean;
+  fields: InlineFieldMeta[];
+  rows: InlineRow[];
+}
+
 export interface DetailResponse {
   app_label: string;
   model_name: string;
@@ -197,12 +242,24 @@ export interface DetailResponse {
   permissions: Permissions;
   fieldsets: FieldsetDescriptor[];
   fields: Record<string, FieldDescriptor>;
+  /** `ModelAdmin.inlines` descriptors; always present (empty when none). */
+  inlines: InlineDescriptor[];
 }
 
 export interface CreateResponse {
   pk: number | string;
   label: string;
   redirect: string;
+}
+
+/**
+ * Response of `POST /api/v1/login/` (contract §7) — the package's React
+ * login endpoint returns the authenticated user block on success. The
+ * shape mirrors `RegistryUser` (the same minimal, self-known fields the
+ * registry exposes; no email / groups / perms).
+ */
+export interface LoginResponse {
+  user: RegistryUser;
 }
 
 export interface FieldErrorEnvelope {

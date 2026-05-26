@@ -21,6 +21,16 @@ export interface TableProps<Row> {
   sortDirection?: 'asc' | 'desc';
   onRowClick?: (row: Row) => void;
   emptyLabel?: string;
+  /**
+   * When set, a leading checkbox column is rendered. `selectedKeys`
+   * holds the currently-selected row keys; `onToggleRow` toggles one
+   * row and `onToggleAll` toggles every row on the page. Generic,
+   * props-driven — no business knowledge in the primitive.
+   */
+  selectable?: boolean;
+  selectedKeys?: Set<string | number>;
+  onToggleRow?: (key: string | number) => void;
+  onToggleAll?: (checked: boolean) => void;
 }
 
 const ALIGN_CLASSES = {
@@ -38,15 +48,31 @@ export function Table<Row>({
   sortDirection,
   onRowClick,
   emptyLabel = 'No results.',
+  selectable = false,
+  selectedKeys,
+  onToggleRow,
+  onToggleAll,
 }: TableProps<Row>) {
   if (rows.length === 0) {
     return <div className="py-8 text-center text-sm text-gray-500">{emptyLabel}</div>;
   }
+  const selected = selectedKeys ?? new Set<string | number>();
+  const allSelected = rows.length > 0 && rows.every((r) => selected.has(rowKey(r)));
   return (
     <div className="overflow-x-auto">
       <table className="min-w-full text-sm">
         <thead className="bg-gray-50 text-gray-700">
           <tr>
+            {selectable && (
+              <th scope="col" className="w-10 px-4 py-2">
+                <input
+                  type="checkbox"
+                  aria-label="Select all rows on this page"
+                  checked={allSelected}
+                  onChange={(e) => onToggleAll?.(e.target.checked)}
+                />
+              </th>
+            )}
             {columns.map((col) => {
               const align = ALIGN_CLASSES[col.align ?? 'left'];
               const sortable = col.sortable && onSort;
@@ -77,6 +103,16 @@ export function Table<Row>({
                 onClick={onRowClick ? () => onRowClick(row) : undefined}
                 className={onRowClick ? 'cursor-pointer hover:bg-gray-50' : ''}
               >
+                {selectable && (
+                  <td className="w-10 px-4 py-2" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="checkbox"
+                      aria-label="Select row"
+                      checked={selected.has(key)}
+                      onChange={() => onToggleRow?.(key)}
+                    />
+                  </td>
+                )}
                 {columns.map((col) => (
                   <td
                     key={col.key}

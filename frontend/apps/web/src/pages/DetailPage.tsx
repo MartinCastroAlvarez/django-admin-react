@@ -6,8 +6,8 @@
 
 import { Link, useParams } from 'react-router-dom';
 
-import { useApiClient, useDetail } from '@dar/data';
-import { Card, EmptyState, Spinner } from '@dar/ui';
+import { useApiClient, useDetail, type InlineDescriptor } from '@dar/data';
+import { Card, EmptyState, Spinner, Table } from '@dar/ui';
 
 import { FieldValueView } from '../components/FieldValueView';
 
@@ -64,6 +64,59 @@ export function DetailPage() {
           </dl>
         </Card>
       ))}
+
+      {/* Inlines (#54): the backend surfaces ModelAdmin.inlines + their
+          existing rows on the detail response. Tabular → a table,
+          Stacked → a card stack. Read rendering; edit affordances are a
+          follow-up gated by the per-inline can_* flags. */}
+      {(data.inlines ?? [])
+        .filter((inline) => inline.can_view)
+        .map((inline) => (
+          <InlineSection key={inline.name} inline={inline} />
+        ))}
     </div>
+  );
+}
+
+function InlineSection({ inline }: { inline: InlineDescriptor }) {
+  if (inline.rows.length === 0) {
+    return (
+      <Card title={inline.label}>
+        <p className="py-4 text-sm text-gray-500">No {inline.label.toLowerCase()} yet.</p>
+      </Card>
+    );
+  }
+
+  if (inline.kind === 'tabular') {
+    const columns = inline.fields.map((f) => ({
+      key: f.name,
+      header: f.label,
+      render: (row: (typeof inline.rows)[number]) => <FieldValueView value={row.fields[f.name]} />,
+    }));
+    return (
+      <Card title={inline.label}>
+        <Table columns={columns} rows={inline.rows} rowKey={(r) => r.pk} />
+      </Card>
+    );
+  }
+
+  // Stacked: one definition list per child row.
+  return (
+    <Card title={inline.label}>
+      <div className="divide-y divide-gray-200">
+        {inline.rows.map((row) => (
+          <dl key={row.pk} className="grid grid-cols-3 gap-4 py-3 text-sm">
+            {inline.fields.map((f) => (
+              <div key={f.name} className="contents">
+                <dt className="text-gray-500">{f.label}</dt>
+                <dd className="col-span-2 whitespace-pre-wrap text-gray-900">
+                  <FieldValueView value={row.fields[f.name]} />
+                </dd>
+              </div>
+            ))}
+          </dl>
+        ))}
+      </div>
+    </Card>
   );
 }
