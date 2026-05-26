@@ -19,6 +19,38 @@ def _url(pk: object) -> str:
 
 
 @pytest.mark.django_db
+def test_detail_resolves_via_get_object_not_get_queryset(superuser_client: Client) -> None:
+    """The detail view must resolve the object through
+    ``ModelAdmin.get_object`` (what Django's change view uses), not
+    ``get_queryset().get()``.
+
+    A consumer may override ``get_object`` to bypass a filter that
+    ``get_queryset`` applies for list-view scoping/performance — so an
+    individual record stays openable even though it's hidden from the
+    list. Observed in the laminr pilot: ``LoanPackageAdmin.get_queryset``
+    excludes test-tenant packages, but its ``get_object`` deliberately
+    bypasses that so the change view still opens them. Resolving detail
+    via ``get_queryset`` 404'd such rows.
+
+    Here: ``get_queryset`` returns ``none()`` (hides everything) while
+    ``get_object`` returns the real row. The detail view must 200.
+    """
+    g = Group.objects.create(name="hidden-from-list")
+
+    with admin_override(
+        Group,
+        get_queryset=lambda self, request: Group.objects.none(),
+        get_object=lambda self, request, object_id, from_field=None: Group.objects.filter(
+            pk=object_id
+        ).first(),
+    ):
+        response = superuser_client.get(_url(g.pk))
+
+    assert response.status_code == 200, response.content
+    assert response.json()["pk"] == g.pk
+
+
+@pytest.mark.django_db
 def test_detail_calls_get_form_with_change_true(superuser_client: Client) -> None:
     """Regression: the detail view must call ``get_form(..., change=True)``
     for an existing object — exactly how Django's change view invokes it.
