@@ -16,6 +16,8 @@ testable, every claim cross-references an acceptance criterion.
 | [`navigation.md`](navigation.md)           | SPA navigation and the URL contract.                 |
 | [`accessibility.md`](accessibility.md)     | WCAG 2.1 AA checklist with examples.                 |
 | [`responsive.md`](responsive.md)           | Breakpoints, the table → card rule, touch targets.   |
+| [`extensibility.md`](extensibility.md)     | Plug-and-play vs extensibility contract (X-1..X-7).  |
+| [`primary-flows.md`](primary-flows.md)     | End-to-end flows tied to acceptance criteria.        |
 
 ## Conventions
 
