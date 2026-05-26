@@ -250,11 +250,16 @@ Rules:
 - `readonly: true` corresponds to membership in
   `ModelAdmin.get_readonly_fields(request, obj)`.
 - Field `type` is a closed v1 vocabulary:
-  - `string`, `text`, `email`, `url`, `slug`
-  - `integer`, `float`, `decimal`
+  - `string`, `text`, `email`, `url`, `slug`, `ip`, `filepath`
+  - `integer`, `float`, `decimal`, `duration`
   - `boolean`
   - `date`, `datetime`, `time`
   - `uuid`
+  - `binary` (base64-encoded bytes)
+  - `json` (pass-through dict; values recursively serialised)
+  - `array` (pass-through list; elements recursively serialised — for
+    `django.contrib.postgres.fields.ArrayField`)
+  - `range` (postgres range types — `DateRangeField`, `IntegerRangeField`, …)
   - `choice`
   - `foreignkey`
   - `unsupported` (manytomany and unknown types in v1; client renders a
@@ -264,6 +269,38 @@ Rules:
 - Sensitive-shaped field names (password, secret, token, api_key, hash,
   ...) are never serialized; the field is omitted as if `exclude`d.
   Defense-in-depth atop the form's own exclusion rules.
+
+### 4.1 Extending the type vocabulary
+
+Consumers can register a custom field type so the SPA serializes it
+without forking the package:
+
+```python
+# yourapp/apps.py
+from django.apps import AppConfig
+
+class YourAppConfig(AppConfig):
+    def ready(self):
+        from django_admin_react.api.serializers import register_field_type
+        from .fields import MoneyField
+
+        register_field_type(
+            "MoneyField",       # what field.get_internal_type() returns
+            "decimal",          # reuse a builtin SPA widget…
+            serializer=lambda v: None if v is None else str(v.amount),
+        )
+```
+
+Rules:
+
+- The closed builtin vocabulary cannot be overridden — calling
+  `register_field_type("CharField", ...)` is a silent no-op so a
+  third-party app can't change `CharField` rendering for every
+  consumer.
+- The `serializer` argument is optional; without it, the default
+  Python-type dispatch in `serialize_value` runs.
+- Coin a new `vocab_type` label (e.g. `"money"`) only if you also
+  ship a matching SPA widget via the frontend extension surface.
 
 ---
 

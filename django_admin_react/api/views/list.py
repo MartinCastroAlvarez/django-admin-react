@@ -266,9 +266,11 @@ def _serialize_list_value(obj: Model, name: str, value: Any) -> Any:
     everything else goes through the conservative serializer with
     ``str()`` fallback. Callable list_display entries (e.g.
     ``@admin.display``) have already been resolved to a plain value
-    by ``lookup_field``.
+    by ``lookup_field``. The model_field reference is forwarded so
+    consumer-registered custom serializers (see #60 /
+    ``register_field_type``) take precedence over the default dispatch.
     """
     model_field = safe_get_field(obj, name)
     if isinstance(model_field, ForeignKey):
         return serialize_fk_value(value)
-    return serialize_value(value)
+    return serialize_value(value, field=model_field)
