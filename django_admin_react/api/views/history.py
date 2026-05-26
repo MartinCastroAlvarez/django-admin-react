@@ -119,7 +119,7 @@ def _serialize_entry(entry: LogEntry) -> dict[str, Any]:
         "id": entry.id,
         "action": _ACTION_LABELS.get(entry.action_flag, "unknown"),
         "action_time": entry.action_time.isoformat(),
-        "user": None if user is None else {"id": user.pk, "label": str(user)},
+        "user": None if user is None else {"id": entry.user_id, "label": str(user)},
         "change_message_human": entry.get_change_message(),
         "change_message_structured": _structured_message(entry),
     }
@@ -158,6 +158,8 @@ def _page_size(request: HttpRequest) -> int:
 def _page_number(request: HttpRequest) -> int:
     """Read the ``page`` query param; default 1 on absent / bogus."""
     raw = request.GET.get("page")
+    if raw is None:
+        return 1
     try:
         return max(1, int(raw))
     except (TypeError, ValueError):

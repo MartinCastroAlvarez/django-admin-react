@@ -119,9 +119,12 @@ def _spec_for_fk(
     unregistered model (see issue #89, defense-in-depth).
     """
     related = field.related_model
-    meta = related._meta if related is not None else None
-    if related is None or meta is None:
+    # ``related_model`` is the resolved model class once the admin is
+    # loaded; ``"self"`` is only a definition-time sentinel. Guard both
+    # ``None`` and the str so the type narrows to ``type[Model]``.
+    if related is None or isinstance(related, str):
         return None
+    meta = related._meta
     # #89: drop the descriptor entirely if the related model isn't in
     # the configured admin site. This keeps the closed-vocabulary
     # posture tight (the SPA only learns about FK filters it can
@@ -290,7 +293,7 @@ def apply_filters(queryset: QuerySet, model_admin: ModelAdmin, request: HttpRequ
         if field_name is None:
             continue
         raw_value = request.GET.get(field_name)
-        if raw_value in (None, ""):
+        if raw_value is None or raw_value == "":
             continue
 
         field = _safe_get_field(model, field_name)

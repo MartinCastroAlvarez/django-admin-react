@@ -162,7 +162,9 @@ def _resolve_fk_name(inline: InlineModelAdmin, parent: Model) -> str | None:
         if isinstance(field, ForeignKey):
             related = field.related_model
             if related is parent_class or (
-                related is not None and issubclass(parent_class, related)
+                related is not None
+                and not isinstance(related, str)
+                and issubclass(parent_class, related)
             ):
                 return field.name
     return None
@@ -184,7 +186,10 @@ def _visible_inline_fields(
     visible = [
         name
         for name in declared
-        if name not in excluded and name != fk_back and not is_sensitive_field_name(name)
+        if isinstance(name, str)
+        and name not in excluded
+        and name != fk_back
+        and not is_sensitive_field_name(name)
     ]
     return filter_sensitive(visible)
 
@@ -209,6 +214,7 @@ def _fields_meta(
     readonly = set(inline.get_readonly_fields(request, None) or ())
     out: list[dict[str, Any]] = []
     for name in visible_fields:
+        label: Any
         try:
             label = label_for_field(name, child_model, inline)
         except Exception:  # pragma: no cover
@@ -277,7 +283,7 @@ def _rows_for_inline(
                 fields_payload[name] = serialize_fk_value(value)
             elif isinstance(model_field, ManyToManyField):
                 try:
-                    related = list(value.all())
+                    related = list(value.all()) if value is not None else []
                 except Exception:
                     related = []
                 fields_payload[name] = [serialize_fk_value(r) for r in related]

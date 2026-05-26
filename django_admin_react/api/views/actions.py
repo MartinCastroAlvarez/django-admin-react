@@ -81,11 +81,13 @@ class ActionView(View):
         # action_name from the URL until ModelAdmin.get_actions
         # confirms it exists for this user.
         actions = model_admin.get_actions(request) or {}
-        if action_name not in actions:
+        # ``actions[name]`` is a ``(callable, name, description)`` tuple
+        # per Django admin's convention. ``.get`` + a None check both
+        # rejects an unknown action and narrows the optional lookup.
+        action_entry = actions.get(action_name)
+        if action_entry is None:
             return not_found_response()
-        # actions[action_name] is a ``(callable, name, description)``
-        # tuple per Django admin's convention.
-        action_callable, _name, _description = actions[action_name]
+        action_callable = action_entry[0]
 
         # Actions are change-shaped — the legacy admin gates them
         # behind change permission. Match that posture so a user
@@ -130,7 +132,7 @@ class ActionView(View):
         # page) — we surface that as a JSON envelope so the SPA can
         # follow it without parsing HTML.
         if isinstance(result, HttpResponse):
-            body = {"redirect": result["Location"]} if "Location" in result else {}
+            body: dict[str, Any] = {"redirect": result["Location"]} if "Location" in result else {}
             body.update({"executed": True, "action": action_name})
             response = JsonResponse(body, status=200)
         else:

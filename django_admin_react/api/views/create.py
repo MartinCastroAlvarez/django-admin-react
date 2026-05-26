@@ -113,7 +113,7 @@ class CreateView(View):
             "redirect": _redirect_for(
                 request,
                 model._meta.app_label,
-                model._meta.model_name,
+                model._meta.model_name or "",
                 instance.pk,
             ),
         }

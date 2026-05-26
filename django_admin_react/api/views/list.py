@@ -221,12 +221,14 @@ def _allowed_ordering(model_admin: ModelAdmin, request: HttpRequest) -> set[str]
     get_sortable_by = getattr(model_admin, "get_sortable_by", None)
     if callable(get_sortable_by):
         return set(get_sortable_by(request) or ())
-    return set(model_admin.get_list_display(request) or ())
+    # ``list_display`` may include callables (display methods); only the
+    # plain field-name strings are valid ordering tokens.
+    return {name for name in model_admin.get_list_display(request) or () if isinstance(name, str)}
 
 
 def _columns_payload(
     model_admin: ModelAdmin,
-    list_display: list[str],
+    list_display: list[Any],
     request: HttpRequest,
 ) -> list[dict[str, Any]]:
     """Build the ``columns[]`` payload for the list response.
@@ -268,7 +270,7 @@ def _columns_payload(
 def _row_for(
     obj: Model,
     model_admin: ModelAdmin,
-    list_display: list[str],
+    list_display: list[Any],
     request: HttpRequest,
     admin_site: Any = None,
 ) -> dict[str, Any]:

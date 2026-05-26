@@ -34,6 +34,7 @@ from typing import Final
 from django.contrib.admin.options import ModelAdmin
 from django.db.models import Count
 from django.db.models import QuerySet
+from django.db.models.functions import Extract
 from django.db.models.functions import ExtractDay
 from django.db.models.functions import ExtractMonth
 from django.db.models.functions import ExtractYear
@@ -98,12 +99,13 @@ def apply_filter(
     all handle these natively). No raw SQL.
     """
     lookups: dict[str, int] = {}
-    if active.get("year") is not None:
-        lookups[f"{field}__year"] = active["year"]
-    if active.get("month") is not None:
-        lookups[f"{field}__month"] = active["month"]
-    if active.get("day") is not None:
-        lookups[f"{field}__day"] = active["day"]
+    year, month, day = active.get("year"), active.get("month"), active.get("day")
+    if year is not None:
+        lookups[f"{field}__year"] = year
+    if month is not None:
+        lookups[f"{field}__month"] = month
+    if day is not None:
+        lookups[f"{field}__day"] = day
     if not lookups:
         return queryset
     return queryset.filter(**lookups)
@@ -128,6 +130,7 @@ def build_buckets(
     excluded (they don't appear in any bucket).
     """
     year, month, day = active.get("year"), active.get("month"), active.get("day")
+    extractor: type[Extract]
     if year is None:
         extractor, _name = ExtractYear, "year"
     elif month is None:
