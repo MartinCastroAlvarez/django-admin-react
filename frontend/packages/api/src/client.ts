@@ -10,6 +10,7 @@ import type {
   AddFormResponse,
   CreatePayload,
   CreateResponse,
+  DeletePreviewResponse,
   DetailResponse,
   FieldErrorEnvelope,
   ListResponse,
@@ -195,6 +196,24 @@ export class ApiClient {
 
   delete(appLabel: string, modelName: string, pk: string | number): Promise<void> {
     return this.request<void>('DELETE', `${appLabel}/${modelName}/${pk}/`);
+  }
+
+  /**
+   * Cascade preview for a delete (contract §5.3) — what else gets
+   * removed, what's PROTECT-blocked, and which extra delete perms are
+   * needed. The SPA shows this before invoking `delete()` so a single
+   * click can't silently cascade rows the operator never saw (#153).
+   * Read-only; never mutates.
+   */
+  deletePreview(
+    appLabel: string,
+    modelName: string,
+    pk: string | number,
+  ): Promise<DeletePreviewResponse> {
+    return this.request<DeletePreviewResponse>(
+      'GET',
+      `${appLabel}/${modelName}/${pk}/delete-preview/`,
+    );
   }
 
   /**

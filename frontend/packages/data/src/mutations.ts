@@ -5,7 +5,7 @@
 //  - debounced batching for rapid edits;
 //  - cache invalidation on success.
 
-import type { ApiClient, CreatePayload, UpdatePayload } from '@dar/api';
+import type { ApiClient, CreatePayload, DeletePreviewResponse, UpdatePayload } from '@dar/api';
 
 export interface CreateArgs {
   client: ApiClient;
@@ -29,6 +29,8 @@ export interface DeleteArgs {
   pk: string | number;
 }
 
+export type DeletePreviewArgs = DeleteArgs;
+
 export function createObject(args: CreateArgs) {
   return args.client.create(args.appLabel, args.modelName, args.payload);
 }
@@ -39,4 +41,8 @@ export function updateObject(args: UpdateArgs) {
 
 export function deleteObject(args: DeleteArgs) {
   return args.client.delete(args.appLabel, args.modelName, args.pk);
+}
+
+export function fetchDeletePreview(args: DeletePreviewArgs): Promise<DeletePreviewResponse> {
+  return args.client.deletePreview(args.appLabel, args.modelName, args.pk);
 }

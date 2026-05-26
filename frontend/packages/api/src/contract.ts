@@ -161,6 +161,28 @@ export interface ActionRunResponse {
   redirect?: string;
 }
 
+/** One cascading model in a delete preview: `{model, count}`. */
+export interface DeleteCascadeEntry {
+  /** `verbose_name_plural` of the cascading model. */
+  model: string;
+  count: number;
+}
+
+/**
+ * Cascade preview for a delete (contract §5.3). Mirrors Django admin's
+ * delete confirmation: what else gets removed (`cascade`), what's
+ * PROTECT-blocked (`protected`), and which extra delete perms are
+ * missing (`perms_needed`). `can_delete` is false when anything is
+ * protected or a perm is missing.
+ */
+export interface DeletePreviewResponse {
+  object: { pk: string | number; label: string };
+  cascade: DeleteCascadeEntry[];
+  protected: string[];
+  perms_needed: string[];
+  can_delete: boolean;
+}
+
 /** One drill-down bucket at the current `date_hierarchy` level. */
 export interface DateHierarchyBucket {
   /** Year (e.g. 2026), month (1-12), or day-of-month (1-31). */
