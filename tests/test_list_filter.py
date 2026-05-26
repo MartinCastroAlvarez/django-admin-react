@@ -19,6 +19,7 @@ Covered:
 from __future__ import annotations
 
 from contextlib import contextmanager
+from contextlib import suppress
 
 import pytest
 from django.contrib import admin
@@ -43,10 +44,8 @@ def admin_attr(model_cls, **values):
     finally:
         for name, original in originals.items():
             if original is sentinel:
-                try:
+                with suppress(AttributeError):
                     delattr(model_admin, name)
-                except AttributeError:
-                    pass
             else:
                 setattr(model_admin, name, original)
 
@@ -129,7 +128,7 @@ def test_simple_list_filter_metadata(superuser_client: Client) -> None:
     assert f["name"] == "active_state"
     assert f["type"] == "custom"
     assert f["label"] == "Active state"
-    assert {l["value"] for l in f["lookups"]} == {"yes", "no"}
+    assert {opt["value"] for opt in f["lookups"]} == {"yes", "no"}
 
 
 @pytest.mark.django_db

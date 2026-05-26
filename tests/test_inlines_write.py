@@ -117,11 +117,7 @@ def test_inline_delete_row_roundtrips(superuser_client: Client) -> None:
     with _ct_admin_registered():
         ct = _new_ct()
         perm = Permission.objects.create(content_type=ct, name="Doomed", codename="doomed")
-        body = {
-            "inlines": {
-                "content_type_set": {"items": [{"pk": perm.pk, "DELETE": True}]}
-            }
-        }
+        body = {"inlines": {"content_type_set": {"items": [{"pk": perm.pk, "DELETE": True}]}}}
         resp = superuser_client.patch(
             _detail_url(ct), data=json.dumps(body), content_type="application/json"
         )

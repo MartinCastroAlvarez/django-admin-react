@@ -143,11 +143,7 @@ def build_buckets(
         .annotate(_count=Count("pk"))
         .order_by("_bucket")
     )
-    return [
-        {"value": r["_bucket"], "count": r["_count"]}
-        for r in rows
-        if r["_bucket"] is not None
-    ]
+    return [{"value": r["_bucket"], "count": r["_count"]} for r in rows if r["_bucket"] is not None]
 
 
 def date_hierarchy_payload(

@@ -69,17 +69,16 @@ class SpaIndexView(View):
     def get(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
         # noqa: ARG002 — args/kwargs only present to satisfy CBV signature.
         admin_site = get_admin_site()
-        if not is_admin_user(request, admin_site=admin_site):
-            # Default: redirect anonymous / unauthorized users to the
-            # HTML login. When the consumer opts into the React login
-            # (``DJANGO_ADMIN_REACT["REACT_LOGIN"]``), serve the SPA
-            # shell instead so the React app renders its own login form
-            # (which POSTs to ``/api/v1/login/``). The shell holds no
-            # user data — bundle loader + mount/brand meta only — so
-            # anonymous access discloses nothing the static assets
-            # wouldn't, and every data API call still 403s until login.
-            if not dar_conf.REACT_LOGIN:
-                return _redirect_to_login(request)
+        # Default: redirect anonymous / unauthorized users to the HTML
+        # login. When the consumer opts into the React login
+        # (``DJANGO_ADMIN_REACT["REACT_LOGIN"]``), serve the SPA shell
+        # instead so the React app renders its own login form (which
+        # POSTs to ``/api/v1/login/``). The shell holds no user data —
+        # bundle loader + mount/brand meta only — so anonymous access
+        # discloses nothing the static assets wouldn't, and every data
+        # API call still 403s until login.
+        if not is_admin_user(request, admin_site=admin_site) and not dar_conf.REACT_LOGIN:
+            return _redirect_to_login(request)
 
         # Force CSRF cookie so the SPA can read it before any unsafe
         # method (the fetch client attaches it as ``X-CSRFToken``). Runs

@@ -92,7 +92,8 @@ def test_field_type_enum_includes_manytomany_and_json(
 def test_error_codes_include_session_expired(superuser_client: Client) -> None:
     """Session expiry (#63) is one of the error envelope codes."""
     body = superuser_client.get(SCHEMA_URL).json()
-    codes = body["components"]["schemas"]["Error"]["properties"]["error"]["properties"]["code"]["enum"]
+    error_schema = body["components"]["schemas"]["Error"]
+    codes = error_schema["properties"]["error"]["properties"]["code"]["enum"]
     assert "forbidden" in codes
     assert "session_expired" in codes
     assert "validation_failed" in codes
@@ -103,7 +104,7 @@ def test_schema_does_not_enumerate_models(superuser_client: Client) -> None:
     """The schema describes envelope shapes — it must not list models."""
     body = superuser_client.get(SCHEMA_URL).json()
     # No path enumerates a concrete app/model.
-    for path in body["paths"].keys():
+    for path in body["paths"]:
         assert "{app_label}" in path or path in (
             "/api/v1/registry/",
             "/api/v1/schema/",

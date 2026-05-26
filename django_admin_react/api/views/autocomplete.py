@@ -91,8 +91,7 @@ class AutocompleteView(View):
 
         if not model_admin.search_fields:
             return bad_request(
-                "The target admin does not declare search_fields; "
-                "autocomplete is not available."
+                "The target admin does not declare search_fields; " "autocomplete is not available."
             )
 
         q = (request.GET.get("q") or "").strip()
@@ -101,9 +100,7 @@ class AutocompleteView(View):
 
         queryset = model_admin.get_queryset(request)
         if q:
-            queryset, may_have_duplicates = model_admin.get_search_results(
-                request, queryset, q
-            )
+            queryset, may_have_duplicates = model_admin.get_search_results(request, queryset, q)
             if may_have_duplicates:
                 queryset = queryset.distinct()
 
