@@ -180,6 +180,9 @@ open pending the Security session's own promotion.
   replacement is "fork your bundle".** — `ARCHITECTURE.md` §5.3
 - **ManyToMany is read-only stub in v1.** Editing requires autocomplete;
   both are deferred. (deferred — tracked on the project board)
+  *→ SUPERSEDED: M2M read+write shipped (PR #107, Issue #55) and
+  autocomplete shipped (Issue #97). See `ARCHITECTURE.md` §8 and the
+  obsolete-marker at Q-2026-05-25-05 above.*
 - **The PyPI artifact ships pre-built React assets.** Consumers do not
   need Node to install. — `ARCHITECTURE.md` §5.4
 - **Forum + docs/agents split.** Forum for ephemeral coordination,
@@ -188,6 +191,11 @@ open pending the Security session's own promotion.
 - **v1 is small.** Inlines, custom actions, bulk actions, custom widgets,
   autocomplete, raw_id, and the React extension API are explicitly
   deferred. (deferred — tracked on the project board)
+  *→ PARTIALLY SUPERSEDED: inlines (#54), custom actions (#101), bulk
+  actions (#103), autocomplete / raw_id (#97), and the React panel
+  extension surface (#111) have since shipped. Custom widgets and
+  runtime theme/config swapping remain the only v1 non-goals. See the
+  reconciled `ARCHITECTURE.md` §8 (Issue #237).*
 
 ---
 
