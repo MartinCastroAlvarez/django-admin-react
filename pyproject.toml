@@ -16,6 +16,7 @@ classifiers = [
     "Framework :: Django :: 5.0",
     "Framework :: Django :: 5.1",
     "Framework :: Django :: 5.2",
+    "Framework :: Django :: 6.0",
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Operating System :: OS Independent",
@@ -23,6 +24,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Internet :: WWW/HTTP :: Site Management",
     "Topic :: Software Development :: Libraries :: Python Modules",
 ]
@@ -37,7 +39,9 @@ include = [
 
 [tool.poetry.dependencies]
 python = "^3.10"
-django = ">=5.0,<6.0"
+# Django 5.0 → 5.2 LTS → 6.x. Bump the upper bound when 7.0 ships and
+# we've verified the package still passes its test matrix on it.
+django = ">=5.0,<7.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.0"
