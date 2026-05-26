@@ -20,6 +20,7 @@ this file in lockstep**, plus matching changes on both sides.
 | Method | Path                                                | Purpose                          | Auth         |
 | ------ | --------------------------------------------------- | -------------------------------- | ------------ |
 | GET    | `/api/v1/registry/`                                 | List apps/models the user sees   | staff        |
+| GET    | `/api/v1/schema/`                                   | OpenAPI 3.1 wire-shape spec      | staff        |
 | GET    | `/api/v1/{app_label}/{model_name}/`                 | List objects                     | staff + view |
 | POST   | `/api/v1/{app_label}/{model_name}/`                 | Create an object                 | staff + add  |
 | GET    | `/api/v1/{app_label}/{model_name}/{pk}/`            | Object detail                    | staff + view |
@@ -615,3 +616,60 @@ curl -H "Cookie: ..." -H "X-CSRFToken: ..." \
      -d '{"name":"Renamed"}' \
      https://example.com/admin-react/api/v1/fintech/account/17/
 ```
+
+---
+
+## 12. `GET /api/v1/schema/` — OpenAPI 3.1
+
+Closes consumer feedback issue
+[#64](https://github.com/MartinCastroAlvarez/django-admin-react/issues/64).
+
+The package ships a machine-readable OpenAPI 3.1 mirror of this prose
+contract. The endpoint emits the same `application/json` document on
+every request — it does **not** enumerate consumer models (that is
+what `/registry/` is for, per-user).
+
+### Why it exists
+
+- Typed clients (`@dar/api` in this repo; consumer-generated clients
+  elsewhere) can be generated from the spec instead of hand-written
+  against the Markdown.
+- Consumer integration tests can validate responses against the
+  schema rather than ad-hoc asserts.
+- Contract drift becomes a CI signal — if the implementation drifts
+  from the doc, the schema diff catches it.
+
+### Auth
+
+Same gate as `/registry/`: authenticated staff via
+`AdminSite.has_permission`. Public docs already live at this file;
+the endpoint is staff-only so the wire shape isn't part of an
+attacker's reconnaissance ladder.
+
+### Contents
+
+The spec documents:
+
+- **Paths**: registry, schema (self-describing), list, detail,
+  create, update, destroy, autocomplete, action.
+- **Components → schemas**: `Error`, `Registry`, `ListResponse`,
+  `DetailResponse`, `FieldDescriptor`, `Filter`, `DateHierarchy`,
+  `WritePayload`, `CreateResponse`, `AutocompleteResponse`,
+  `ActionPayload`, `ActionResponse`, plus shared atoms
+  (`Permissions`, `ModelRef`, `FKValue`, `M2MItem`).
+- **Components → parameters**: reusable `AppLabel`, `ModelName`,
+  `Pk` path-parameter definitions.
+- **Closed vocabularies**: `FIELD_TYPE_VOCABULARY` (the `type` enum
+  in `FieldDescriptor`) and `ERROR_CODE_VOCABULARY` (the `code` enum
+  in `Error`) — both exported from
+  `django_admin_react.api.schema` so consumers can import them
+  directly.
+
+### Out of scope for v1
+
+- A bundled Swagger UI / Redoc renderer (consumers wire their own).
+- Per-consumer model paths in `paths` (the registry already
+  enumerates the model catalog, gated per user).
+- A version-bump policy doc (the spec's `info.version` moves only
+  when the wire shape changes — additive bumps for new fields,
+  breaking bumps for any non-additive change).
