@@ -143,8 +143,9 @@ export function Layout({ children }: PropsWithChildren) {
 
   return (
     <div className="flex h-full min-h-screen">
-      {/* Mobile top bar — hamburger + brand. Hidden on desktop. */}
-      <header className="md:hidden fixed inset-x-0 top-0 z-30 flex h-14 items-center gap-3 bg-gray-900 px-4 text-gray-100">
+      {/* Top bar — hamburger + brand. Shown on mobile AND tablet; the
+          static sidebar only appears at lg (≥1024px). */}
+      <header className="lg:hidden fixed inset-x-0 top-0 z-30 flex h-14 items-center gap-3 bg-gray-900 px-4 text-gray-100">
         <button
           type="button"
           aria-label="Open navigation"
@@ -160,24 +161,25 @@ export function Layout({ children }: PropsWithChildren) {
         </Link>
       </header>
 
-      {/* Backdrop — only on mobile while the drawer is open. */}
+      {/* Backdrop — on mobile + tablet while the drawer is open. */}
       {drawerOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/50 md:hidden"
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
           onClick={closeDrawer}
           aria-hidden="true"
         />
       )}
 
-      {/* Sidebar: static column on desktop; off-canvas drawer on mobile. */}
+      {/* Sidebar: static column on large screens (≥lg); off-canvas
+          drawer on mobile AND tablet (< lg). */}
       <aside
         className={[
           'w-64 shrink-0 overflow-y-auto bg-gray-900 p-4 text-gray-100',
-          // Mobile: fixed off-canvas drawer that slides in.
+          // Mobile + tablet: fixed off-canvas drawer that slides in.
           'fixed inset-y-0 left-0 z-50 transform transition-transform duration-200',
           drawerOpen ? 'translate-x-0' : '-translate-x-full',
-          // Desktop: pinned, always visible, in normal flow.
-          'md:static md:z-auto md:translate-x-0',
+          // Large screens (≥1024px): pinned, always visible, in normal flow.
+          'lg:static lg:z-auto lg:translate-x-0',
         ].join(' ')}
       >
         <div className="mb-6">
@@ -272,8 +274,9 @@ export function Layout({ children }: PropsWithChildren) {
         </nav>
       </aside>
 
-      {/* Content. Extra top padding on mobile clears the fixed top bar. */}
-      <main className="flex-1 overflow-y-auto p-6 pt-20 md:pt-6">{children}</main>
+      {/* Content. Extra top padding on mobile + tablet clears the fixed
+          top bar (which is shown until lg). */}
+      <main className="flex-1 overflow-y-auto p-6 pt-20 lg:pt-6">{children}</main>
 
       {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
     </div>
