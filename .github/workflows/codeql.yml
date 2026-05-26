@@ -1,0 +1,61 @@
+# CodeQL static analysis.
+#
+# This is the ONE CI workflow the package ships (SECURITY.md §8 keeps
+# the lint/test pipeline local-only for v0.x; CodeQL is the documented
+# exception — issue #144, post-public-flip hardening). It runs GitHub's
+# semantic code analysis over the Python package and the TypeScript
+# frontend, surfacing findings in the repository's Security tab where
+# external reporters and maintainers both look. Free for public repos.
+#
+# It complements, not replaces, the local gates: `bandit` / `ruff -S`
+# (Python) and `eslint` (frontend) still run via `scripts/lint.sh`;
+# CodeQL adds dataflow-based detection (injection, path traversal,
+# unsafe deserialization) those rule-based linters can miss.
+name: CodeQL
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Weekly re-scan so a newly-published CodeQL query catches an issue
+    # in code that hasn't changed since the last push.
+    - cron: "27 4 * * 1"
+
+# Least-privilege: the analysis only needs to read the code and write
+# security events. No write access to contents, packages, or anything
+# that could mutate the repo.
+permissions:
+  contents: read
+  security-events: write
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # `python` covers django_admin_react/; `javascript-typescript`
+        # covers frontend/. Both are first-party code we ship or build.
+        language: [python, javascript-typescript]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          language: ${{ matrix.language }}
+          # `security-and-quality` is the broadest first-party query
+          # suite — security findings plus maintainability/correctness.
+          queries: security-and-quality
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v3
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"
