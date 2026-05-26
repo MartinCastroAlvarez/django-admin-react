@@ -254,33 +254,6 @@ already honours those customisations.
 
 ---
 
-## What's not yet supported (tracked)
-
-The pre-alpha intentionally ships a small backend. The following
-`ModelAdmin` features are on the roadmap but not in the alpha — open
-issues with acceptance signals:
-
-| Feature | Issue | Workaround for now |
-|---|---|---|
-| `inlines` (`TabularInline` / `StackedInline`) | [#54](https://github.com/MartinCastroAlvarez/django-admin-react/issues/54) | Edit the child model directly under its own admin URL |
-| `ManyToManyField` read + write | [#55](https://github.com/MartinCastroAlvarez/django-admin-react/issues/55) | Exclude the field; manage relation through a dedicated admin |
-| `list_filter` (the left sidebar) | [#56](https://github.com/MartinCastroAlvarez/django-admin-react/issues/56) | Use `search_fields` for the same intent |
-| `FileField` / `ImageField` upload | [#57](https://github.com/MartinCastroAlvarez/django-admin-react/issues/57) | Use the legacy admin for these models |
-| `ModelAdmin.actions` + bulk select | [#58](https://github.com/MartinCastroAlvarez/django-admin-react/issues/58) | One-off DRF endpoint or management command |
-| `autocomplete_fields` / `raw_id_fields` | [#59](https://github.com/MartinCastroAlvarez/django-admin-react/issues/59) | Keep FK target tables small for now |
-| `JSONField` / `ArrayField` / range types (and `register_field_type` hook) | [#60](https://github.com/MartinCastroAlvarez/django-admin-react/issues/60) | Mark as `readonly`; edit via shell |
-| `list_editable` + bulk PATCH | [#61](https://github.com/MartinCastroAlvarez/django-admin-react/issues/61) | Edit row-by-row |
-| `date_hierarchy` drill-down | [#62](https://github.com/MartinCastroAlvarez/django-admin-react/issues/62) | `?ordering=-date_field` and scroll |
-| Session-expiry / re-login modal | [#63](https://github.com/MartinCastroAlvarez/django-admin-react/issues/63) | Browser refresh on 403 |
-| OpenAPI / JSON Schema endpoint | [#64](https://github.com/MartinCastroAlvarez/django-admin-react/issues/64) | Hand-maintain types from `docs/api-contract.md` |
-| Per-model React extension points | [#65](https://github.com/MartinCastroAlvarez/django-admin-react/issues/65) | Use the legacy admin for model-specific UIs |
-
-Mount the SPA at a **second path** (`path("admin2/", include("django_admin_react.urls"))`)
-alongside `/admin/` while the gaps close. Both run off the same
-`ModelAdmin` registrations.
-
----
-
 ## What you get
 
 - **Plug-and-play**: works with any `ModelAdmin` you already have.
