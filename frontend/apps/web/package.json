@@ -4,17 +4,31 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "lint": "echo 'lint placeholder — wired in PR #6'",
-    "typecheck": "tsc --noEmit -p . || true",
-    "build": "echo 'build placeholder — wired in PR #6'",
-    "dev": "echo 'dev server placeholder — wired in PR #6'",
+    "lint": "eslint src --max-warnings 0",
+    "typecheck": "tsc --noEmit -p .",
+    "build": "vite build",
+    "dev": "vite",
+    "preview": "vite preview",
     "test": "echo 'no tests yet'"
   },
   "dependencies": {
+    "@dar/api": "workspace:*",
     "@dar/data": "workspace:*",
     "@dar/ui": "workspace:*",
-    "@dar/list": "workspace:*",
-    "@dar/details": "workspace:*",
-    "@dar/models": "workspace:*"
+    "react": "^18.3.0",
+    "react-dom": "^18.3.0",
+    "react-router-dom": "^6.26.0"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.0",
+    "autoprefixer": "^10.4.0",
+    "eslint": "^9.0.0",
+    "eslint-plugin-no-restricted-imports": "^0.0.0",
+    "postcss": "^8.4.0",
+    "tailwindcss": "^3.4.0",
+    "typescript": "^5.4.0",
+    "vite": "^5.4.0"
   }
 }

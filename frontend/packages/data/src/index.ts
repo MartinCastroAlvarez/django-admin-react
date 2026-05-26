@@ -1,8 +1,49 @@
-// @dar/data — context-provider data layer.
+// @dar/data — the only consumer of @dar/api.
 //
-// Wraps @dar/api with React Context + localStorage for stale-while-
-// revalidate first paint and debounced mutations. See ./README.md for
-// the full contract. Implementation lands in PR #6 (providers + SWR
-// shell) and PR #7 (debounced mutations + cache invalidation).
+// Page packages (@dar/list, @dar/details, @dar/models, @dar/web)
+// import EVERYTHING through this surface. The eslint boundary rule
+// in `frontend/.eslintrc.cjs` enforces that other packages may not
+// `import "@dar/api"`.
 
-export {};
+export { ApiProvider, useApiClient } from './api-context';
+export type { ApiProviderProps } from './api-context';
+export { ApiClient, ApiError } from '@dar/api';
+export type {
+  ApiClientConfig,
+  ColumnDescriptor,
+  CreatePayload,
+  CreateResponse,
+  DetailResponse,
+  FieldChoice,
+  FieldDescriptor,
+  FieldErrorEnvelope,
+  FieldType,
+  FieldValue,
+  FieldsetDescriptor,
+  ForeignKeyValue,
+  ListResponse,
+  ListRow,
+  Permissions,
+  RegistryAppEntry,
+  RegistryModelEntry,
+  RegistryResponse,
+  RegistryUser,
+  UpdatePayload,
+} from '@dar/api';
+
+export { RegistryProvider, useRegistry } from './registry-context';
+export type { RegistryProviderProps, RegistryState } from './registry-context';
+
+export { useList } from './list-context';
+export type { ListState } from './list-context';
+
+export { useDetail } from './detail-context';
+export type { DetailState } from './detail-context';
+
+export { createObject, updateObject, deleteObject } from './mutations';
+export type { CreateArgs, UpdateArgs, DeleteArgs } from './mutations';
+
+export { renderValue } from './format';
+
+export { useSwrCache } from './swr-cache';
+export type { SwrState, UseSwrCacheArgs } from './swr-cache';
