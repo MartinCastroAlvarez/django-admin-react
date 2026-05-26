@@ -17,15 +17,21 @@ below on every merge.
 | Example Django apps (fintech, library, blog, ecommerce, hr)       | ✅ Merged     | PR #5 (`df0c53c`)   |
 | Cleanup: scrub partial-token + drop CI draft                      | ✅ Merged     | PR #7 (`d37495b`)   |
 | Local linter stack + `scripts/{lint,build,deploy}.sh`             | ✅ Merged     | PR #8 (`95d6db2`)   |
-| `GET /api/v1/registry/` endpoint                                  | 🟡 In flight | `pr/03-registry-endpoint` branch |
-| `GET /api/v1/<app>/<model>/` (list)                               | ⬜ Pending    | PR #4 in `PLAN.md` §2 |
-| `GET /api/v1/<app>/<model>/<pk>/` (detail)                        | ⬜ Pending    | PR #4 in `PLAN.md` §2 |
-| Create / update / delete endpoints                                | ⬜ Pending    | PR #5 in `PLAN.md` §2 |
-| Frontend shell (`@dar/web` + Vite + router + auth boundary)     | ⬜ Pending    | PR #6 in `PLAN.md` §2 |
+| PM/UX product docs (PRODUCT_VISION, DESIGN_SYSTEM, ROADMAP, ONBOARDING, docs/ux/) | ✅ Merged | PR #12 (`9d5f982`) |
+| `ACCEPTANCE.md` §2 + §3 + §4 (PM / Architect / Security)         | ✅ Merged     | PR #11 (`c074e3c`)  |
+| Architect TESTING.md + API_CONTRACT.md                            | ✅ Merged     | PR #13 (`3e2859f`)  |
+| `pnpm` script runner + rename `@dar/shell` → `@dar/web`           | ✅ Merged     | PR #14 (`cd0a37b`)  |
+| Security hardening (pre-commit, dep audit, threat model, tests)   | ✅ Merged     | PR #15 (`1b4e8dd`)  |
+| `GET /api/v1/registry/` endpoint                                  | ✅ Merged     | PR #3 (subsumed into list/detail/writes) |
+| `GET /api/v1/<app>/<model>/` (list)                               | ✅ Merged     | PR #17 (`77ea8aa`)  |
+| `GET /api/v1/<app>/<model>/<pk>/` (detail)                        | ✅ Merged     | PR #17 (`77ea8aa`)  |
+| Create / update / delete endpoints                                | ✅ Merged     | PR #17 (`77ea8aa`)  |
+| Cross-agent forum reviews for PRs #11/#13/#14/#15/#17             | ✅ Merged     | PR #20 (`7050794`)  |
+| Frontend shell (`@dar/web` + Vite + router + auth boundary)       | ⬜ Pending    | PR #6 in `PLAN.md` §2 |
 | Frontend pages (`@dar/list`, `@dar/details`, `@dar/models`)       | ⬜ Pending    | PR #7 in `PLAN.md` §2 |
 | Frontend forms + `@dar/data` (SWR + debounced mutations)          | ⬜ Pending    | PR #7 in `PLAN.md` §2 |
-| Example apps wired to the React admin + screenshots in README     | ⬜ Pending    | PR #8 in `PLAN.md` §2 |
-| First PyPI release (`0.1.0`)                                      | ⬜ Pending    | Requires repo-owner approval + token |
+| Example apps wired to the React admin + SPA screenshots in README | ⬜ Pending    | PR #8 in `PLAN.md` §2 |
+| First PyPI release (`0.1.0`)                                      | ⬜ Pending    | Awaits frontend + repo-owner token |
 
 Legend: ✅ done · 🟡 in flight · ⬜ pending · ❌ blocked
 
@@ -76,16 +82,18 @@ The PM/UX role tracks `ACCEPTANCE.md` §2 against the same milestone
 lens as the engineering lane. Live status board:
 [`docs/pm-acceptance-status.md`](docs/pm-acceptance-status.md).
 
-Headline numbers (2026-05-26):
+Headline numbers (2026-05-26, post merges #11/#13/#14/#15/#17):
 
-- ✅ verified — 10 criteria (mostly §2.1, §2.6, onboarding docs).
-- 🟡 partial — 9 criteria (need frontend + PyPI release to flip).
-- ⬜ blocked on frontend — the rest (~25), per
+- ✅ verified — 12 criteria (P-2, P-5, D-1, D-3, D-5, O-1, O-3,
+  Doc-1, Doc-2, Doc-3, Doc-4, E-1).
+- 🟡 partially met — 11 criteria (every 🟡 has its *backend* side
+  green; only the SPA half is missing).
+- ⬜ blocked on frontend — the rest (~22), per
   [`PLAN.md`](PLAN.md) §2 PR #6 / #7.
 
 The v0.1 release gate (`ACCEPTANCE.md` §5) cannot pass until the
 frontend lands. Every PM doc / spec / screenshot that does **not**
-depend on the SPA is shipped or in review.
+depend on the SPA is shipped.
 
 ---
 
