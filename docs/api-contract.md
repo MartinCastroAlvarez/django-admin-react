@@ -185,6 +185,48 @@ bad query parameter. Out-of-range values are bounds-checked
 (`year ∈ [1, 9999]`, `month ∈ [1, 12]`, `day ∈ [1, 31]`) before
 reaching the ORM.
 
+### 3.3 `filters` (always-present array)
+
+When the `ModelAdmin` declares `list_filter`, the response surfaces
+per-filter metadata so the SPA can render the left-sidebar filter
+strip. The key is always present (empty `[]` when no filters
+declared) so the SPA branches on `filters.length` without a
+`hasOwnProperty` guard.
+
+```json
+"filters": [
+  { "name": "is_staff",      "label": "Staff status",  "type": "boolean" },
+  { "name": "status",        "label": "Status",        "type": "choice",
+    "choices": [{"value": "active", "label": "Active"}, ...] },
+  { "name": "owner",         "label": "Owner",         "type": "foreignkey",
+    "to": {"app_label": "auth", "model_name": "user"},
+    "choices": [{"value": 1, "label": "alice"}] },
+  { "name": "created_at",    "label": "Created",       "type": "date" },
+  { "name": "active_state",  "label": "Active state",  "type": "custom",
+    "lookups": [{"value": "yes", "label": "Active"}, {"value": "no", "label": "Inactive"}] }
+]
+```
+
+Supported v1 filter types:
+
+- **`boolean`** — three-way; param value is `true` / `false` (anything
+  else, including unset, leaves the queryset alone).
+- **`choice`** — exact match against the field's `choices`.
+- **`foreignkey`** — exact pk match. Inlines up to 25 options when
+  the target table is small; larger targets defer to autocomplete
+  (#59) — `choices` is absent then.
+- **`date`** — exact-date match. Range UX deferred (use
+  `date_hierarchy` for the heavy date-drill case — §3.1).
+- **`custom`** — `SimpleListFilter` subclass. The filter's own
+  `parameter_name` is the query string key; `lookups()` is the
+  choice list; `queryset()` does the narrowing.
+
+Each filter's value comes from `?<param_name>=<value>`. Unknown
+filter params are silently ignored. Garbage values that break the
+ORM fall back to `.none()` (zero rows; never a 500). Filters are
+applied **after** search and **before** `date_hierarchy` /
+ordering.
+
 ### 3.2 `GET /api/v1/{app_label}/{model_name}/autocomplete/`
 
 Typeahead endpoint for high-cardinality FK pickers
