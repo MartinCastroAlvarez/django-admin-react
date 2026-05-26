@@ -3,6 +3,19 @@ import { Link } from 'react-router-dom';
 
 import { useRegistry } from '@dar/data';
 
+// Brand title + logo URL are written into the SpaIndexView template
+// as ``<meta name="dar-brand-title">`` / ``<meta name="dar-brand-logo">``
+// so the SPA picks them up on first paint with no FOUC.
+// Defaults match the legacy hardcoded shell.
+function readMeta(name: string): string | null {
+  if (typeof document === 'undefined') return null;
+  const el = document.querySelector<HTMLMetaElement>(`meta[name="${name}"]`);
+  return el?.content?.trim() || null;
+}
+
+const BRAND_TITLE = readMeta('dar-brand-title') || 'django-admin-react';
+const BRAND_LOGO_URL = readMeta('dar-brand-logo');
+
 export function Layout({ children }: PropsWithChildren) {
   const { data } = useRegistry();
 
@@ -10,8 +23,18 @@ export function Layout({ children }: PropsWithChildren) {
     <div className="flex h-full min-h-screen">
       <aside className="w-64 shrink-0 bg-gray-900 text-gray-100 p-4 overflow-y-auto">
         <div className="mb-6">
-          <Link to="/" className="font-semibold text-lg hover:text-white">
-            django-admin-react
+          <Link
+            to="/"
+            className="flex items-center gap-2 font-semibold text-lg hover:text-white"
+          >
+            {BRAND_LOGO_URL && (
+              <img
+                src={BRAND_LOGO_URL}
+                alt=""
+                className="h-6 w-6 rounded shrink-0"
+              />
+            )}
+            <span>{BRAND_TITLE}</span>
           </Link>
           {data?.user && (
             <div className="text-xs text-gray-400 mt-1">

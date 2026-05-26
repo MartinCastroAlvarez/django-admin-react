@@ -110,13 +110,24 @@ class ListView(View):
         end = start + page_size
 
         list_display = list(model_admin.get_list_display(request))
-        columns = _columns_payload(model_admin, list_display)
+        columns = _columns_payload(model_admin, list_display, request)
 
         results = [_row_for(obj, model_admin, list_display, request) for obj in queryset[start:end]]
 
         body: dict[str, Any] = {
             "app_label": model._meta.app_label,
+            # ``model_name`` stays lowercase (Django convention; used in URLs).
+            # The SPA should render ``verbose_name_plural`` for list view
+            # titles, falling back to ``object_name`` when the consumer
+            # has not customised ``Meta.verbose_name``. Lowercased
+            # ``model_name`` was previously the only signal, which is
+            # why list views displayed names like
+            # ``Packagemodeldisclaimerdisplayed`` instead of the
+            # original ``PackageModelDisclaimerDisplayed``.
             "model_name": model._meta.model_name,
+            "object_name": model._meta.object_name,
+            "verbose_name": str(model._meta.verbose_name),
+            "verbose_name_plural": str(model._meta.verbose_name_plural),
             "permissions": model_permissions(model_admin, request),
             "columns": columns,
             "search_fields": list(model_admin.search_fields or ()),
@@ -213,6 +224,7 @@ def _allowed_ordering(model_admin: ModelAdmin, request: HttpRequest) -> set[str]
 def _columns_payload(
     model_admin: ModelAdmin,
     list_display: list[str],
+    request: HttpRequest,
 ) -> list[dict[str, Any]]:
     """Build the ``columns[]`` payload for the list response.
 
@@ -224,8 +236,14 @@ def _columns_payload(
     submits changes via the bulk PATCH endpoint (Issue #61). The
     ``except`` fallback to the bare name is defensive — corrupt
     admin registrations should never 500 the endpoint.
+
+    ``request`` is threaded through so ``get_sortable_by`` (and its
+    fallback to ``get_list_display``) can honour third-party admin
+    wrappers — e.g. ``django-admin-flexlist`` — that read
+    ``request.user`` inside their ``get_list_display`` overrides.
+    Calling them with ``None`` would crash the endpoint.
     """
-    sortable = set(getattr(model_admin, "get_sortable_by", lambda r: ())(None) or ())
+    sortable = set(getattr(model_admin, "get_sortable_by", lambda r: ())(request) or ())
     editable = set(getattr(model_admin, "list_editable", ()) or ())
     payload = []
     for name in list_display:

@@ -47,8 +47,20 @@ export function ListPage() {
     <div className="space-y-4">
       <header className="flex items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold capitalize">
-            {appLabel} · {modelName}
+          {/*
+            Title order of preference: ``verbose_name_plural`` (honours
+            ``Meta.verbose_name_plural`` overrides), then ``object_name``
+            (the model class name as written), then the lowercase URL
+            param as a last resort. ``modelName`` from the URL is
+            lowercase + no separators, so capitalising it produces
+            things like ``Packagemodeldisclaimerdisplayed`` — never
+            display that.
+          */}
+          <h1 className="text-2xl font-semibold">
+            <span className="capitalize">{appLabel}</span> ·{' '}
+            {data.verbose_name_plural
+              ? capitalize(data.verbose_name_plural)
+              : data.object_name || modelName}
           </h1>
           <p className="text-sm text-gray-500">
             {data.total.toLocaleString()} object{data.total === 1 ? '' : 's'}
@@ -81,6 +93,11 @@ export function ListPage() {
       <Pagination page={data.page} totalPages={totalPages} onChange={(next) => setPage(next)} />
     </div>
   );
+}
+
+function capitalize(value: string): string {
+  if (!value) return value;
+  return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
 interface PaginationProps {

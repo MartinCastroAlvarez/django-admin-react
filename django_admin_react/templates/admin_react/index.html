@@ -4,8 +4,14 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="dar-mount" content="{{ mount_point }}" />
-    <title>Django Admin</title>
-    <link rel="icon" href="data:," />
+    <meta name="dar-brand-title" content="{{ brand_title }}" />
+    {% if brand_logo_url %}<meta name="dar-brand-logo" content="{{ brand_logo_url }}" />{% endif %}
+    <title>{{ brand_title }}</title>
+    {% if brand_logo_url %}
+      <link rel="icon" href="{{ brand_logo_url }}" />
+    {% else %}
+      <link rel="icon" href="data:," />
+    {% endif %}
     {% csrf_token %}
     {% if bundle %}
       {% for css_path in bundle.css %}

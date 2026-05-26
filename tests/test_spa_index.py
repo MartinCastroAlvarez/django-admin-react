@@ -125,3 +125,85 @@ def test_without_manifest_renders_helpful_fallback(
     # who runs `runserver` without `pnpm build:vite` knows what to do.
     assert "pnpm" in body
     assert "build:vite" in body
+
+
+# --------------------------------------------------------------------------- #
+# Branding (BRAND_TITLE + BRAND_LOGO_URL)                                     #
+# --------------------------------------------------------------------------- #
+import importlib
+
+import pytest
+from django.contrib.admin import site as default_admin_site
+from django.test import override_settings
+
+from django_admin_react import views as spa_views
+
+
+def _reload_conf() -> None:
+    """Force `django_admin_react.conf` to re-read settings."""
+    import django_admin_react.conf as _conf
+
+    importlib.reload(_conf)
+    # SpaIndexView holds a module-level reference to conf — re-bind.
+    importlib.reload(spa_views)
+
+
+@pytest.mark.django_db
+def test_brand_title_falls_back_to_admin_site_header(superuser_client: Client) -> None:
+    """When `BRAND_TITLE` is unset, the SPA shell uses the configured
+    AdminSite's `site_header`. Consumers who already customised their
+    AdminSite for the legacy admin don't need a second setting.
+    """
+    with override_settings(DJANGO_ADMIN_REACT={}):
+        _reload_conf()
+        original_header = default_admin_site.site_header
+        default_admin_site.site_header = "Operations Console"
+        try:
+            response = superuser_client.get(ROOT_URL)
+            html = response.content.decode("utf-8")
+            assert 'name="dar-brand-title" content="Operations Console"' in html
+            assert "<title>Operations Console</title>" in html
+        finally:
+            default_admin_site.site_header = original_header
+
+
+@pytest.mark.django_db
+def test_brand_title_explicit_override_wins(superuser_client: Client) -> None:
+    """`BRAND_TITLE` overrides the AdminSite's `site_header`."""
+    with override_settings(DJANGO_ADMIN_REACT={"BRAND_TITLE": "Laminr"}):
+        _reload_conf()
+        original_header = default_admin_site.site_header
+        default_admin_site.site_header = "Something Else"
+        try:
+            response = superuser_client.get(ROOT_URL)
+            html = response.content.decode("utf-8")
+            assert 'name="dar-brand-title" content="Laminr"' in html
+            assert "<title>Laminr</title>" in html
+        finally:
+            default_admin_site.site_header = original_header
+
+
+@pytest.mark.django_db
+def test_brand_logo_url_renders_favicon_and_meta(superuser_client: Client) -> None:
+    """`BRAND_LOGO_URL` populates both the `<link rel="icon">` and the
+    `dar-brand-logo` meta tag the SPA reads at boot.
+    """
+    logo_url = "/static/laminr/logo.svg"
+    with override_settings(DJANGO_ADMIN_REACT={"BRAND_LOGO_URL": logo_url}):
+        _reload_conf()
+        response = superuser_client.get(ROOT_URL)
+        html = response.content.decode("utf-8")
+        assert f'name="dar-brand-logo" content="{logo_url}"' in html
+        assert f'rel="icon" href="{logo_url}"' in html
+
+
+@pytest.mark.django_db
+def test_brand_logo_url_unset_falls_back_to_data_uri(superuser_client: Client) -> None:
+    """When `BRAND_LOGO_URL` is unset, the no-op `data:,` placeholder
+    is preserved (matches the prior hardcoded behaviour)."""
+    with override_settings(DJANGO_ADMIN_REACT={}):
+        _reload_conf()
+        response = superuser_client.get(ROOT_URL)
+        html = response.content.decode("utf-8")
+        assert 'rel="icon" href="data:,"' in html
+        assert 'name="dar-brand-logo"' not in html
