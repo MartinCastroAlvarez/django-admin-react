@@ -1,9 +1,45 @@
 import type { PropsWithChildren } from 'react';
 import { useEffect, useMemo, useState } from 'react';
-import { Menu } from 'lucide-react';
+import { Download, Menu } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 import { useRegistry } from '@dar/data';
+
+// The browser's `beforeinstallprompt` event (Chromium). Captured so we
+// can show an explicit "Install" affordance and call `.prompt()` on
+// click — the manifest + SW (#86, #200/#219) make the app installable;
+// this surfaces it. Typed locally since it's not in lib.dom yet.
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  readonly userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+}
+
+function useInstallPrompt(): { canInstall: boolean; promptInstall: () => void } {
+  const [deferred, setDeferred] = useState<BeforeInstallPromptEvent | null>(null);
+  useEffect(() => {
+    function onPrompt(e: Event): void {
+      e.preventDefault(); // stop Chrome's mini-infobar; we drive the UI
+      setDeferred(e as BeforeInstallPromptEvent);
+    }
+    function onInstalled(): void {
+      setDeferred(null);
+    }
+    window.addEventListener('beforeinstallprompt', onPrompt);
+    window.addEventListener('appinstalled', onInstalled);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', onPrompt);
+      window.removeEventListener('appinstalled', onInstalled);
+    };
+  }, []);
+  return {
+    canInstall: deferred !== null,
+    promptInstall: () => {
+      if (!deferred) return;
+      void deferred.prompt();
+      setDeferred(null); // a prompt can only be used once
+    },
+  };
+}
 
 // Brand title + logo URL are written into the SpaIndexView template
 // as ``<meta name="dar-brand-title">`` / ``<meta name="dar-brand-logo">``
@@ -74,6 +110,7 @@ function filterApps(apps: RegistryApp[], query: string): RegistryApp[] {
 
 export function Layout({ children }: PropsWithChildren) {
   const { data } = useRegistry();
+  const { canInstall, promptInstall } = useInstallPrompt();
   const [query, setQuery] = useState('');
   // The sidebar is a static column on desktop (≥ md) and a slide-in
   // overlay drawer on mobile so it never eats horizontal space on a
@@ -155,6 +192,16 @@ export function Layout({ children }: PropsWithChildren) {
               {data.user.display_name}
               {data.user.is_superuser ? ' · superuser' : ''}
             </div>
+          )}
+          {canInstall && (
+            <button
+              type="button"
+              onClick={promptInstall}
+              className="mt-3 inline-flex items-center gap-1.5 rounded border border-gray-700 px-2 py-1 text-xs text-gray-200 hover:bg-gray-800"
+            >
+              <Download className="h-3.5 w-3.5" aria-hidden />
+              Install app
+            </button>
           )}
         </div>
 
