@@ -46,7 +46,7 @@ Owner: `claude-pm-ux-opus47` (Product Manager / UX Lead).
 Source: [`PRODUCT_VISION.md`](PRODUCT_VISION.md), [`docs/ux/`](docs/ux/)
 (filled in subsequent PRs).
 
-Statuses use the legend from [`PROGRESS.md`](PROGRESS.md): ✅ done · 🟡
+Statuses: ✅ done · 🟡
 in flight · ⬜ pending · ❌ blocked. Statuses are updated by the role
 owner only.
 
@@ -137,7 +137,7 @@ owner only.
 The PM/UX contract for every row below is in
 [`docs/ux/extensibility.md`](docs/ux/extensibility.md). Rows
 E-6 / E-7 / E-8 / E-9 were promoted from §2.10 to §2.9 by the
-2026-05-26 extensibility directive (`forum/UX-DIRECTIVE-extensibility-contract.md`).
+2026-05-26 extensibility directive ((documented in `docs/ux/extensibility.md`)).
 Architect + Security co-sign before each row turns live (gates
 called out per row).
 
@@ -158,7 +158,7 @@ called out per row).
 | E-8a | Returning a non-empty `get_detail_blocks(request, obj)` from a `ModelAdmin` causes the SPA detail page to render the blocks in their declared `placement` slot. (X-5.) | Add a `stats` block; observe. *Architect signed off (2026-05-26) on the block schema enum.* |
 | E-8b | A block of an unrecognised `type` is silently dropped client-side and logged server-side. (X-5.) | Push a fake `type` in an example; observe console + server log. |
 | E-8c | A block whose server-side computation fails renders an `ErrorState` scoped to that block; sibling blocks keep rendering. (X-5.) | Force a block to raise; observe. |
-| E-9  | A `type: "html"` block runs through the configured server-side sanitiser (`nh3`) before reaching the SPA; `<script>` tags and inline event handlers never survive the round-trip. (X-6.) | Try to slip a `<script>` through; observe stripped output. **Security signed off (2026-05-26) conditional on C-1..C-10 in [`forum/REVIEW-security-pr-ux-extensibility-contract.md`](forum/REVIEW-security-pr-ux-extensibility-contract.md) §3.X-6.2** — the original `allow_unsafe_html=True` boolean was rejected, replaced with the constrained `trusted_html` block-type path (v1.x at earliest; PM/UX recommends no escape hatch in v1). E-9 stays **drafted, not live, until the Security follow-up PRs land** (sanitiser spec + implementation + CSP defaults). v0.1 ships with X-1..X-5 + X-7; X-6 is post-v0.1. |
+| E-9  | A `type: "html"` block runs through the configured server-side sanitiser (`nh3`) before reaching the SPA; `<script>` tags and inline event handlers never survive the round-trip. (X-6.) | Try to slip a `<script>` through; observe stripped output. **Security signed off (2026-05-26) conditional on C-1..C-10 in the Security PR review comments §3.X-6.2** — the original `allow_unsafe_html=True` boolean was rejected, replaced with the constrained `trusted_html` block-type path (v1.x at earliest; PM/UX recommends no escape hatch in v1). E-9 stays **drafted, not live, until the Security follow-up PRs land** (sanitiser spec + implementation + CSP defaults). v0.1 ships with X-1..X-5 + X-7; X-6 is post-v0.1. |
 
 ### 2.10 v1 non-goals
 
@@ -227,7 +227,7 @@ deliverables. The PM/UX role does **not** sign these off alone.
 ## 3. Architecture / Engineering acceptance criteria
 
 Owner: Software Architect / Engineering Lead. Source of truth files:
-[`ARCHITECTURE.md`](ARCHITECTURE.md), [`PLAN.md`](PLAN.md),
+[`ARCHITECTURE.md`](ARCHITECTURE.md),
 [`TESTING.md`](TESTING.md) (to land in a follow-up PR),
 [`API_CONTRACT.md`](API_CONTRACT.md) (or
 [`docs/api-contract.md`](docs/api-contract.md) — top-level pointer to
@@ -338,10 +338,10 @@ Merger runs the pipeline locally before squash-merge.
 
 | # | Criterion | How to verify |
 | - | --------- | ------------- |
-| Doc-A | The required-reading set is present and consistent: [`README.md`](README.md), [`ARCHITECTURE.md`](ARCHITECTURE.md), [`PLAN.md`](PLAN.md), [`PROGRESS.md`](PROGRESS.md), [`SECURITY.md`](SECURITY.md), [`CONTRIBUTING.md`](CONTRIBUTING.md), [`CLAUDE.md`](CLAUDE.md), [`TESTING.md`](TESTING.md), [`API_CONTRACT.md`](API_CONTRACT.md) (or a top-level pointer to `docs/api-contract.md`), [`ACCEPTANCE.md`](ACCEPTANCE.md). | `ls` of repo root. |
+| Doc-A | The required-reading set is present and consistent: [`README.md`](README.md), [`ARCHITECTURE.md`](ARCHITECTURE.md), [`SECURITY.md`(SECURITY.md), [`CONTRIBUTING.md`](CONTRIBUTING.md), [`CLAUDE.md`](CLAUDE.md), [`TESTING.md`](TESTING.md), [`API_CONTRACT.md`](API_CONTRACT.md) (or a top-level pointer to `docs/api-contract.md`), [`ACCEPTANCE.md`](ACCEPTANCE.md). | `ls` of repo root. |
 | Doc-B | Every folder has a `README.md` (per [`CLAUDE.md`](CLAUDE.md) §1). | `find . -type d -not -path './.git*' -not -path './node_modules*' -not -path './.venv*' -not -path './dist*'` followed by per-dir `README.md` check. |
 | Doc-C | Every architectural decision is recorded in [`docs/agents/decisions.md`](docs/agents/decisions.md) within the same PR. | PR diff review. |
-| Doc-D | Every meaningful merge appends a one-liner to [`docs/agents/changelog.md`](docs/agents/changelog.md). | Diff review. |
+| Doc-D | Every meaningful merge is a closed PR with a Closes #N reference; the PR list is the changelog. | Diff review. |
 | Doc-E | All internal markdown links resolve. | `lychee` or `markdown-link-check` is added to `./scripts/lint.sh` no later than `0.1.0` and runs against tracked `*.md` files. |
 
 ### 3.10 Backwards compatibility & semantic versioning
@@ -417,7 +417,7 @@ the threat model (`docs/threat-model.md`, planned).
 > either a test passes or the release is blocked. "Looks secure" is
 > not an acceptance criterion.
 
-Statuses use the legend from [`PROGRESS.md`](PROGRESS.md): ✅ done · 🟡
+Statuses: ✅ done · 🟡
 in flight · ⬜ pending · ❌ blocked. Statuses are updated by the role
 owner only.
 
@@ -500,7 +500,7 @@ owner only.
 | S-38 | `.gitignore` blocks `.env`, `.env.*` (except `.env.example`), `*.pem`, `*.key`, `*.crt`, `secrets/`, `.secrets/`. | `cat .gitignore`; required entries present. |
 | S-39 | A pre-commit hook (`.pre-commit-config.yaml`) runs `gitleaks` + a custom regex grep for `ghp_/gho_/ghs_/aws_secret_access_key/BEGIN.*PRIVATE KEY`. Devs are documented to enable it in `CONTRIBUTING.md` § "Pre-commit". | File exists; `pre-commit run --all-files` passes locally on a clean repo. |
 | S-40 | Issue, PR, and forum templates explicitly warn against pasting secrets. | `.github/PULL_REQUEST_TEMPLATE.md` and `.github/ISSUE_TEMPLATE/*` contain the warning. |
-| S-41 | If a secret leak is discovered (active or historical), a `forum/INCIDENT-*.md` is opened, the secret is rotated **first**, and history rewrite is gated by explicit human approval. | Procedure documented in [`SECURITY.md`](SECURITY.md) §5. |
+| S-41 | If a secret leak is discovered (active or historical), an Issue labelled `incident:secret-leak` is opened, the secret is rotated **first**, and history rewrite is gated by explicit human approval. | Procedure documented in [`SECURITY.md`](SECURITY.md) §5. |
 
 ### 4.9 Dependency security
 
@@ -508,7 +508,7 @@ owner only.
 | - | --------- | ------------- |
 | S-42 | Every new third-party Python dependency in `pyproject.toml` has a corresponding entry in `docs/agents/decisions.md` explaining why it's needed and what alternative was rejected. | Diff review on every PR that touches `[tool.poetry.dependencies]` or dev deps. |
 | S-43 | Every new third-party JS dependency in any `frontend/**/package.json` has a corresponding entry in `docs/agents/decisions.md`. | Same as S-42, on JS side. |
-| S-44 | `poetry run pip-audit` returns 0 findings of severity ≥ HIGH at release time. | Run inside `scripts/audit-deps.sh` (planned); record in `PROGRESS.md` quality-gate table. |
+| S-44 | `poetry run pip-audit` returns 0 findings of severity ≥ HIGH at release time. | Run inside `scripts/audit-deps.sh` (planned); comment on the release PR with the result. |
 | S-45 | `pnpm audit --prod` returns 0 findings of severity ≥ HIGH at release time. | Same as S-44 on JS side. |
 | S-46 | `bandit -r django_admin_react` returns 0 findings of severity ≥ HIGH at release time. | Already wired in `scripts/lint.sh`. |
 | S-47 | The package has **no runtime dependency** on `djangorestframework`, an OAuth/JWT library, or any auth framework other than Django itself. The only runtime dependency is Django 5.x. | `poetry export -f requirements.txt` shows Django + transitive only. |
@@ -543,7 +543,7 @@ owner only.
 | - | --------- | ------------- |
 | S-57 | PyPI publishing requires `POETRY_PYPI_TOKEN_PYPI` in env. `scripts/deploy.sh` refuses to run if the token is missing or empty. | `bash -c 'unset POETRY_PYPI_TOKEN_PYPI; ./scripts/deploy.sh'` exits non-zero with a clear error. |
 | S-58 | The PyPI token is **never** echoed, stored in any file in the repo, or printed to any log. The `scripts/deploy.sh` code does not echo `$POETRY_PYPI_TOKEN_PYPI`. | Manual review of `scripts/deploy.sh`. |
-| S-59 | A release tag is **never** pushed by an agent without explicit human approval. Tier 6 in [`docs/agents/autonomy-policy.md`](docs/agents/autonomy-policy.md). | Confirm by audit-trail: `forum/AGENT-*-pr-*-audit.md` for any release PR shows a human approver. |
+| S-59 | A release tag is **never** pushed by an agent without explicit human approval. Tier 6 in [`docs/agents/autonomy-policy.md`](docs/agents/autonomy-policy.md). | Confirm by audit-trail: the merge close-out comment on the PR for any release PR shows a human approver. |
 | S-60 | `pyproject.toml` version is not `0.0.0` at release time; an SBOM (CycloneDX or equivalent) is produced for each release. | `scripts/build.sh` + a small SBOM step (planned). |
 | S-61 | Released wheels embed the pre-built React SPA, **not** sources. The wheel contains hashed `django_admin_react/static/admin_react/*` and `templates/admin_react/index.html`; it does **not** contain `frontend/`, `node_modules/`, or any source `.ts` / `.tsx`. | `unzip -l dist/*.whl` shows static + templates, not frontend source. |
 
@@ -633,7 +633,7 @@ in §2, §3, and §4 is ✅ for the milestone being released.
 - [ ] §2.9 E-1 through E-5 ✅
 - [ ] §3 ✅ (entire section; Architect role)
 - [ ] §4 ✅ (entire section; Security role)
-- [ ] `PROGRESS.md` quality-gates table all-green
+- [ ] Quality-gates check pass (recorded in the release PR comment)
 - [ ] Repo owner has provided the PyPI token and explicit go-ahead
 
 If any line is not ✅, the release is **not v1**. The next release
@@ -646,8 +646,8 @@ candidate is `0.1.0rcN` or the milestone is renamed.
 - [`PRODUCT_VISION.md`](PRODUCT_VISION.md) — the why.
 - [`ARCHITECTURE.md`](ARCHITECTURE.md) — the system contract.
 - [`SECURITY.md`](SECURITY.md) — non-negotiable security rules.
-- [`PLAN.md`](PLAN.md) — engineering PR sequence.
-- [`PROGRESS.md`](PROGRESS.md) — current status board.
+- [Project board](https://github.com/users/MartinCastroAlvarez/projects/3) — engineering PR sequence.
+
 - [`docs/agents/decisions.md`](docs/agents/decisions.md) — accepted
   decisions (PM-tagged entries are appended here when this file
   changes materially).

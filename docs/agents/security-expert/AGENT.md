@@ -55,7 +55,7 @@
     discoverable by anyone with a git clone after open-source).
   - If a finding appears, the **only** safe remediation is to
     rotate the secret upstream first, then file an INCIDENT in
-    `forum/INCIDENT-<date>-<topic>.md` and ask the repo owner for
+    an Issue labelled `incident:<topic>` and ask the repo owner for
     explicit approval before any history rewrite.
 
 ## Deploy gate (PyPI release)
@@ -66,7 +66,7 @@ only — `.gitignore` line 2 + 3 + gitleaks pre-commit hook keep it
 off any commit).
 
 Release is gated on the cross-role agreement in
-[`../../forum/AGENT-security-opus47-pypi-deploy-gate.md`](../../forum/AGENT-security-opus47-pypi-deploy-gate.md):
+the deploy-gate Issue:
 
 1. PM signs off on §2 acceptance.
 2. Architect signs off on §3 + Clean Architecture/Code 10/10.
@@ -132,7 +132,7 @@ Read in this order:
 7. Repo-level docs (`SECURITY.md`, `ACCEPTANCE.md`'s security
    section, `docs/api-contract.md`, `docs/agents/decisions.md`,
    `docs/agents/pr-workflow.md`, `docs/agents/autonomy-policy.md`).
-8. The latest forum posts in `/forum/` (skim `ls -t forum | head`).
+8. Recent activity on Issues / Discussions / PRs (`gh issue list`, `gh pr list`).
 
 ## Files this role owns
 
@@ -157,7 +157,7 @@ Read in this order:
 
 - `LICENSE` (legal)
 - `PRODUCT_VISION.md`, `DESIGN_SYSTEM.md`, `ONBOARDING.md`,
-  `ROADMAP.md`, `docs/ux/**` (PM/UX agent owns these)
+  `docs/ux/**` (PM/UX agent owns these)
 - `ARCHITECTURE.md` (Architect agent — but security may propose
   amendments via PR with their review)
 - `docs/agents/pr-workflow.md`, `docs/agents/autonomy-policy.md`
@@ -186,13 +186,13 @@ See [`DECISIONS.md`](DECISIONS.md). Mirror durable decisions to
 ## How to coordinate
 
 - Forum post on session start:
-  `forum/AGENT-security-<your-handle>-<short-topic>.md` claiming
+  an Issue claiming
   scope.
 - Append to `docs/agents/decisions.md` with `[SEC]` tag for any
   durable decision.
 - Append to `docs/agents/open-questions.md` for anything that needs
   a human or another agent.
-- Update `docs/agents/handoff.md` if you leave anything dangling.
+- Comment on the Issue if you leave anything dangling.
 - Never paste a token, secret, or `.env` content into any file in
   this repo.
 

@@ -178,7 +178,7 @@ human takes it from there.
 - [ ] **[NOTE]** If the PR creates a cross-role dependency
       (e.g., this PR exposes a new endpoint that needs Architect
       perf review), open a handoff in
-      [`docs/agents/handoff.md`](../HANDOFF.md).
+      the Issue queue.
 - [ ] **[NOTE]** If the PR resolves a handoff to Security, mark it
       `done` in the same diff.
 
@@ -194,7 +194,7 @@ human takes it from there.
    - Quote specific file + line for every requested change.
    - Be at least one sentence — never just "LGTM" or "👍".
 4. If the verdict is `Request changes`, drop a forum file
-   `forum/AGENT-security-<your-handle>-pr-<N>-review.md`
+   the PR review comment
    summarising the changes asked for.
 5. If the verdict is `Approve` on a tier-5 PR, the body says
    "Approved subject to human sign-off — tier 5 requires repo

@@ -120,8 +120,10 @@ Deferred to v1.x / v1.1:
 - `Cmd+K` command palette.
 - `g` then `l` / `g` then `d` Gmail-style navigation.
 
-Maps to [`PRODUCT_VISION.md`](../../PRODUCT_VISION.md) §8;
-[`ROADMAP.md`](../../ROADMAP.md) v0.2.
+Maps to [`PRODUCT_VISION.md`](../../PRODUCT_VISION.md) §8; tracked
+on the
+[Project board](https://github.com/users/MartinCastroAlvarez/projects/3)
+under Phase v0.2.
 
 ---
 

@@ -108,19 +108,21 @@ Every endpoint added must include all of these tests before merging:
 
 - `.env`, `*.pem`, `*.key`, `*.crt`, and `secrets/` are gitignored.
 - Never paste a token, password, or API key into any file in this repo
-  (including `forum/`, `docs/agents/`, PR descriptions, commit messages).
-  **Partial / redacted token references** (e.g., `ghp_…XYZ`) are also
-  forbidden and detected by the pre-commit hook + `tests/test_security.py`.
+  (including `docs/agents/`, PR descriptions, Issues, Discussions, commit
+  messages). **Partial / redacted token references** (e.g., `ghp_…XYZ`)
+  are also forbidden and detected by the pre-commit hook +
+  `tests/test_security.py`.
 - If a secret is accidentally committed, the response is:
   1. Rotate the secret immediately on the upstream provider.
   2. **Wait for human approval** before rewriting history. No agent may
      `git push --force` autonomously. Once approved, force-push the
      rewritten history that removes the secret and notify downstream
      consumers.
-  3. File an entry in `docs/agents/changelog.md` describing what happened
-     and what was rotated. Also open `forum/INCIDENT-<date>-secret-leak.md`
-     (a "kill switch" entry that disables auto-merge per
-     `docs/agents/autonomy-policy.md` §3).
+  3. Open a GitHub Issue labelled `incident:secret-leak` describing what
+     happened and what was rotated. The Issue itself is the durable
+     record; an Issue with that label active is a "kill switch" entry
+     that disables auto-merge per
+     `docs/agents/autonomy-policy.md` §3.
 - A pre-commit hook (`.pre-commit-config.yaml`) runs `gitleaks` plus a
   custom `pygrep` for partial token patterns. Enable it locally with:
   `pre-commit install`.

@@ -22,16 +22,12 @@ docs/agents/
 ├── README.md             # this file
 ├── autonomy-policy.md    # tier rules, what's auto-mergeable, kill switches
 ├── pr-workflow.md        # author / reviewer / merger / releaser protocol
-├── changelog.md          # one line per meaningful PR — newest on top
 ├── decisions.md          # accepted architectural decisions — append-only
 ├── open-questions.md     # unresolved questions, including cross-role ones
-├── handoff.md            # active handoffs between roles
 ├── product-manager/      # PM / UX Lead role state
 │   ├── AGENT.md          # entrypoint — read this first
-│   ├── STATUS.md         # current step, blockers
 │   ├── DECISIONS.md      # PM-owned decisions
 │   ├── OPEN_QUESTIONS.md # PM-owned open questions
-│   ├── NEXT_STEPS.md     # planned next actions
 │   ├── SKILLS.md         # what this role can/should do
 │   └── REVIEW_CHECKLIST.md
 ├── software-architect/   # Software Architect / Engineering Lead role state
@@ -40,6 +36,13 @@ docs/agents/
     └── (same shape as product-manager/)
 ```
 
+Status, progress, work tracking, handoffs, and per-PR review
+conversation all live on GitHub now — Issues, the
+[Project board](https://github.com/users/MartinCastroAlvarez/projects/3),
+Discussions, and PR review comments. The markdown that remains in
+this folder is **durable contract** (the role charter, accepted
+decisions, open questions) — not status.
+
 ## When to write where
 
 | You want to…                                          | Write here                              |
@@ -47,11 +50,11 @@ docs/agents/
 | Record an accepted, durable design choice             | `decisions.md`                          |
 | Surface an unresolved question (single-role)          | `<role>/OPEN_QUESTIONS.md`              |
 | Surface an unresolved question (cross-role)           | `open-questions.md` § Cross-role        |
-| Note that a PR shipped                                | `changelog.md`                          |
+| Note that a PR shipped                                | The PR itself; merged PR list is the changelog |
 | Record a role-internal decision                       | `<role>/DECISIONS.md`                   |
-| Track who is doing what                               | `<role>/STATUS.md` and `<role>/NEXT_STEPS.md` |
-| Hand a topic to another role                          | `handoff.md`                            |
-| Coordinate ephemerally with another agent             | `/forum/AGENT-*.md`                     |
+| Track who is doing what                               | Project board card + Issue assignment   |
+| Hand a topic to another role                          | Comment on the Issue and re-assign      |
+| Coordinate ephemerally with another agent             | Comment on the Issue / PR / Discussion  |
 | Explain how a folder works                            | that folder's `README`                  |
 | Document the overall architecture                     | `/ARCHITECTURE.md`                      |
 
@@ -77,8 +80,13 @@ docs/agents/
 - Secrets, tokens, credentials, or `.env` content.
 - Long prose that's really architecture — push that into
   `/ARCHITECTURE.md`.
-- Transient agent state (use `/forum/`).
-- PR text — that belongs in the PR description on GitHub.
+- Status / progress / changelog data — the
+  [Project board](https://github.com/users/MartinCastroAlvarez/projects/3),
+  [Issues](https://github.com/MartinCastroAlvarez/django-admin-react/issues),
+  and merged PR history are the source of truth.
+- Per-PR review conversation — that belongs on the PR itself.
+- Announcements / Q&A / community chatter —
+  [Discussions](https://github.com/MartinCastroAlvarez/django-admin-react/discussions).
 
 ## House style
 

@@ -18,7 +18,7 @@ proposing anything.
 ## What this role *does*
 
 1. **Authors product specs** in `PRODUCT_VISION.md`, `DESIGN_SYSTEM.md`,
-   `ONBOARDING.md`, `ROADMAP.md`, `ACCEPTANCE.md` §2, and `docs/ux/`.
+   `ONBOARDING.md`, `ACCEPTANCE.md` §2, and `docs/ux/`.
 2. **Reviews PRs for UX impact** — never approves engineering PRs in
    the "Reviewer" or "Merger" role, but posts comments and
    "Request changes" against the criteria in `ACCEPTANCE.md` §2.
@@ -45,8 +45,6 @@ proposing anything.
 1. `git fetch origin && git status`.
 2. Read [`AGENT.md`](AGENT.md), [`STATUS.md`](STATUS.md),
    [`NEXT_STEPS.md`](NEXT_STEPS.md) in that order.
-3. Read [`../HANDOFF.md`](../HANDOFF.md) for any open ask.
-4. Read [`../../docs/agents/changelog.md`](../../docs/agents/changelog.md)
    to catch up on what other agents merged.
 5. Pick the first unchecked item in `NEXT_STEPS.md`.
 
@@ -113,7 +111,7 @@ When reviewing a PR:
 
 If a decision falls outside scope (security, infra, dependency
 choice), open a `docs/agents/open-questions.md` entry and ping the
-owning role via [`../HANDOFF.md`](../HANDOFF.md). Don't decide
+owning role via the relevant Issue. Don't decide
 unilaterally.
 
 ## Tooling
@@ -128,8 +126,7 @@ unilaterally.
 - Every new doc has a clear north-star paragraph at the top.
 - Every new criterion is measurable (someone can answer yes/no).
 - Cross-references are wired (no orphan docs).
-- `docs/agents/product-manager/STATUS.md` is updated.
-- `docs/agents/changelog.md` has a one-liner.
+- The board card is moved to Done.
 - `scripts/lint.sh` is green.
 - A non-PM agent has reviewed; a third agent has merged. (Two-agent
   rule per `docs/agents/pr-workflow.md` §1.)

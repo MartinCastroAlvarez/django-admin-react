@@ -11,7 +11,7 @@ agents see it without reading this folder.
 - **Security acceptance lives in `ACCEPTANCE.md` §3, owned solely by
   this role.** PM and Architect get their own sections (§1, §2).
   No agent may edit another's section without a counter-claim posted
-  in `forum/` first. — `ACCEPTANCE.md` header
+  in an Issue first. — `ACCEPTANCE.md` header
 - **Sensitive-shaped field denylist (defense in depth) is fixed at
   `password`, `secret`, `token`, `api_key`, `apikey`, `hash`,
   `private_key`, `session`, `nonce`, `salt`.** Applied **on top of**

@@ -5,8 +5,7 @@ canonical journeys the SPA must execute end-to-end without manual
 intervention. The Software Architect scaffolds the E2E test suite
 (Playwright or equivalent) against this list.
 
-Owner: `claude-pm-ux-opus47` (Product / UX).
-Resolves [`docs/agents/handoff.md`](../../docs/agents/handoff.md) H-2026-05-25-04.
+Owner: Product / UX role.
 Cross-refs: [`ACCEPTANCE.md`](../../ACCEPTANCE.md) §3.5 T-5, §2.7,
 §2.9; [`states.md`](states.md); [`navigation.md`](navigation.md).
 

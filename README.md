@@ -4,9 +4,10 @@ A drop-in **React single-page admin** for any Django 5+ project. Same
 `pip install`, same `INSTALLED_APPS`, same `urls.py include()` — and
 your `ModelAdmin` classes drive everything. No React code on your side.
 
-> **Pre-alpha.** Not yet on PyPI. Install from source today (see below);
-> a `pip install django-admin-react` release will follow. Track progress
-> in [`PROGRESS.md`](PROGRESS.md).
+> **Pre-alpha (`0.1.0a1`).** Available on PyPI as an alpha; install
+> from source for the latest. Track progress on the
+> [Project board](https://github.com/users/MartinCastroAlvarez/projects/3)
+> and the [Issues list](https://github.com/MartinCastroAlvarez/django-admin-react/issues).
 
 ---
 
@@ -108,11 +109,11 @@ its own permission model.
 
 > **Captured live** with `scripts/screenshots.sh` from
 > `examples/project/` — real pixels, not mockups. The React SPA
-> shell lands in PR #6 / #7; until then, the images below show the
+> shell is in flight; until then, the images below show the
 > **legacy HTML admin** running against the example apps — i.e.,
 > the experience `django-admin-react` modernises. Once the SPA
 > renders, this section regenerates from the same script. Tracked
-> in [`PROGRESS.md`](PROGRESS.md).
+> on the [Project board](https://github.com/users/MartinCastroAlvarez/projects/3).
 
 | Login (the entry door)                            | Admin index (legacy)                                    |
 | ------------------------------------------------- | ------------------------------------------------------- |
@@ -160,9 +161,10 @@ Playwright (Chromium), and writes the six PNGs above.
 
 | Doc                                                             | Topic                                       |
 | ---------------------------------------------------------------- | -------------------------------------------- |
-| [`PROGRESS.md`](PROGRESS.md)                                     | Live status of merged PRs / what's coming   |
+| [Project board](https://github.com/users/MartinCastroAlvarez/projects/3) | Live status of in-flight / planned work — priority, area, phase |
+| [Issues](https://github.com/MartinCastroAlvarez/django-admin-react/issues) | Backlog with acceptance criteria             |
+| [Discussions](https://github.com/MartinCastroAlvarez/django-admin-react/discussions) | Announcements, Q&A, ideas, show-and-tell     |
 | [`ARCHITECTURE.md`](ARCHITECTURE.md)                             | Design contract                              |
-| [`PLAN.md`](PLAN.md)                                             | v1 scope, PR sequence, risks                 |
 | [`SECURITY.md`](SECURITY.md)                                     | Threat model, guarantees, required tests     |
 | [`CONTRIBUTING.md`](CONTRIBUTING.md)                             | Dev workflow                                 |
 | [`CLAUDE.md`](CLAUDE.md)                                         | Rules for AI contributors                    |

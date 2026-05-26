@@ -6,7 +6,7 @@
 > then continue from §"Next action".
 
 Owner identity (rotating): the **active** session identifier is
-posted in `STATUS.md` and `forum/AGENT-pm-ux-*.md`. The role itself
+tracked on the project board and in PR review comments. The role itself
 persists across sessions.
 
 ---
@@ -59,7 +59,6 @@ read but should not edit without coordination.
 | [`PRODUCT_VISION.md`](../../PRODUCT_VISION.md)       | North star, principles, anti-goals.           |
 | [`DESIGN_SYSTEM.md`](../../DESIGN_SYSTEM.md)         | Tailwind tokens, dark mode, accessibility.    |
 | [`ONBOARDING.md`](../../ONBOARDING.md)               | Five-minute install path for Django devs.     |
-| [`ROADMAP.md`](../../ROADMAP.md)                     | User-facing release roadmap (v1 → v1.x → v2). |
 | [`ACCEPTANCE.md`](../../ACCEPTANCE.md) §2            | Product / UX acceptance criteria (§2 only).   |
 | [`docs/ux/`](../../docs/ux/)                         | UX rules in detail (states, nav, a11y, …).    |
 | [`docs/screenshots/README.md`](../../docs/screenshots/README.md) | Screenshot contract for the frontend PR. |
@@ -74,15 +73,12 @@ Every session, in this order:
 3. [`NEXT_STEPS.md`](NEXT_STEPS.md) — what's queued.
 4. [`DECISIONS.md`](DECISIONS.md) — my role's accepted decisions.
 5. [`OPEN_QUESTIONS.md`](OPEN_QUESTIONS.md) — my open questions.
-6. [`../HANDOFF.md`](../HANDOFF.md) — handoffs across roles.
 7. [`../DECISIONS.md`](../DECISIONS.md) — cross-role decisions.
 8. [`../OPEN_QUESTIONS.md`](../OPEN_QUESTIONS.md) — cross-role questions.
 9. [`../../CLAUDE.md`](../../CLAUDE.md) — top-level agent rules.
 10. [`../../PRODUCT_VISION.md`](../../PRODUCT_VISION.md) — the brief.
 11. [`../../ACCEPTANCE.md`](../../ACCEPTANCE.md) — the bar.
-12. [`../../docs/agents/changelog.md`](../../docs/agents/changelog.md)
     — what other agents merged recently.
-13. [`../../PROGRESS.md`](../../PROGRESS.md) — milestone board.
 
 If a file in this list does not exist, create it; do not work around
 it.
@@ -96,7 +92,7 @@ it.
   be testable; "the UI should look nice" is not a criterion.
 - I follow [`docs/agents/pr-workflow.md`](../../docs/agents/pr-workflow.md)
   for all PRs. As Author, I never approve or merge my own PR.
-- I never paste secrets in any file under `docs/agents/`, `forum/`,
+- I never paste secrets in any file under `docs/agents/` or anywhere in this repo,
   `docs/agents/`, or anywhere else committed to the repo.
 - I update this folder **continuously** — every meaningful decision,
   blocker, or completed step lands in `STATUS.md` and (if
@@ -109,7 +105,7 @@ here; this file is mostly static.
 
 ## 6. Blockers — pointer
 
-See `STATUS.md` § "Blockers" and [`../HANDOFF.md`](../HANDOFF.md).
+See open Issues on the [project board](https://github.com/users/MartinCastroAlvarez/projects/3) for current blockers.
 
 ## 7. Latest decisions — pointer
 
@@ -138,7 +134,7 @@ PR review workflow").
 - Never approve your own PR or a PR you co-authored.
 
 Stale-PR escalation: any PR open > 72 h without all three role
-approvals gets logged in [`../HANDOFF.md`](../HANDOFF.md) with the
+approvals get logged as PR review comments with the
 author's role and last activity timestamp.
 
 ## 10. When this role disagrees with engineering
@@ -167,9 +163,8 @@ Every session, before quitting:
    one-line "last touched: <file/topic>".
 2. Move completed items from [`NEXT_STEPS.md`](NEXT_STEPS.md) to
    [`DECISIONS.md`](DECISIONS.md) (with rationale) or to
-   [`../../docs/agents/changelog.md`](../../docs/agents/changelog.md)
    (with the PR link).
 3. Append any new open question to [`OPEN_QUESTIONS.md`](OPEN_QUESTIONS.md)
    or [`../OPEN_QUESTIONS.md`](../OPEN_QUESTIONS.md) (cross-role).
 4. If a hand-off to another role is needed, append to
-   [`../HANDOFF.md`](../HANDOFF.md).
+   the relevant Issue.

@@ -27,8 +27,9 @@ source of truth** for permissions, querysets, forms, and field configuration.
 
 Explicit non-goals for v1: inlines, custom admin actions, bulk actions,
 custom admin widgets, complex filters, autocomplete fields, `raw_id_fields`,
-and a React-side extension API. See [`PLAN.md`](PLAN.md) for the deferred
-list.
+and a React-side extension API. The
+[Project board](https://github.com/users/MartinCastroAlvarez/projects/3)
+tracks each deferred item by Phase.
 
 ---
 
@@ -115,14 +116,11 @@ django-admin-react/
 ├── docs/                        # Long-form documentation
 │   ├── api-contract.md
 │   ├── installation.md
-│   └── docs/agents/
+│   └── agents/
 │       ├── decisions.md
-│       ├── open-questions.md
-│       └── changelog.md
+│       └── open-questions.md
 │
-├── forum/                       # Free-form multi-agent discussion threads
 ├── ARCHITECTURE.md              # ← you are here
-├── PLAN.md
 ├── SECURITY.md
 ├── CONTRIBUTING.md
 ├── CLAUDE.md                    # Required reading for AI agents
@@ -130,6 +128,10 @@ django-admin-react/
 ├── LICENSE
 └── pyproject.toml               # Poetry-managed
 ```
+
+Live status / backlog / coordination lives on GitHub (Issues, the
+[Project board](https://github.com/users/MartinCastroAlvarez/projects/3),
+Discussions, PR review comments), not in committed markdown.
 
 Every folder above has its own `README.md` describing its purpose and what
 belongs there. This is enforced in [`CLAUDE.md`](CLAUDE.md).
@@ -385,4 +387,6 @@ the gate.
   React extensibility later, we will design the contract carefully rather
   than ad-hoc.
 
-See [`PLAN.md`](PLAN.md) for the sequencing of in-scope work.
+See the
+[Project board](https://github.com/users/MartinCastroAlvarez/projects/3)
+for the sequencing of in-scope work.

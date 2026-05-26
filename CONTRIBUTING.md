@@ -10,13 +10,17 @@ Read, in order:
 
 1. [`README.md`](README.md)
 2. [`ARCHITECTURE.md`](ARCHITECTURE.md)
-3. [`PLAN.md`](PLAN.md)
-4. [`SECURITY.md`](SECURITY.md)
-5. [`docs/agents/decisions.md`](docs/agents/decisions.md) and
+3. [`SECURITY.md`](SECURITY.md)
+4. [`docs/agents/decisions.md`](docs/agents/decisions.md) and
    [`docs/agents/open-questions.md`](docs/agents/open-questions.md)
+5. The [Project board](https://github.com/users/MartinCastroAlvarez/projects/3)
+   and open [Issues](https://github.com/MartinCastroAlvarez/django-admin-react/issues)
+   for what's in flight and what's planned.
 
-If anything you plan to do conflicts with those documents, open an issue or
-add an entry to `docs/agents/open-questions.md` **before** writing code.
+If anything you plan to do conflicts with those documents, open an
+[Issue](https://github.com/MartinCastroAlvarez/django-admin-react/issues/new) or
+a [Discussion](https://github.com/MartinCastroAlvarez/django-admin-react/discussions)
+**before** writing code.
 
 ## 2. Development environment
 
@@ -74,18 +78,21 @@ at or above the threshold blocks the release per `ACCEPTANCE.md`
 ## 3. Branching and PRs
 
 - Branch from `main`.
-- Branch naming: `pr/<NN>-<short-kebab-slug>` for the planned PR sequence
-  (see [`PLAN.md`](PLAN.md) §2), or `feat/...`, `fix/...`, `docs/...`,
-  `chore/...` for everything else.
+- Branch naming: `feat/...`, `fix/...`, `docs/...`, `chore/...`,
+  `refactor/...`, depending on the change type.
 - Open one PR per branch. Multi-feature branches will be split.
 - PR titles use Conventional Commits prefixes (`feat:`, `fix:`, `docs:`,
-  `chore:`, `refactor:`, `test:`). The numbered foundation PRs may prepend
-  `PR #NN —` for readability.
+  `chore:`, `refactor:`, `test:`).
 - The PR description must:
   - State what changed and why.
-  - List which files in [`ARCHITECTURE.md`](ARCHITECTURE.md) /
-    [`PLAN.md`](PLAN.md) / `docs/` you updated.
+  - Link the driving [Issue](https://github.com/MartinCastroAlvarez/django-admin-react/issues)
+    (`Closes #N`) and the matching
+    [Project board](https://github.com/users/MartinCastroAlvarez/projects/3) card.
+  - List which sections of [`ARCHITECTURE.md`](ARCHITECTURE.md) /
+    `docs/` you updated.
   - Include the test matrix you ran (or "n/a, docs only").
+- All review feedback and approvals happen as PR review comments — not
+  as committed markdown files.
 - Direct commits to `main` are reserved for the initial bootstrap commit.
   All real work goes through PRs.
 
@@ -111,8 +118,9 @@ at or above the threshold blocks the release per `ACCEPTANCE.md`
   review.
 - If you change architecture, update [`ARCHITECTURE.md`](ARCHITECTURE.md)
   in the same PR.
-- If you change the plan or scope, update [`PLAN.md`](PLAN.md) in the same
-  PR.
+- If you change scope, update the driving Issue (or open a new one) and
+  the relevant card on the
+  [Project board](https://github.com/users/MartinCastroAlvarez/projects/3).
 - Significant decisions get a one-line entry in
   [`docs/agents/decisions.md`](docs/agents/decisions.md).
 
@@ -125,21 +133,25 @@ at or above the threshold blocks the release per `ACCEPTANCE.md`
 ## 8. Multi-agent coordination
 
 Several AI agents may work on this repository concurrently. Coordination
-happens through:
+happens through GitHub primitives — not committed markdown:
 
-- [`docs/agents/decisions.md`](docs/agents/decisions.md): one-line entries
-  for accepted architectural decisions. Append-only.
+- **[Issues](https://github.com/MartinCastroAlvarez/django-admin-react/issues)**
+  — work tracking. Claim an issue (assign yourself or post a comment)
+  before starting.
+- **[Project board](https://github.com/users/MartinCastroAlvarez/projects/3)**
+  — Priority / Area / Phase across in-flight and planned work.
+- **[Discussions](https://github.com/MartinCastroAlvarez/django-admin-react/discussions)**
+  — announcements, Q&A, ideas, show-and-tell.
+- **PR review comments** — all review feedback and all approvals.
+  Never as committed markdown files.
+- [`docs/agents/decisions.md`](docs/agents/decisions.md): append-only
+  ADRs (one line each, link out for detail).
 - [`docs/agents/open-questions.md`](docs/agents/open-questions.md):
-  questions awaiting a decision. Anyone can append; once answered the
-  question moves to `decisions.md`.
-- [`docs/agents/changelog.md`](docs/agents/changelog.md): notable changes,
-  one line per PR.
-- [`forum/`](forum/): free-form discussion threads (one `.md` per topic).
-  Use this for design conversation that does not yet belong in
-  `decisions.md`.
+  questions awaiting a decision that aren't yet shaped for an Issue or
+  Discussion.
 
-Anything in `forum/` and `docs/agents/` is committed and public. **Do not
-paste secrets or private data into those files.**
+Everything in this repository (`docs/`, commits, PR descriptions, Issues,
+Discussions) is public. **Do not paste secrets or private data anywhere.**
 
 ## 9. Releasing
 

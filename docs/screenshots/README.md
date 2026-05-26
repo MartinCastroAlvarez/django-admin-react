@@ -4,8 +4,8 @@ Screenshot inventory + naming contract for the README and product
 docs.
 
 Owner: PM/UX role ([`docs/agents/product-manager/AGENT.md`](../../docs/agents/product-manager/AGENT.md)).
-Producing role: Frontend Engineer (PR #6 / #7 in
-[`PLAN.md`](../../PLAN.md)).
+Producing role: Frontend Engineer — tracked on the
+[Project board](https://github.com/users/MartinCastroAlvarez/projects/3).
 
 The screenshots **do not yet exist** at the time of writing — the
 SPA isn't implemented. This file is the contract the frontend PR

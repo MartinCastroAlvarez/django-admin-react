@@ -136,7 +136,7 @@ The review **body template**:
 - [ ] For each PR with failing local lint: post a comment with the
       first ten lines of the failure.
 - [ ] For each PR that has been open > 72 h: add it to
-      [`docs/agents/handoff.md`](../HANDOFF.md) as a "stale PR" with the
+      the Issue queue as a "stale PR" with the
       author's role and the last activity date.
 
 ---
