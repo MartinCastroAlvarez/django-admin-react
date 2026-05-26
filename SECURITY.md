@@ -9,12 +9,29 @@ changing API behavior.
 
 Please **do not open a public GitHub issue** for security problems.
 
-Email: `security@<TO-BE-CONFIGURED>` — until this is configured, open a
-private GitHub Security Advisory on this repository
-(`Security → Advisories → New draft advisory`).
+The primary reporting channel is **GitHub Security Advisories** on this
+repository:
 
-We will respond within 5 working days. Critical issues will be patched as
-soon as possible and a CVE requested where appropriate.
+> **[Security → Advisories → New draft advisory](https://github.com/MartinCastroAlvarez/django-admin-react/security/advisories/new)**
+
+This route is preferred because:
+
+- It is private end-to-end between reporter and maintainers.
+- It allocates a CVE number when warranted.
+- It produces the published advisory at fix-time without any manual
+  re-keying of details.
+- It does not depend on an email address that could change, expire,
+  or be intercepted in transit.
+
+No additional channel is currently configured. If GitHub Security
+Advisories are not viable for you (for example, you do not have a
+GitHub account, or the issue blocks repository access), contact the
+project maintainer directly via the email listed on their public
+GitHub profile and request a private channel.
+
+We will acknowledge a report within 5 working days. Critical issues
+will be patched as soon as possible and a CVE requested where
+appropriate. See §11 for the full disclosure timeline.
 
 ## 2. Threat model (v1)
 
