@@ -55,6 +55,9 @@ export function ListPage() {
   });
 
   const [searchDraft, setSearchDraft] = useState(q);
+  // Filters live in a modal/bottom-sheet behind a button so they never
+  // occupy fixed horizontal space on mobile or desktop (#177).
+  const [filterOpen, setFilterOpen] = useState(false);
 
   function patchParams(mutate: (next: URLSearchParams) => void): void {
     const next = new URLSearchParams(searchParams);
@@ -116,22 +119,39 @@ export function ListPage() {
             {data.total.toLocaleString()} object{data.total === 1 ? '' : 's'}
           </p>
         </div>
-        {data.search_fields.length > 0 && (
-          <form
-            className="w-64"
-            onSubmit={(e) => {
-              e.preventDefault();
-              commitSearch();
-            }}
-          >
-            <Input
-              placeholder={`Search by ${data.search_fields.join(', ')}…`}
-              value={searchDraft}
-              onChange={(e) => setSearchDraft(e.target.value)}
-              onBlur={commitSearch}
-            />
-          </form>
-        )}
+        <div className="flex items-center gap-2">
+          {data.search_fields.length > 0 && (
+            <form
+              className="w-56"
+              onSubmit={(e) => {
+                e.preventDefault();
+                commitSearch();
+              }}
+            >
+              <Input
+                placeholder={`Search by ${data.search_fields.join(', ')}…`}
+                value={searchDraft}
+                onChange={(e) => setSearchDraft(e.target.value)}
+                onBlur={commitSearch}
+              />
+            </form>
+          )}
+          {hasFilters && (
+            <button
+              type="button"
+              onClick={() => setFilterOpen(true)}
+              aria-haspopup="dialog"
+              className="shrink-0 rounded border border-gray-300 px-3 py-2 text-sm hover:bg-gray-100"
+            >
+              Filters
+              {chips.length > 0 && (
+                <span className="ml-1 rounded-full bg-blue-600 px-1.5 py-0.5 text-xs text-white">
+                  {chips.length}
+                </span>
+              )}
+            </button>
+          )}
+        </div>
       </header>
 
       {chips.length > 0 && (
@@ -162,43 +182,89 @@ export function ListPage() {
         </div>
       )}
 
-      <div className={hasFilters ? 'flex gap-4' : ''}>
-        <div className="min-w-0 flex-1">
-          <Card>
-            <Table
-              columns={columns}
-              rows={data.results}
-              rowKey={(r) => r.pk}
-              onRowClick={(row) => navigate(`/${appLabel}/${modelName}/${row.pk}`)}
-              emptyLabel={
-                q || chips.length ? 'No results match these filters.' : 'No objects yet.'
-              }
-            />
-          </Card>
-          <div className="mt-4">
-            <Pagination page={data.page} totalPages={totalPages} onChange={setPage} />
-          </div>
-        </div>
+      {/* Table is always full-width now — filters live in the modal. */}
+      <Card>
+        <Table
+          columns={columns}
+          rows={data.results}
+          rowKey={(r) => r.pk}
+          onRowClick={(row) => navigate(`/${appLabel}/${modelName}/${row.pk}`)}
+          emptyLabel={q || chips.length ? 'No results match these filters.' : 'No objects yet.'}
+        />
+      </Card>
+      <Pagination page={data.page} totalPages={totalPages} onChange={setPage} />
 
-        {hasFilters && (
-          <aside className="w-60 shrink-0">
-            <div className="rounded-lg border border-gray-200 bg-white p-4">
-              <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
-                Filter
-              </h2>
-              <div className="space-y-4">
-                {filters.map((f) => (
-                  <FilterControl
-                    key={f.name}
-                    filter={f}
-                    value={activeFilters[f.name] ?? ''}
-                    onChange={(v) => setFilter(f.name, v)}
-                  />
-                ))}
-              </div>
-            </div>
-          </aside>
-        )}
+      {filterOpen && (
+        <FilterModal
+          filters={filters}
+          active={activeFilters}
+          onChange={setFilter}
+          onClearAll={() => patchParams((next) => chips.forEach((c) => next.delete(c.name)))}
+          onClose={() => setFilterOpen(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+interface FilterModalProps {
+  filters: FilterDescriptor[];
+  active: Record<string, string>;
+  onChange: (name: string, value: string) => void;
+  onClearAll: () => void;
+  onClose: () => void;
+}
+
+// Modal on desktop, bottom-sheet on mobile. Closing on backdrop tap or
+// the Done button; Escape handled by the parent page's listeners are
+// not needed here because the backdrop already gives an obvious exit.
+function FilterModal({ filters, active, onChange, onClearAll, onClose }: FilterModalProps) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center sm:items-center"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Filters"
+    >
+      <div className="absolute inset-0 bg-black/50" onClick={onClose} aria-hidden="true" />
+      <div className="relative z-10 max-h-[85vh] w-full overflow-y-auto rounded-t-xl bg-white p-5 shadow-xl sm:max-w-md sm:rounded-xl">
+        <div className="mb-4 flex items-center justify-between">
+          <h2 className="text-lg font-semibold">Filters</h2>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close filters"
+            className="rounded p-1 text-gray-500 hover:bg-gray-100"
+          >
+            ✕
+          </button>
+        </div>
+        <div className="space-y-4">
+          {filters.map((f) => (
+            <FilterControl
+              key={f.name}
+              filter={f}
+              value={active[f.name] ?? ''}
+              onChange={(v) => onChange(f.name, v)}
+            />
+          ))}
+        </div>
+        <div className="mt-5 flex justify-between">
+          <button
+            type="button"
+            onClick={onClearAll}
+            className="text-sm text-gray-500 underline hover:text-gray-700"
+          >
+            Clear all
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+          >
+            Done
+          </button>
+        </div>
       </div>
     </div>
   );
