@@ -19,6 +19,7 @@ from django.http import HttpResponse
 from django.urls import path
 from django.views.generic import View
 
+from django_admin_react.api.views.actions import ActionView
 from django_admin_react.api.views.autocomplete import AutocompleteView
 from django_admin_react.api.views.create import CreateView
 from django_admin_react.api.views.destroy import DestroyView
@@ -79,6 +80,13 @@ urlpatterns: list = [
         "<str:app_label>/<str:model_name>/autocomplete/",
         AutocompleteView.as_view(),
         name="autocomplete",
+    ),
+    # Action endpoint must precede the instance pattern below for the
+    # same reason — ``actions`` would otherwise be swallowed as a pk.
+    path(
+        "<str:app_label>/<str:model_name>/actions/<str:action_name>/",
+        ActionView.as_view(),
+        name="action",
     ),
     path(
         "<str:app_label>/<str:model_name>/",

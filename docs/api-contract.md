@@ -185,6 +185,35 @@ bad query parameter. Out-of-range values are bounds-checked
 (`year ∈ [1, 9999]`, `month ∈ [1, 12]`, `day ∈ [1, 31]`) before
 reaching the ORM.
 
+### 3.4 `actions` (always-present array)
+
+When the `ModelAdmin` declares `actions = [...]`, the list response
+surfaces each action so the SPA can render the "Actions" dropdown
+above the list table. The key is always present (empty `[]` when the
+admin has no actions visible to the user).
+
+```json
+"actions": [
+  { "name": "delete_selected", "label": "Delete selected users",
+    "description": "Delete selected users", "requires_confirmation": true },
+  { "name": "mark_inactive",   "label": "Mark inactive",
+    "description": "Mark inactive", "requires_confirmation": false }
+]
+```
+
+- `name` — the action's identifier (the function's `__name__`, or
+  the explicit name from `@admin.action(name=...)`). This is the
+  segment in the runner URL.
+- `label` — the user-facing string (from `short_description` or
+  fall back to the name).
+- `requires_confirmation` — `True` when the label contains "delete"
+  (conservative hint; the SPA may always show a confirmation step
+  regardless).
+
+The set is the result of `ModelAdmin.get_actions(request)` — Django
+filters out actions whose required permission the user lacks, so the
+SPA never sees an action it can't run.
+
 ### 3.3 `filters` (always-present array)
 
 When the `ModelAdmin` declares `list_filter`, the response surfaces
@@ -431,6 +460,52 @@ Response 201:
 - Readonly and excluded fields in the payload produce a `400`.
 
 Response 200: same shape as `GET .../{pk}/`.
+
+### 5.4 `POST /api/v1/{app_label}/{model_name}/actions/{action_name}/`
+
+Runs a `ModelAdmin` action over a selected set of rows. The action
+name is re-resolved through `ModelAdmin.get_actions(request)` — the
+SPA's name is never trusted as a callable lookup.
+
+Request body:
+
+```json
+{ "pks": [1, 2, 3], "confirmed": true }
+```
+
+- `pks` — non-empty list of primary keys; missing or empty → `400`.
+- `confirmed` — informational; the action callable owns its
+  confirmation semantics. The backend doesn't short-circuit on
+  `false`.
+
+Response 200:
+
+```json
+{ "executed": true, "action": "mark_inactive", "pks": [1, 2, 3] }
+```
+
+When the action callable returns an `HttpResponse` (e.g., a redirect
+to a confirmation page in legacy admin), the JSON envelope surfaces
+the redirect target:
+
+```json
+{ "executed": true, "action": "delete_selected", "redirect": "/admin-react/library/book/" }
+```
+
+Rules:
+
+- **Rule 10 preserved**: the queryset passed to the action is
+  `ModelAdmin.get_queryset(request).filter(pk__in=pks)`. The action
+  cannot reach rows outside the admin's gate, even if the client
+  includes their pks in the request body.
+- **Rule 5**: gated by the admin's `has_change_permission`. The set
+  of actions returned by `get_actions` may further narrow this per
+  Django's standard behavior (e.g., `delete_selected` requires
+  `has_delete_permission`).
+- **CSRF**: required (`X-CSRFToken` on the POST). The endpoint is
+  not `@csrf_exempt`.
+
+Wrapped in `transaction.atomic()`.
 
 ### 5.3 `DELETE /api/v1/{app_label}/{model_name}/{pk}/`
 
