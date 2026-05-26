@@ -7,7 +7,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { ListFilter } from 'lucide-react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import {
   useApiClient,
@@ -173,16 +173,27 @@ export function ListPage() {
 
   return (
     <div className="space-y-4">
-      <header>
-        <h1 className="text-2xl font-semibold">
-          <span className="capitalize">{appLabel}</span> ·{' '}
-          {data.verbose_name_plural
-            ? capitalize(data.verbose_name_plural)
-            : data.object_name || modelName}
-        </h1>
-        <p className="text-sm text-gray-500">
-          {data.total.toLocaleString()} object{data.total === 1 ? '' : 's'}
-        </p>
+      <header className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold">
+            <span className="capitalize">{appLabel}</span> ·{' '}
+            {data.verbose_name_plural
+              ? capitalize(data.verbose_name_plural)
+              : data.object_name || modelName}
+          </h1>
+          <p className="text-sm text-gray-500">
+            {data.total.toLocaleString()} object{data.total === 1 ? '' : 's'}
+          </p>
+        </div>
+        {data.permissions.add && (
+          <Link
+            to={`/${appLabel}/${modelName}/add`}
+            className="shrink-0 rounded-md border border-blue-600 bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          >
+            + Add{' '}
+            {data.verbose_name ? capitalize(data.verbose_name) : modelName}
+          </Link>
+        )}
       </header>
 
       {/* Toolbar row (#177 / #182): Actions dropdown (only when rows are

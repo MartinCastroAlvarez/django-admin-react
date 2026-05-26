@@ -26,6 +26,7 @@ from django_admin_react.api.views.auth import LogoutView
 from django_admin_react.api.views.autocomplete import AutocompleteView
 from django_admin_react.api.views.bulk import BulkUpdateView
 from django_admin_react.api.views.create import CreateView
+from django_admin_react.api.views.create_form import AddFormView
 from django_admin_react.api.views.delete_preview import DeletePreviewView
 from django_admin_react.api.views.destroy import DestroyView
 from django_admin_react.api.views.detail import DetailView
@@ -109,6 +110,14 @@ urlpatterns: list = [
         "<str:app_label>/<str:model_name>/bulk/",
         BulkUpdateView.as_view(),
         name="bulk_update",
+    ),
+    # Add-form schema — the create page's field descriptors for a NEW
+    # object. Literal ``add`` must precede the ``<pk>`` instance route
+    # below so it isn't swallowed as a pk.
+    path(
+        "<str:app_label>/<str:model_name>/add/",
+        AddFormView.as_view(),
+        name="add_form",
     ),
     path(
         "<str:app_label>/<str:model_name>/",

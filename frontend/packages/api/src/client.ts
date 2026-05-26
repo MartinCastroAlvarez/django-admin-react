@@ -6,6 +6,7 @@
 
 import type {
   ActionRunResponse,
+  AddFormResponse,
   CreatePayload,
   CreateResponse,
   DetailResponse,
@@ -171,6 +172,11 @@ export class ApiClient {
    */
   login(username: string, password: string): Promise<LoginResponse> {
     return this.request<LoginResponse>('POST', 'login/', { username, password });
+  }
+
+  /** The create-form schema for a NEW object (GET <app>/<model>/add/). */
+  addForm(appLabel: string, modelName: string): Promise<AddFormResponse> {
+    return this.request<AddFormResponse>('GET', `${appLabel}/${modelName}/add/`);
   }
 
   create(appLabel: string, modelName: string, payload: CreatePayload): Promise<CreateResponse> {

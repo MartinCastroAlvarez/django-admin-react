@@ -246,6 +246,20 @@ export interface DetailResponse {
   inlines: InlineDescriptor[];
 }
 
+/**
+ * Response of `GET /api/v1/<app>/<model>/add/` — the create-form schema
+ * for a NEW object. Same field/fieldset shape as the detail response
+ * (so one FieldInput renders both), minus the per-object bits (pk,
+ * label, inlines). Field values carry the model defaults.
+ */
+export interface AddFormResponse {
+  app_label: string;
+  model_name: string;
+  permissions: Permissions;
+  fieldsets: FieldsetDescriptor[];
+  fields: Record<string, FieldDescriptor>;
+}
+
 export interface CreateResponse {
   pk: number | string;
   label: string;
