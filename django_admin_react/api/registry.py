@@ -352,3 +352,42 @@ def save_options(
         "save_as": save_as,
         "save_as_continue": save_as_continue,
     }
+
+
+def password_change_form_class(model_admin: ModelAdmin) -> type | None:
+    """Return the admin's declared password-change form class, or ``None``.
+
+    Django's ``UserAdmin`` declares ``change_password_form`` (default
+    ``django.contrib.auth.forms.AdminPasswordChangeForm``) and registers a
+    dedicated ``<id>/password/`` view; a plain ``ModelAdmin`` does neither.
+    We treat the presence of a ``change_password_form`` attribute as the
+    signal that this admin intends password-set support — and reuse *that*
+    form, so the package never invents its own password handling (rule 1:
+    ``ModelAdmin`` is the only source of truth). Models whose admin lacks
+    the attribute have no password sub-resource (the caller 404s, exactly
+    as Django's router 404s ``/password/`` for a non-``UserAdmin`` model).
+    """
+    form_class = getattr(model_admin, "change_password_form", None)
+    return form_class if isinstance(form_class, type) else None
+
+
+def password_change_meta(
+    model_admin: ModelAdmin,
+    request: HttpRequest,
+    obj: Model,
+) -> dict[str, bool]:
+    """Detail-payload block describing the password-set affordance (#252).
+
+    ``supported`` is ``True`` only when the admin exposes a password-change
+    form **and** the request holds change permission on the object — so the
+    SPA shows "Set password" exactly when the POST would be accepted, never
+    a button that 403s. No password material is ever surfaced here; this is
+    purely a capability flag (the field itself stays hidden by the
+    sensitive-name denylist).
+    """
+    return {
+        "supported": bool(
+            password_change_form_class(model_admin) is not None
+            and model_admin.has_change_permission(request, obj)
+        ),
+    }

@@ -269,6 +269,23 @@ LogEntry timeline (`api/views/history.py`, reads via `api/audit.py`).
 | S/T    | Cross-origin frame drives the SW cache via `postMessage`          | Message handler verifies `event.origin === self.location.origin` (CodeQL `js/missing-origin-check`, #208). | `test_pwa.py` (origin-check assertion) |
 | T      | SW caches a mutation (replay risk)                                | Non-GET requests are never cached/replayed. | `test_pwa.py` |
 
+### 4.17 Password set/change — `POST /api/v1/<app>/<model>/<pk>/password/` (#252 / `api/views/password.py`)
+
+`UserAdmin` parity. A thin JSON shell over the admin's own
+`change_password_form` (`AdminPasswordChangeForm`) → `user.set_password`;
+the package invents no credential machinery (S-5, see the ADR in
+`docs/agents/decisions.md`).
+
+| STRIDE | Threat                                                            | Mitigation                                                                                          | Acceptance / Test |
+| ------ | ----------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- | ----------------- |
+| E      | Non-staff / unauthorized user resets another user's password      | `is_admin_user` (403) then `has_change_permission(request, obj)` (403) — the same permission Django's own password view requires. | `test_password.py::test_authenticated_non_staff_forbidden`, `…without_change_permission_forbidden` |
+| S/T    | CSRF forges a password reset from another origin                  | CSRF enforced (no `@csrf_exempt`); a POST without a token is a 403 from middleware. | `test_password.py::test_csrf_missing_forbidden` |
+| T      | Weak/garbage password set, bypassing policy                       | Validation runs the admin form: match check + `AUTH_PASSWORD_VALIDATORS`; failures are 400 with field errors, value unchanged. | `test_password.py::test_password_mismatch…`, `…validators_are_enforced` |
+| I      | Password (or its hash) leaks into the response / logs             | Body is handed straight to the form; response is `{detail, id}` only — no password, no hash. Field stays hidden by the sensitive-name denylist. LogEntry message is the fixed "Changed password." | `test_password.py::test_password_never_in_response` |
+| E      | `/password/` exposed on a non-user model (unexpected write path)  | Route 404s unless the admin declares `change_password_form` — no sub-resource for non-`UserAdmin` models. | `test_password.py::test_model_without_password_form_not_found` |
+| D      | Self-change silently logs the operator out (availability)         | When actor == target, `update_session_auth_hash` rotates the session so the session survives. | `test_password.py::test_self_password_change_keeps_session` |
+| D      | Credential brute-force via repeated POSTs                         | Out of scope (consumer's job) — same `django-ratelimit`/`django-axes` recommendation as login. QSEC-01. | n/a |
+
 ---
 
 ## 5. Supply-chain

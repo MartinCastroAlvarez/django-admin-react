@@ -32,6 +32,7 @@ from django_admin_react.api.views.destroy import DestroyView
 from django_admin_react.api.views.detail import DetailView
 from django_admin_react.api.views.history import HistoryView
 from django_admin_react.api.views.list import ListView
+from django_admin_react.api.views.password import SetPasswordView
 from django_admin_react.api.views.registry import RegistryView
 from django_admin_react.api.views.schema import SchemaView
 from django_admin_react.api.views.update import UpdateView
@@ -146,6 +147,14 @@ urlpatterns: list = [
         "<str:app_label>/<str:model_name>/<str:pk>/delete-preview/",
         DeletePreviewView.as_view(),
         name="delete_preview",
+    ),
+    # Password set/change sub-resource (#252) — UserAdmin parity. Literal
+    # ``password`` segment must precede the ``<pk>`` instance route below.
+    # 404s for any model whose admin has no password-change form.
+    path(
+        "<str:app_label>/<str:model_name>/<str:pk>/password/",
+        SetPasswordView.as_view(),
+        name="set_password",
     ),
     path(
         "<str:app_label>/<str:model_name>/<str:pk>/",
