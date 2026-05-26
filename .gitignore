@@ -72,3 +72,6 @@ django_admin_react/static/admin_react/assets/
 django_admin_react/static/admin_react/index.html
 
 .claude/
+
+# Local audit run artifacts (not for VCS)
+.audit-*.json

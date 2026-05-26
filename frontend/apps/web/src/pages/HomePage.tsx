@@ -39,10 +39,14 @@ export function HomePage() {
       </header>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {data.apps.flatMap((app) =>
-          app.models.map((model) => (
+          app.models.map((model) => {
+            // Route by real_app_label (see Layout.tsx) — app.app_label
+            // may be a consumer get_app_list grouping that 404s.
+            const routeApp = model.real_app_label || app.app_label;
+            return (
             <Link
-              key={`${app.app_label}.${model.model_name}`}
-              to={`/${app.app_label}/${model.model_name}`}
+              key={`${routeApp}.${model.model_name}`}
+              to={`/${routeApp}/${model.model_name}`}
               className="block hover:no-underline"
             >
               <Card title={model.verbose_name_plural || model.model_name}>
@@ -65,7 +69,8 @@ export function HomePage() {
                 </div>
               </Card>
             </Link>
-          )),
+            );
+          }),
         )}
       </div>
     </div>

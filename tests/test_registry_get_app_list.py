@@ -269,3 +269,44 @@ def test_custom_site_group_filtered_by_view_permission(
         assert (
             "User" not in object_names
         ), "User must be hidden when has_view_permission returns False"
+
+
+@pytest.mark.django_db
+def test_grouped_model_resolves_by_real_app_label_not_group_label(
+    superuser_client: Client, grouped_admin_site_settings
+) -> None:
+    """The list/detail round-trip contract the SPA depends on.
+
+    When a custom ``get_app_list`` regroups ``auth.User`` under a
+    synthetic group ``accounts``, the registry surfaces it with
+    ``app_label="accounts"`` (display) **and** ``real_app_label="auth"``
+    (routing). The list endpoint must:
+
+    - **200** at ``/api/v1/auth/user/``       (the real app label), and
+    - **404** at ``/api/v1/accounts/user/``   (the synthetic group label).
+
+    The SPA builds its sidebar / card links from ``real_app_label`` for
+    exactly this reason. A regression here (SPA routing by the group
+    label) 404s every model under a renamed group — which is what a
+    real consumer using custom admin groupings hit in the pilot.
+    """
+    registry = superuser_client.get(REGISTRY_URL).json()
+    accounts_group = next(a for a in registry["apps"] if a["app_label"] == "accounts")
+    user_entry = next(m for m in accounts_group["models"] if m["object_name"] == "User")
+
+    real = user_entry["real_app_label"]
+    group = user_entry["app_label"]
+    model_name = user_entry["model_name"]
+    assert real == "auth"
+    assert group == "accounts"
+
+    # Round-trips at the real app label.
+    ok = superuser_client.get(f"/admin-react/api/v1/{real}/{model_name}/")
+    assert ok.status_code == 200, "list endpoint must resolve by real_app_label"
+
+    # Does NOT resolve at the display group label (no oracle, clean 404).
+    bad = superuser_client.get(f"/admin-react/api/v1/{group}/{model_name}/")
+    assert bad.status_code == 404, (
+        "the synthetic group label must not resolve a model — the SPA must "
+        "route by real_app_label, never the get_app_list group label"
+    )

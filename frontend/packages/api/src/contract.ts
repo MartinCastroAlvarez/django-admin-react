@@ -38,7 +38,20 @@ export interface RegistryUser {
 }
 
 export interface RegistryModelEntry {
+  /**
+   * The *display* app label — equals the group label when the
+   * consumer's `AdminSite.get_app_list` returns custom groupings.
+   * NOT safe for routing; use `real_app_label`.
+   */
   app_label: string;
+  /**
+   * The model's true `_meta.app_label`. This is the only value that
+   * round-trips through the list/detail endpoints (`resolve_model`).
+   * Always build URLs as `<mount>/api/v1/<real_app_label>/<model_name>/`.
+   * Falls back to `app_label` when the consumer uses the default
+   * (ungrouped) `get_app_list`.
+   */
+  real_app_label: string;
   model_name: string;
   object_name: string;
   verbose_name: string;
@@ -49,6 +62,11 @@ export interface RegistryModelEntry {
 export interface RegistryAppEntry {
   app_label: string;
   verbose_name: string;
+  /**
+   * True when `app_label` is a consumer-defined `get_app_list`
+   * grouping rather than a real Django app label. Display-only.
+   */
+  is_group?: boolean;
   models: RegistryModelEntry[];
 }
 

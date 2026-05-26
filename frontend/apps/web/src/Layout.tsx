@@ -50,16 +50,25 @@ export function Layout({ children }: PropsWithChildren) {
                 {app.verbose_name}
               </div>
               <ul className="space-y-1">
-                {app.models.map((model) => (
-                  <li key={`${app.app_label}.${model.model_name}`}>
-                    <Link
-                      to={`/${app.app_label}/${model.model_name}`}
-                      className="block text-sm px-2 py-1 rounded hover:bg-gray-800"
-                    >
-                      {model.verbose_name_plural || model.model_name}
-                    </Link>
-                  </li>
-                ))}
+                {app.models.map((model) => {
+                  // Route by real_app_label — `app.app_label` may be a
+                  // consumer `get_app_list` grouping (e.g. "financial_
+                  // institutions") that does NOT round-trip through the
+                  // list/detail endpoints (`resolve_model` resolves by
+                  // the model's true `_meta.app_label`). Falls back to
+                  // `app.app_label` for the default (ungrouped) case.
+                  const routeApp = model.real_app_label || app.app_label;
+                  return (
+                    <li key={`${routeApp}.${model.model_name}`}>
+                      <Link
+                        to={`/${routeApp}/${model.model_name}`}
+                        className="block text-sm px-2 py-1 rounded hover:bg-gray-800"
+                      >
+                        {model.verbose_name_plural || model.model_name}
+                      </Link>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           ))}
