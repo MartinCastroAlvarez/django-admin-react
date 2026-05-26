@@ -15,7 +15,7 @@ from __future__ import annotations
 from typing import Any
 
 from django.http import HttpRequest
-from django.http import HttpResponse
+from django.http import HttpResponseBase
 from django.urls import path
 from django.views.generic import View
 
@@ -47,11 +47,11 @@ class CollectionView(View):
 
     http_method_names = ["get", "post"]
 
-    def get(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+    def get(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponseBase:
         """Forward GET to ``ListView`` (contract §3)."""
         return ListView.as_view()(request, *args, **kwargs)
 
-    def post(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+    def post(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponseBase:
         """Forward POST to ``CreateView`` (contract §5.1)."""
         return CreateView.as_view()(request, *args, **kwargs)
 
@@ -66,15 +66,15 @@ class InstanceView(View):
 
     http_method_names = ["get", "patch", "delete"]
 
-    def get(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+    def get(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponseBase:
         """Forward GET to ``DetailView`` (contract §4)."""
         return DetailView.as_view()(request, *args, **kwargs)
 
-    def patch(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+    def patch(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponseBase:
         """Forward PATCH to ``UpdateView`` (contract §5.2)."""
         return UpdateView.as_view()(request, *args, **kwargs)
 
-    def delete(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+    def delete(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponseBase:
         """Forward DELETE to ``DestroyView`` (contract §5.3)."""
         return DestroyView.as_view()(request, *args, **kwargs)
 

@@ -38,6 +38,7 @@ import json
 from typing import Any
 
 from django.contrib.admin.options import ModelAdmin
+from django.core.exceptions import ObjectDoesNotExist
 from django.core.exceptions import ValidationError
 from django.db.models import ForeignKey
 from django.db.models import ManyToManyField
@@ -74,12 +75,14 @@ def bad_request(message: str = "Malformed request.") -> HttpResponse:
     return response
 
 
-def validation_failed(errors: dict[str, list[str]]) -> HttpResponse:
+def validation_failed(errors: dict[str, Any]) -> HttpResponse:
     """Return a 400 ``validation_failed`` envelope (contract §6).
 
     The ``errors`` mapping is already the wire shape — see
     :func:`form_errors_to_envelope` for the canonical converter from
-    Django's ``form.errors`` to this shape.
+    Django's ``form.errors`` to this shape. Values are usually
+    ``list[str]`` (a field's messages) but may nest (inline formsets
+    key per-row/per-field error maps), so the value type stays ``Any``.
     """
     body = {
         "error": {
@@ -166,7 +169,10 @@ def load_object_or_none(
     """
     try:
         return model_admin.get_object(request, str(pk))
-    except (model.DoesNotExist, ValidationError, ValueError, TypeError):
+    except (ObjectDoesNotExist, ValidationError, ValueError, TypeError):
+        # ``ObjectDoesNotExist`` is the base of every model's
+        # ``DoesNotExist`` — caught generically so this stays valid for
+        # any ``model`` without a per-model attribute lookup.
         return None
 
 
@@ -195,6 +201,8 @@ def writable_field_names(
     readonly = set(model_admin.get_readonly_fields(request, obj) or ())
     out: list[str] = []
     for name in declared:
+        if not isinstance(name, str):
+            continue
         if name in excluded or name in readonly or is_sensitive_field_name(name):
             continue
         # ManyToManyField is now writable (Issue #55). Plain M2M

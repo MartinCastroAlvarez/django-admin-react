@@ -133,7 +133,7 @@ def _build_payload(
 def _visible_field_names(
     model_admin: ModelAdmin,
     request: HttpRequest,
-    obj: Model,
+    obj: Model | None,
 ) -> list[str]:
     """Field names the detail response may surface for this object.
 
@@ -146,7 +146,9 @@ def _visible_field_names(
     declared = list(model_admin.get_fields(request, obj) or ())
     excluded = set(model_admin.get_exclude(request, obj) or ())
     visible = [
-        name for name in declared if name not in excluded and not is_sensitive_field_name(name)
+        name
+        for name in declared
+        if isinstance(name, str) and name not in excluded and not is_sensitive_field_name(name)
     ]
     return filter_sensitive(visible)
 
@@ -154,7 +156,7 @@ def _visible_field_names(
 def _fieldsets_payload(
     model_admin: ModelAdmin,
     request: HttpRequest,
-    obj: Model,
+    obj: Model | None,
     visible_names: list[str],
 ) -> list[dict[str, Any]]:
     """Honour ``ModelAdmin.get_fieldsets`` (with a flat fallback).

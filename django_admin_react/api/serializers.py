@@ -250,9 +250,13 @@ def safe_get_field(model_or_instance: type[Model] | Model, name: str) -> Field |
     ``docs/architect-verdict-2026-05-26.md`` Condition A).
     """
     try:
-        return model_or_instance._meta.get_field(name)
+        field = model_or_instance._meta.get_field(name)
     except Exception:
         return None
+    # ``get_field`` may also return reverse relations / generic FKs,
+    # which are not concrete ``Field``s. Callers want a real field or
+    # nothing (those names fall through to the callable/display path).
+    return field if isinstance(field, Field) else None
 
 
 _TYPE_BY_INTERNAL: Final[dict[str, str]] = {
@@ -427,7 +431,10 @@ def field_metadata(
         # readonly via writable_field_names; ``to`` still points at
         # the target so the SPA can render the existing labels.
         related = field.related_model
-        if related is not None:
+        # ``related_model`` is the resolved model class by the time the
+        # admin is loaded; the ``"self"`` sentinel only exists during
+        # model definition. Guard it out so the type narrows cleanly.
+        if related is not None and not isinstance(related, str):
             meta = related._meta
             metadata["to"] = {"app_label": meta.app_label, "model_name": meta.model_name}
     if getattr(field, "max_length", None):

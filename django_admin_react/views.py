@@ -28,6 +28,7 @@ import json
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
+from typing import cast
 
 from django.conf import settings
 from django.contrib.auth.forms import AuthenticationForm
@@ -183,7 +184,10 @@ class DarLogoutView(LogoutView):
     package login so logout works without the legacy admin.
     """
 
-    next_page = reverse_lazy("django_admin_react:login")
+    # ``reverse_lazy`` returns a lazy str proxy (``_StrPromise``); the
+    # base ``next_page`` is annotated ``str | None``. The proxy resolves
+    # to a str at access time, so the cast is type-only.
+    next_page = cast(str, reverse_lazy("django_admin_react:login"))
 
 
 # --------------------------------------------------------------------------- #
