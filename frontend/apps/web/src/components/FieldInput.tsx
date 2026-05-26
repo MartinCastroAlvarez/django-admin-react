@@ -10,6 +10,7 @@
 
 import type { FieldDescriptor, FieldValue, WriteValue } from '@dar/data';
 
+import { AutocompleteInput } from './AutocompleteInput';
 import { FieldValueView } from './FieldValueView';
 
 interface FieldInputProps {
@@ -87,26 +88,34 @@ export function FieldInput({ name, field, value, error, onChange }: FieldInputPr
           ))}
         </select>
       );
+    } else if (field.to) {
+      // FK with no inlined choices (large target table) — typeahead
+      // against the target model's autocomplete endpoint.
+      const currentLabel =
+        field.value && typeof field.value === 'object' && 'label' in field.value
+          ? (field.value as { label: string }).label
+          : undefined;
+      control = (
+        <AutocompleteInput
+          to={field.to}
+          value={value}
+          initialLabel={currentLabel}
+          invalid={Boolean(error?.length)}
+          onChange={onChange}
+        />
+      );
     } else {
-      // FK with no inlined choices (large target table). Bare-pk input
-      // + current label hint until the autocomplete widget lands.
+      // FK with neither choices nor a `to` target — bare-pk fallback.
       const current = fkId(field.value);
       control = (
-        <div>
-          <input
-            id={id}
-            type="text"
-            defaultValue={current == null ? '' : String(current)}
-            onChange={(e) => onChange(e.target.value === '' ? null : e.target.value)}
-            placeholder="related object id"
-            className={base}
-          />
-          {field.value && typeof field.value === 'object' && 'label' in field.value && (
-            <p className="mt-1 text-xs text-gray-400">
-              current: {(field.value as { label: string }).label}
-            </p>
-          )}
-        </div>
+        <input
+          id={id}
+          type="text"
+          defaultValue={current == null ? '' : String(current)}
+          onChange={(e) => onChange(e.target.value === '' ? null : e.target.value)}
+          placeholder="related object id"
+          className={base}
+        />
       );
     }
   } else if (field.type === 'integer' || field.type === 'float' || field.type === 'decimal') {
