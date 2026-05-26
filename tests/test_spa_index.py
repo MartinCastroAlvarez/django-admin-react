@@ -170,15 +170,15 @@ def test_brand_title_falls_back_to_admin_site_header(superuser_client: Client) -
 @pytest.mark.django_db
 def test_brand_title_explicit_override_wins(superuser_client: Client) -> None:
     """`BRAND_TITLE` overrides the AdminSite's `site_header`."""
-    with override_settings(DJANGO_ADMIN_REACT={"BRAND_TITLE": "Laminr"}):
+    with override_settings(DJANGO_ADMIN_REACT={"BRAND_TITLE": "Acme"}):
         _reload_conf()
         original_header = default_admin_site.site_header
         default_admin_site.site_header = "Something Else"
         try:
             response = superuser_client.get(ROOT_URL)
             html = response.content.decode("utf-8")
-            assert 'name="dar-brand-title" content="Laminr"' in html
-            assert "<title>Laminr</title>" in html
+            assert 'name="dar-brand-title" content="Acme"' in html
+            assert "<title>Acme</title>" in html
         finally:
             default_admin_site.site_header = original_header
 
@@ -188,7 +188,7 @@ def test_brand_logo_url_renders_favicon_and_meta(superuser_client: Client) -> No
     """`BRAND_LOGO_URL` populates both the `<link rel="icon">` and the
     `dar-brand-logo` meta tag the SPA reads at boot.
     """
-    logo_url = "/static/laminr/logo.svg"
+    logo_url = "/static/acme/logo.svg"
     with override_settings(DJANGO_ADMIN_REACT={"BRAND_LOGO_URL": logo_url}):
         _reload_conf()
         response = superuser_client.get(ROOT_URL)
