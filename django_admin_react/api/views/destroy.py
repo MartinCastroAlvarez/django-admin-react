@@ -67,7 +67,7 @@ class DestroyView(View):
         """
         admin_site = get_admin_site()
         if not is_admin_user(request, admin_site=admin_site):
-            return forbidden_response()
+            return forbidden_response(request)
 
         resolved = resolve_model(admin_site, request, app_label, model_name)
         if resolved is None:
@@ -79,7 +79,7 @@ class DestroyView(View):
             return not_found_response()
 
         if not model_admin.has_delete_permission(request, obj):
-            return forbidden_response()
+            return forbidden_response(request)
 
         with transaction.atomic():
             model_admin.delete_model(request, obj)

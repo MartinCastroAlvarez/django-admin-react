@@ -75,7 +75,7 @@ class UpdateView(View):
         """
         admin_site = get_admin_site()
         if not is_admin_user(request, admin_site=admin_site):
-            return forbidden_response()
+            return forbidden_response(request)
 
         resolved = resolve_model(admin_site, request, app_label, model_name)
         if resolved is None:
@@ -87,7 +87,7 @@ class UpdateView(View):
             return not_found_response()
 
         if not model_admin.has_change_permission(request, obj):
-            return forbidden_response()
+            return forbidden_response(request)
 
         parsed = parse_json_body(request)
         if isinstance(parsed, HttpResponse):
