@@ -95,6 +95,9 @@ Query parameters:
 | `page`      | int     | `1`     | 1-indexed.                                                       |
 | `page_size` | int     | `DEFAULT_PAGE_SIZE` | Clamped to `MAX_PAGE_SIZE`.                          |
 | `ordering`  | string  | `""`    | Comma-separated list. Each entry must appear in `get_ordering(request)` or `ModelAdmin.ordering`. Unknown values are ignored. |
+| `year`      | int     | (none)  | Date-hierarchy drill-down. Active only when the `ModelAdmin` declares `date_hierarchy`. Garbage / out-of-range silently ignored. |
+| `month`     | int     | (none)  | Requires `year` to be set; ignored otherwise.                    |
+| `day`       | int     | (none)  | Requires `year` and `month` to be set; ignored otherwise.        |
 
 Response 200:
 
@@ -134,8 +137,53 @@ Rules:
   can label the search box). Empty list means no search.
 - `results[*].fields` only contains values for `columns[*].name`.
 - `results[*].label` is `str(obj)` (the admin's display fallback).
-- `total` reflects the filtered queryset count **after** search is
-  applied.
+- `total` reflects the filtered queryset count **after** search **and
+  date-hierarchy drill-down** are applied.
+
+### 3.1 `date_hierarchy` (optional block)
+
+When the `ModelAdmin` declares
+`date_hierarchy = "<DateField-or-DateTimeField-name>"`, the response
+gains a `date_hierarchy` block:
+
+```json
+"date_hierarchy": {
+  "field": "created_at",
+  "granularity_options": ["year", "month", "day"],
+  "active": { "year": 2025, "month": 10, "day": null },
+  "buckets": [
+    { "value": 5,  "count": 12 },
+    { "value": 20, "count":  4 }
+  ]
+}
+```
+
+- **`field`** — the name of the date field on the model.
+- **`granularity_options`** — always `["year", "month", "day"]` (the
+  closed v1 vocabulary).
+- **`active`** — the currently selected drill-down levels. Children
+  of a `null` ancestor are forced to `null` (e.g., `?month=10`
+  without a year is ignored).
+- **`buckets`** — next-level drill-down counts:
+  - No year selected → buckets are years.
+  - Year selected, no month → buckets are months *within that year*.
+  - Year + month selected, no day → buckets are days *within that
+    month*.
+  - Year + month + day selected → buckets are `[]` (no further
+    drill).
+
+The block is **omitted** when:
+
+- The admin does not declare `date_hierarchy`, **or**
+- The named field does not exist on the model (defensive against
+  typos), **or**
+- The named field is not a `DateField` / `DateTimeField`.
+
+Robustness: garbage query strings (`?year=abc`, `?year=-1`,
+`?month=99`) are silently dropped; the endpoint never raises on a
+bad query parameter. Out-of-range values are bounds-checked
+(`year ∈ [1, 9999]`, `month ∈ [1, 12]`, `day ∈ [1, 31]`) before
+reaching the ORM.
 
 ---
 
