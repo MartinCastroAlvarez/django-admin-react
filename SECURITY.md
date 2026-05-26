@@ -212,6 +212,39 @@ equivalent) is recommended once the SPA is live; sample snippet will
 ship in `docs/installation.md` alongside PR #6
 (see `docs/agents/open-questions.md` QSEC-2026-05-25-03).
 
+### File / image field storage
+
+The package emits `value.url` for `FileField` and `ImageField` values
+in the detail response. Whether that URL is appropriately gated
+depends on the consumer's storage backend — the package never wraps
+the URL with its own access check:
+
+- **Signed-URL backends** (S3 with bucket-level access blocked, GCS
+  with signed-blob URLs, a custom storage that returns a tokenised
+  download path, …). The URL is time-bound and per-request; an
+  unauthenticated reader who captures the URL out-of-band has it for
+  the signing TTL only. No further consumer action needed beyond
+  setting the storage's TTL conservatively (matching `SESSION_COOKIE_AGE`
+  is a reasonable upper bound).
+- **Local-storage backends** with `MEDIA_URL` pointing at the same
+  domain as the admin. The URL is just a path under the consumer's
+  static-files server. If `MEDIA_URL` is publicly readable (the
+  default Django development configuration), then any logged-in
+  staff user who can view the row can also share the file URL with
+  anyone — including unauthenticated parties — and they can fetch
+  the file. For production deployments where files should stay
+  staff-only, put `MEDIA_URL` behind the same staff-gate as the
+  rest of the admin: `django-private-storage`, an `nginx`
+  `auth_request` to the Django session check, or a small
+  Django view that reads `MEDIA_ROOT` and gates on
+  `request.user.is_active and request.user.is_staff`.
+
+This is the same disclosure surface Django's HTML admin ships with
+(its `<a href="{{ field.url }}">` does not check the linked URL's
+ACL either). The SPA does not change the posture; it does make the
+URLs trivially scriptable against `/api/v1/<app>/<model>/<pk>/`,
+which raises the operational stakes of `MEDIA_URL` configuration.
+
 ## 10. Cross-references
 
 - [`ACCEPTANCE.md`](ACCEPTANCE.md) §4 — measurable security criteria.
