@@ -642,6 +642,24 @@ the session is invalid.
 
 ---
 
+## 6.2 `GET /api/v1/schema/`
+
+OpenAPI 3.1 document for the wire envelope shapes (registry, list,
+detail, errors, filter / action / column / date-hierarchy specs,
+field-type vocabulary). Drives typed-client generation (e.g.
+`openapi-typescript`).
+
+- **Does not** enumerate the consumer's models — that surface lives
+  on the model-list endpoint, which is permission-gated.
+- **Staff-gated** like the rest of the API.
+- `Cache-Control: no-store`.
+
+The endpoint exists so a typed client can be auto-generated rather
+than hand-translated from this Markdown. CI / build pipelines can
+diff the schema across versions to detect contract drift.
+
+---
+
 ## 7. Pagination, ordering, search
 
 - Pagination is offset-based and `1-indexed`. The response always

@@ -27,6 +27,7 @@ from django_admin_react.api.views.destroy import DestroyView
 from django_admin_react.api.views.detail import DetailView
 from django_admin_react.api.views.list import ListView
 from django_admin_react.api.views.registry import RegistryView
+from django_admin_react.api.views.schema import SchemaView
 from django_admin_react.api.views.update import UpdateView
 
 
@@ -74,6 +75,7 @@ class InstanceView(View):
 
 urlpatterns: list = [
     path("registry/", RegistryView.as_view(), name="registry"),
+    path("schema/", SchemaView.as_view(), name="schema"),
     # Autocomplete is more specific than the collection / instance
     # patterns below — it must be listed FIRST so the literal
     # ``/autocomplete/`` segment isn't swallowed as a ``<str:pk>``.
