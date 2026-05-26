@@ -17,47 +17,58 @@ const PASS = process.env.DAR_PASS || "screenshots-only-do-not-reuse";
 
 mkdirSync(OUT, { recursive: true });
 
+// Capture the django-admin-react SPA (mounted at /admin-react/), NOT
+// the legacy admin (/admin/legacy/). The legacy login is used only to
+// establish the shared session cookie; every captured page below is the
+// React SPA or its API. ``spa`` captures wait for React to render past
+// network-idle.
 const captures = [
   {
-    name: "01-admin-login.png",
+    name: "01-spa-login.png",
     viewport: { width: 1440, height: 900 },
     deviceScaleFactor: 2,
     setup: null,
-    path: "/admin/legacy/login/?next=/admin/legacy/",
+    spa: false,
+    path: "/admin-react/login/?next=/admin-react/",
   },
   {
-    name: "02-admin-index.png",
+    name: "02-spa-registry.png",
     viewport: { width: 1440, height: 900 },
     deviceScaleFactor: 2,
     setup: "login",
-    path: "/admin/legacy/",
+    spa: true,
+    path: "/admin-react/",
   },
   {
-    name: "03-admin-library-list.png",
+    name: "03-spa-list.png",
     viewport: { width: 1440, height: 900 },
     deviceScaleFactor: 2,
     setup: "login",
-    path: "/admin/legacy/library/author/",
+    spa: true,
+    path: "/admin-react/library/author/",
   },
   {
-    name: "04-admin-library-list-mobile.png",
+    name: "04-spa-list-mobile.png",
     viewport: { width: 375, height: 812 },
     deviceScaleFactor: 3,
     setup: "login",
-    path: "/admin/legacy/library/author/",
+    spa: true,
+    path: "/admin-react/library/author/",
   },
   {
-    name: "05-admin-library-detail.png",
+    name: "05-spa-detail.png",
     viewport: { width: 1440, height: 900 },
     deviceScaleFactor: 2,
     setup: "login",
-    path: "/admin/legacy/library/author/1/change/",
+    spa: true,
+    path: "/admin-react/library/author/1/",
   },
   {
     name: "06-registry-api-json.png",
     viewport: { width: 1280, height: 720 },
     deviceScaleFactor: 2,
     setup: "login",
+    spa: false,
     path: "/admin-react/api/v1/registry/",
   },
 ];
@@ -93,6 +104,11 @@ async function main() {
     const page = await context.newPage();
     try {
       await page.goto(`${BASE}${c.path}`, { waitUntil: "networkidle" });
+      // The SPA fetches the registry / list / detail after first paint;
+      // give React a beat to render past network-idle before capturing.
+      if (c.spa) {
+        await page.waitForTimeout(1200);
+      }
       await page.screenshot({ path: resolve(OUT, c.name), fullPage: false });
       console.log(`✓ ${c.name}`);
     } catch (err) {
