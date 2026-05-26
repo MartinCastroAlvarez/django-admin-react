@@ -5,11 +5,23 @@
 // controlled state local to this page; cache/network management is
 // the data layer's job.
 
-import { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useMemo, useState } from 'react';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
-import { useApiClient, useList, type ListRow, renderValue } from '@dar/data';
+import {
+  useApiClient,
+  useList,
+  type FilterDescriptor,
+  type FilterOption,
+  type ListRow,
+} from '@dar/data';
 import { Card, EmptyState, Input, Spinner, Table } from '@dar/ui';
+
+import { FieldValueView } from '../components/FieldValueView';
+
+// Query params the page manages itself; everything else is a
+// `list_filter` key.
+const RESERVED_PARAMS = new Set(['q', 'page']);
 
 export function ListPage() {
   const params = useParams<{ appLabel: string; modelName: string }>();
@@ -17,8 +29,21 @@ export function ListPage() {
   const modelName = params.modelName ?? '';
   const navigate = useNavigate();
   const client = useApiClient();
-  const [q, setQ] = useState('');
-  const [page, setPage] = useState(1);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // Search, page, and filters all live in the URL so a reload restores
+  // the exact view (ACCEPTANCE N-3). Filters are every non-reserved
+  // query param, keyed by the descriptor `name`.
+  const q = searchParams.get('q') ?? '';
+  const page = Number(searchParams.get('page') ?? '1') || 1;
+
+  const activeFilters = useMemo(() => {
+    const out: Record<string, string> = {};
+    for (const [key, value] of searchParams.entries()) {
+      if (!RESERVED_PARAMS.has(key) && value !== '') out[key] = value;
+    }
+    return out;
+  }, [searchParams]);
 
   const { data, loading, error } = useList({
     client,
@@ -26,7 +51,38 @@ export function ListPage() {
     modelName,
     q,
     page,
+    filters: activeFilters,
   });
+
+  const [searchDraft, setSearchDraft] = useState(q);
+
+  function patchParams(mutate: (next: URLSearchParams) => void): void {
+    const next = new URLSearchParams(searchParams);
+    mutate(next);
+    next.delete('page'); // any search/filter change resets to page 1
+    setSearchParams(next);
+  }
+
+  function commitSearch(): void {
+    patchParams((next) => {
+      if (searchDraft) next.set('q', searchDraft);
+      else next.delete('q');
+    });
+  }
+
+  function setFilter(name: string, value: string): void {
+    patchParams((next) => {
+      if (value === '') next.delete(name);
+      else next.set(name, value);
+    });
+  }
+
+  function setPage(nextPage: number): void {
+    const next = new URLSearchParams(searchParams);
+    if (nextPage <= 1) next.delete('page');
+    else next.set('page', String(nextPage));
+    setSearchParams(next);
+  }
 
   if (loading && !data) return <Spinner label="Loading…" />;
   if (error && !data) {
@@ -38,24 +94,18 @@ export function ListPage() {
     key: c.name,
     header: c.label,
     sortable: c.sortable,
-    render: (row: ListRow) => renderValue(row.fields[c.name]),
+    render: (row: ListRow) => <FieldValueView value={row.fields[c.name]} />,
   }));
 
   const totalPages = Math.max(1, Math.ceil(data.total / data.page_size));
+  const filters = data.filters ?? [];
+  const hasFilters = filters.length > 0;
+  const chips = buildChips(filters, activeFilters);
 
   return (
     <div className="space-y-4">
       <header className="flex items-end justify-between gap-4">
         <div>
-          {/*
-            Title order of preference: ``verbose_name_plural`` (honours
-            ``Meta.verbose_name_plural`` overrides), then ``object_name``
-            (the model class name as written), then the lowercase URL
-            param as a last resort. ``modelName`` from the URL is
-            lowercase + no separators, so capitalising it produces
-            things like ``Packagemodeldisclaimerdisplayed`` — never
-            display that.
-          */}
           <h1 className="text-2xl font-semibold">
             <span className="capitalize">{appLabel}</span> ·{' '}
             {data.verbose_name_plural
@@ -67,30 +117,167 @@ export function ListPage() {
           </p>
         </div>
         {data.search_fields.length > 0 && (
-          <div className="w-64">
+          <form
+            className="w-64"
+            onSubmit={(e) => {
+              e.preventDefault();
+              commitSearch();
+            }}
+          >
             <Input
               placeholder={`Search by ${data.search_fields.join(', ')}…`}
-              value={q}
-              onChange={(e) => {
-                setQ(e.target.value);
-                setPage(1);
-              }}
+              value={searchDraft}
+              onChange={(e) => setSearchDraft(e.target.value)}
+              onBlur={commitSearch}
             />
-          </div>
+          </form>
         )}
       </header>
 
-      <Card>
-        <Table
-          columns={columns}
-          rows={data.results}
-          rowKey={(r) => r.pk}
-          onRowClick={(row) => navigate(`/${appLabel}/${modelName}/${row.pk}`)}
-          emptyLabel={q ? 'No results match this search.' : 'No objects yet.'}
-        />
-      </Card>
+      {chips.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {chips.map((chip) => (
+            <button
+              key={chip.name}
+              type="button"
+              onClick={() => setFilter(chip.name, '')}
+              className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-3 py-1 text-xs text-blue-700 hover:bg-blue-100"
+            >
+              <span className="font-medium">{chip.filterLabel}:</span>
+              <span>{chip.valueLabel}</span>
+              <span aria-hidden className="ml-1 text-blue-400">
+                ✕
+              </span>
+            </button>
+          ))}
+          {chips.length > 1 && (
+            <button
+              type="button"
+              onClick={() => patchParams((next) => chips.forEach((c) => next.delete(c.name)))}
+              className="rounded-full px-3 py-1 text-xs text-gray-500 hover:text-gray-800 hover:underline"
+            >
+              Clear all
+            </button>
+          )}
+        </div>
+      )}
 
-      <Pagination page={data.page} totalPages={totalPages} onChange={(next) => setPage(next)} />
+      <div className={hasFilters ? 'flex gap-4' : ''}>
+        <div className="min-w-0 flex-1">
+          <Card>
+            <Table
+              columns={columns}
+              rows={data.results}
+              rowKey={(r) => r.pk}
+              onRowClick={(row) => navigate(`/${appLabel}/${modelName}/${row.pk}`)}
+              emptyLabel={
+                q || chips.length ? 'No results match these filters.' : 'No objects yet.'
+              }
+            />
+          </Card>
+          <div className="mt-4">
+            <Pagination page={data.page} totalPages={totalPages} onChange={setPage} />
+          </div>
+        </div>
+
+        {hasFilters && (
+          <aside className="w-60 shrink-0">
+            <div className="rounded-lg border border-gray-200 bg-white p-4">
+              <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
+                Filter
+              </h2>
+              <div className="space-y-4">
+                {filters.map((f) => (
+                  <FilterControl
+                    key={f.name}
+                    filter={f}
+                    value={activeFilters[f.name] ?? ''}
+                    onChange={(v) => setFilter(f.name, v)}
+                  />
+                ))}
+              </div>
+            </div>
+          </aside>
+        )}
+      </div>
+    </div>
+  );
+}
+
+interface Chip {
+  name: string;
+  filterLabel: string;
+  valueLabel: string;
+}
+
+function optionsFor(filter: FilterDescriptor): FilterOption[] {
+  return filter.lookups ?? filter.choices ?? [];
+}
+
+function buildChips(filters: FilterDescriptor[], active: Record<string, string>): Chip[] {
+  const byName = new Map(filters.map((f) => [f.name, f]));
+  const chips: Chip[] = [];
+  for (const [name, value] of Object.entries(active)) {
+    const f = byName.get(name);
+    if (!f) continue;
+    const opt = optionsFor(f).find((o) => String(o.value) === value);
+    chips.push({ name, filterLabel: f.label, valueLabel: opt?.label ?? value });
+  }
+  return chips;
+}
+
+interface FilterControlProps {
+  filter: FilterDescriptor;
+  value: string;
+  onChange: (value: string) => void;
+}
+
+function FilterControl({ filter, value, onChange }: FilterControlProps) {
+  const labelId = `dar-filter-${filter.name}`;
+
+  if (filter.type === 'date') {
+    return (
+      <div>
+        <label htmlFor={labelId} className="mb-1 block text-sm font-medium text-gray-700">
+          {filter.label}
+        </label>
+        <input
+          id={labelId}
+          type="date"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
+        />
+      </div>
+    );
+  }
+
+  const options: FilterOption[] =
+    filter.type === 'boolean'
+      ? [
+          { value: 'true', label: 'Yes' },
+          { value: 'false', label: 'No' },
+        ]
+      : optionsFor(filter);
+
+  return (
+    <div>
+      <label htmlFor={labelId} className="mb-1 block text-sm font-medium text-gray-700">
+        {filter.label}
+      </label>
+      <select
+        id={labelId}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
+      >
+        <option value="">All</option>
+        {options.map((o) => (
+          <option key={String(o.value)} value={String(o.value)}>
+            {o.label}
+          </option>
+        ))}
+      </select>
     </div>
   );
 }

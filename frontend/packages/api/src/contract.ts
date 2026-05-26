@@ -87,12 +87,60 @@ export interface ForeignKeyValue {
   label: string;
 }
 
-export type FieldValue = string | number | boolean | null | ForeignKeyValue | ForeignKeyValue[];
+/**
+ * A value the backend marked as safe HTML — produced when a
+ * `ModelAdmin` `list_display` / readonly display method returns a
+ * Django `SafeString` (`format_html` / `mark_safe`). The SPA renders
+ * `html` as markup (Django changelist parity). A plain string is
+ * NEVER this shape, so untrusted text stays escaped. See
+ * api-contract §4 + SECURITY.md.
+ */
+export interface HtmlValue {
+  html: string;
+}
+
+export type FieldValue =
+  | string
+  | number
+  | boolean
+  | null
+  | ForeignKeyValue
+  | ForeignKeyValue[]
+  | HtmlValue;
 
 export interface ListRow {
   pk: number | string;
   label: string;
   fields: Record<string, FieldValue>;
+}
+
+/** One selectable option in a `choice` / `foreignkey` / `custom` filter. */
+export interface FilterOption {
+  value: string | number | boolean;
+  label: string;
+}
+
+/**
+ * A `list_filter` descriptor (api-contract §3.3). The `name` is the
+ * query-string key; the value sent is `?<name>=<value>`.
+ */
+export interface FilterDescriptor {
+  name: string;
+  label: string;
+  type: 'boolean' | 'choice' | 'foreignkey' | 'date' | 'custom';
+  /** Present for `choice` / `foreignkey` (≤25 options). */
+  choices?: FilterOption[];
+  /** `custom` (SimpleListFilter) carries its options here. */
+  lookups?: FilterOption[];
+  to?: { app_label: string; model_name: string };
+}
+
+/** One bulk action surfaced from `ModelAdmin.actions`. */
+export interface ActionDescriptor {
+  name: string;
+  label: string;
+  description: string;
+  requires_confirmation?: boolean;
 }
 
 export interface ListResponse {
@@ -108,6 +156,10 @@ export interface ListResponse {
   permissions: Permissions;
   columns: ColumnDescriptor[];
   search_fields: string[];
+  /** `list_filter` descriptors; always present (empty array when none). */
+  filters: FilterDescriptor[];
+  /** Bulk actions from `ModelAdmin.actions`; always present. */
+  actions: ActionDescriptor[];
   page: number;
   page_size: number;
   total: number;

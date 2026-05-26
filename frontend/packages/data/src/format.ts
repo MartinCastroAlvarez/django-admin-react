@@ -5,12 +5,27 @@
 // renders a cell or a field reads through one of these helpers, so
 // the formatting story stays consistent across the SPA.
 
-import type { FieldValue, ForeignKeyValue } from '@dar/api';
+import type { FieldValue, ForeignKeyValue, HtmlValue } from '@dar/api';
 
 const EMPTY_PLACEHOLDER = '—';
 
 function isForeignKeyValue(value: unknown): value is ForeignKeyValue {
   return typeof value === 'object' && value !== null && 'id' in value && 'label' in value;
+}
+
+/**
+ * True when the value is the backend's safe-HTML envelope (a
+ * `ModelAdmin` display method that returned a Django `SafeString`).
+ * The caller renders `.html` as markup; a plain string never matches
+ * this guard, so untrusted text stays escaped.
+ */
+export function isHtmlValue(value: unknown): value is HtmlValue {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'html' in value &&
+    typeof (value as HtmlValue).html === 'string'
+  );
 }
 
 /**
@@ -34,6 +49,10 @@ export function renderValue(value: FieldValue | undefined): string {
       .map((entry) => (isForeignKeyValue(entry) ? entry.label : String(entry)))
       .join(', ');
   }
+  // Safe-HTML envelope: when only a string is needed (e.g. a title),
+  // strip tags to a plain-text approximation. Markup rendering is the
+  // caller's job via `isHtmlValue` + dangerouslySetInnerHTML.
+  if (isHtmlValue(value)) return value.html.replace(/<[^>]*>/g, '');
   if (isForeignKeyValue(value)) return value.label;
   return String(value);
 }

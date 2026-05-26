@@ -6,8 +6,10 @@
 
 import { Link, useParams } from 'react-router-dom';
 
-import { renderValue, useApiClient, useDetail } from '@dar/data';
+import { useApiClient, useDetail } from '@dar/data';
 import { Card, EmptyState, Spinner } from '@dar/ui';
+
+import { FieldValueView } from '../components/FieldValueView';
 
 export function DetailPage() {
   const params = useParams<{
@@ -54,10 +56,7 @@ export function DetailPage() {
                 <div key={name} className="py-2 grid grid-cols-3 gap-4 text-sm">
                   <dt className="text-gray-500">{field.label}</dt>
                   <dd className="col-span-2 text-gray-900 whitespace-pre-wrap">
-                    {renderValue(field.value)}
-                    {field.readonly && (
-                      <span className="ml-2 text-xs text-gray-400">(read-only)</span>
-                    )}
+                    <FieldValueView value={field.value} />
                   </dd>
                 </div>
               );

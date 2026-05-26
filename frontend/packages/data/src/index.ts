@@ -9,6 +9,7 @@ export { ApiProvider, useApiClient } from './api-context';
 export type { ApiProviderProps } from './api-context';
 export { ApiClient, ApiError } from '@dar/api';
 export type {
+  ActionDescriptor,
   ApiClientConfig,
   ColumnDescriptor,
   CreatePayload,
@@ -20,7 +21,10 @@ export type {
   FieldType,
   FieldValue,
   FieldsetDescriptor,
+  FilterDescriptor,
+  FilterOption,
   ForeignKeyValue,
+  HtmlValue,
   ListResponse,
   ListRow,
   Permissions,
@@ -43,7 +47,7 @@ export type { DetailState } from './detail-context';
 export { createObject, updateObject, deleteObject } from './mutations';
 export type { CreateArgs, UpdateArgs, DeleteArgs } from './mutations';
 
-export { renderValue } from './format';
+export { renderValue, isHtmlValue } from './format';
 
 export { useSwrCache } from './swr-cache';
 export type { SwrState, UseSwrCacheArgs } from './swr-cache';

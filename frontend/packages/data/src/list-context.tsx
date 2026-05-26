@@ -18,9 +18,20 @@ export interface UseListParams {
   page?: number;
   pageSize?: number;
   ordering?: string;
+  /** `list_filter` query params keyed by descriptor name. */
+  filters?: Record<string, string>;
 }
 
 export type ListState = SwrState<ListResponse>;
+
+function serializeFilters(filters?: Record<string, string>): string {
+  if (!filters) return '';
+  return Object.keys(filters)
+    .filter((k) => filters[k] !== '' && filters[k] != null)
+    .sort()
+    .map((k) => `${k}=${filters[k]}`)
+    .join('&');
+}
 
 function cacheKeyFor(p: UseListParams): string {
   // Versioned + parameter-discriminated so two queries with different
@@ -33,11 +44,13 @@ function cacheKeyFor(p: UseListParams): string {
     p.page ?? 1,
     p.pageSize ?? 0,
     p.ordering ?? '',
+    serializeFilters(p.filters),
   ].join('|');
 }
 
 export function useList(params: UseListParams): ListState {
   const cacheKey = cacheKeyFor(params);
+  const filtersKey = serializeFilters(params.filters);
   const fetcher = useMemo(
     () => () => {
       const query: Parameters<ApiClient['list']>[2] = {};
@@ -45,8 +58,12 @@ export function useList(params: UseListParams): ListState {
       if (params.page !== undefined) query.page = params.page;
       if (params.pageSize !== undefined) query.page_size = params.pageSize;
       if (params.ordering !== undefined) query.ordering = params.ordering;
+      if (params.filters !== undefined) query.filters = params.filters;
       return params.client.list(params.appLabel, params.modelName, query);
     },
+    // `params.filters` tracked via its serialised form (`filtersKey`)
+    // so a new object identity with identical contents doesn't refetch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [
       params.client,
       params.appLabel,
@@ -55,6 +72,7 @@ export function useList(params: UseListParams): ListState {
       params.page,
       params.pageSize,
       params.ordering,
+      filtersKey,
     ],
   );
   return useSwrCache<ListResponse>({

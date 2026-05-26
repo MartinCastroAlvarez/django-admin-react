@@ -132,6 +132,12 @@ export class ApiClient {
       page?: number;
       page_size?: number;
       ordering?: string;
+      /**
+       * Arbitrary `list_filter` query params keyed by the descriptor's
+       * `name` (e.g. `{ created_at_filter: '7_days' }`). Empty-string /
+       * null values are omitted so clearing a filter drops it.
+       */
+      filters?: Record<string, string | null | undefined>;
     } = {},
   ): Promise<ListResponse> {
     const search = new URLSearchParams();
@@ -139,6 +145,11 @@ export class ApiClient {
     if (params.page) search.set('page', String(params.page));
     if (params.page_size) search.set('page_size', String(params.page_size));
     if (params.ordering) search.set('ordering', params.ordering);
+    for (const [key, value] of Object.entries(params.filters ?? {})) {
+      if (value !== undefined && value !== null && value !== '') {
+        search.set(key, value);
+      }
+    }
     const qs = search.toString();
     const suffix = qs ? `?${qs}` : '';
     return this.request<ListResponse>('GET', `${appLabel}/${modelName}/${suffix}`);
