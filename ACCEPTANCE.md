@@ -111,6 +111,7 @@ owner only.
 | Doc-3 | Every documented API endpoint in [`docs/api-contract.md`](docs/api-contract.md) has a happy-path example. | Diff endpoint table vs. example blocks. |
 | Doc-4 | Every folder under the repo root has a `README.md` (per [`CLAUDE.md`](CLAUDE.md) §1). | `find . -type d -not -path './.git*' -not -path './node_modules*'` and check. |
 | Doc-5 | All cross-doc links resolve. | A link-check pass before each release. |
+| Doc-6 | The package exposes a `GET /api/v1/schema/` endpoint returning OpenAPI 3.1 for the envelope shapes (registry / list / detail / errors / type vocabulary), gated by the same staff permission as the rest of the API. (Closes [#64](https://github.com/MartinCastroAlvarez/django-admin-react/issues/64), shipped via [PR #108](https://github.com/MartinCastroAlvarez/django-admin-react/pull/108).) | Hit the endpoint as staff; validate the returned JSON against the OpenAPI 3.1 spec; non-staff returns 403. |
 
 ### 2.7 SPA navigation
 
@@ -122,6 +123,8 @@ owner only.
 | N-4 | Deep links to a model that the user can no longer view (perm lost) render the standard "not found / forbidden" empty state, never an unrecoverable error. | Manual: revoke perm mid-session, reload. |
 | N-5 | Authenticated session expiry inside the SPA renders a focus-trapped **re-login modal** (page behind it stays rendered) with a **Sign in** button that round-trips through `LOGIN_URL?next=<spa-path>`. Backend distinguishes `error.code: "session_expired"` from `forbidden` per [`docs/api-contract.md`](docs/api-contract.md) §6.1 (detection, landed in PR #95) + §10 (SPA flow + `?next=` posture + optional warning endpoints). UX flow is in [`docs/ux/states.md`](docs/ux/states.md) §3.5. **Never** a silent JS error, blank page, or hard redirect that drops in-flight work. | Force-clear the session cookie; click anything; modal appears, Sign in completes, user lands on the original SPA path. |
 | N-6 | When the consumer sets `DJANGO_ADMIN_REACT["SESSION_WARNING_SECONDS"]` to a positive int, the SPA shows a non-blocking toast at `expires_at - N` with a **Stay signed in** button that hits `POST /api/v1/session/touch/`. When unset (default) the SPA ships the modal-only flow from N-5. | Set `SESSION_WARNING_SECONDS = 60`; let the session approach expiry; toast appears; click Stay signed in; session extends. |
+| N-7 | An admin declaring `list_filter = (...)` causes the SPA to surface filters as a sidebar drawer (`≥1024px`) / bottom-sheet (`<1024px`); applied filters appear as a chip row above the table; the URL contains the filter state so deep-links round-trip. (Closes [#56](https://github.com/MartinCastroAlvarez/django-admin-react/issues/56), backend shipped via [PR #99](https://github.com/MartinCastroAlvarez/django-admin-react/pull/99); SPA side awaits the frontend implementation PR.) | Add `list_filter` to an example; observe filter chips + URL state. |
+| N-8 | An admin declaring `date_hierarchy = "<field>"` causes the SPA to surface a year→month→day drill-down strip above the filter sidebar (`≥1024px`) / under the page header (`<1024px`); state threads into N-7's chip row. (Closes [#62](https://github.com/MartinCastroAlvarez/django-admin-react/issues/62), backend shipped via [PR #80](https://github.com/MartinCastroAlvarez/django-admin-react/pull/80); SPA side awaits the frontend implementation PR.) | Add `date_hierarchy` to an example; drill down; observe URL state. |
 
 ### 2.8 Visual consistency
 
@@ -160,6 +163,12 @@ called out per row).
 | E-8b | A block of an unrecognised `type` is silently dropped client-side and logged server-side. (X-5.) | Push a fake `type` in an example; observe console + server log. |
 | E-8c | A block whose server-side computation fails renders an `ErrorState` scoped to that block; sibling blocks keep rendering. (X-5.) | Force a block to raise; observe. |
 | E-9  | A `type: "html"` block runs through the configured server-side sanitiser (`nh3`) before reaching the SPA; `<script>` tags and inline event handlers never survive the round-trip. (X-6.) | Try to slip a `<script>` through; observe stripped output. **Security signed off (2026-05-26) conditional on C-1..C-10 in the Security PR review comments §3.X-6.2** — the original `allow_unsafe_html=True` boolean was rejected, replaced with the constrained `trusted_html` block-type path (v1.x at earliest; PM/UX recommends no escape hatch in v1). E-9 stays **drafted, not live, until the Security follow-up PRs land** (sanitiser spec + implementation + CSP defaults). v0.1 ships with X-1..X-5 + X-7; X-6 is post-v0.1. |
+| E-10 | An admin with `autocomplete_fields = ("owner",)` causes the SPA's owner picker to call `GET /api/v1/<app>/<model>/autocomplete/?q=…` instead of materialising the entire target queryset. Permissions on the **target** model's `has_view_permission` gate the lookup. (Closes [#59](https://github.com/MartinCastroAlvarez/django-admin-react/issues/59), shipped via [PR #97](https://github.com/MartinCastroAlvarez/django-admin-react/pull/97).) | Type in the picker; observe `?q=…` requests + permission-gated 403 when target view perm is revoked. |
+| E-11 | An admin declaring a plain `ManyToManyField` exposes it as a read+write `many_to_many` descriptor; `filter_horizontal` / `filter_vertical` propagate as the `widget` hint; `through`-with-extras stays read-only with a link to the through admin. (Closes [#55](https://github.com/MartinCastroAlvarez/django-admin-react/issues/55), shipped via [PR #107](https://github.com/MartinCastroAlvarez/django-admin-react/pull/107).) | Add a M2M in an example; load detail; save with the M2M changed; observe `form.save_m2m()` round-trip. |
+| E-12 | An admin declaring `list_editable = ("status",)` causes the SPA list page to render those columns as editable cells (click → input swap; blur/Enter → `PATCH /api/v1/<app>/<model>/bulk/` for that row; Esc cancels); per-row save indicator (spinner → checkmark); per-row error envelope renders inline. (Closes [#61](https://github.com/MartinCastroAlvarez/django-admin-react/issues/61), backend shipped via [PR #103](https://github.com/MartinCastroAlvarez/django-admin-react/pull/103); SPA-side awaits the frontend implementation PR.) | Add `list_editable` to an example; click a cell; observe inline edit + bulk PATCH. |
+| E-13 | An admin declaring `inlines = [BookInline]` causes the SPA detail response to include an `inlines: []` array describing each inline (child model, fields, permissions, fieldsets, `extra`, `min_num`, `max_num`, `can_delete`). The SPA renders Tabular inlines as table rows, Stacked inlines as card stacks. (Partial close of [#54](https://github.com/MartinCastroAlvarez/django-admin-react/issues/54) — **read half** shipped via [PR #109](https://github.com/MartinCastroAlvarez/django-admin-react/pull/109); **write half** still tracked under #54.) | Add an inline; load detail; observe the inline descriptor + SPA render. |
+| E-14 | An admin declaring a `FileField` / `ImageField` exposes the current upload as `{name, url, size}` in the detail descriptor, plus `accept` MIME hint where the admin declares one. The SPA renders the thumbnail (image) or filename + size (file) with a **Replace** / **Clear** affordance. (Read-half close of [#57](https://github.com/MartinCastroAlvarez/django-admin-react/issues/57) — shipped via [PR #110](https://github.com/MartinCastroAlvarez/django-admin-react/pull/110); write / multipart upload tracked separately when filed.) | Add a `FileField`; load detail; observe the descriptor + SPA render. |
+| E-15 | The package exposes a frontend extension surface (`registerFieldWidget` / `registerModelPanel` / `registerModelAction`) so consumers can ship a per-`vocab_type` widget or a per-model panel/action without forking. Extensions ship at build-time via a static `dar.config.ts` (preserves CSP `script-src 'self'`); per-slot error boundaries prevent extension faults from blank-screening the SPA. (Closes [#65](https://github.com/MartinCastroAlvarez/django-admin-react/issues/65), shipped via [PR #111](https://github.com/MartinCastroAlvarez/django-admin-react/pull/111); SPA-side widget registration awaits the frontend implementation PR.) | Register a custom panel; load a detail; observe the extension render. |
 
 ### 2.10 v1 non-goals
 
@@ -169,11 +178,21 @@ side without an explicit v1.x roadmap entry is a regression.
 
 > Edited 2026-05-26 by the extensibility directive: inlines, custom
 > admin actions, server-rendered HTML, and custom widgets moved into
-> §2.9 (rows E-6..E-9). The remaining items below stay out-of-scope.
+> §2.9 (rows E-6..E-9).
+>
+> Edited 2026-05-26 by the acceptance refresh (mid-sprint): two more
+> items promoted to §2.9 — **autocomplete** ([PR #97](https://github.com/MartinCastroAlvarez/django-admin-react/pull/97)) → E-10, **M2M read+write** ([PR #107](https://github.com/MartinCastroAlvarez/django-admin-react/pull/107)) → E-11.
+>
+> Edited 2026-05-26 by the acceptance refresh (late-sprint): another
+> wave of merges promoted items to §2.9 — **list_editable** ([PR #103](https://github.com/MartinCastroAlvarez/django-admin-react/pull/103))
+> → E-12, **inlines read half** ([PR #109](https://github.com/MartinCastroAlvarez/django-admin-react/pull/109)) → E-13, **files read half**
+> ([PR #110](https://github.com/MartinCastroAlvarez/django-admin-react/pull/110)) → E-14, **frontend extension contract** ([PR #111](https://github.com/MartinCastroAlvarez/django-admin-react/pull/111)) → E-15.
+> The **OpenAPI schema endpoint** ([PR #108](https://github.com/MartinCastroAlvarez/django-admin-react/pull/108)) added §2.6 row **Doc-6**.
+> The remaining items below stay out-of-scope.
 
-- Autocomplete / `raw_id_fields`.
-- ManyToMany editing (read-only stub only).
-- React-side plugin / extension API.
+- Runtime React plugin loader (the static `register_field_type` Python
+  hook + the build-time `dar.config.ts` extension surface from PR #111
+  are commit-time hooks, not a runtime plugin loader).
 - Server-rendered HTML *fallback pages* (HTML lives inside the SPA's `html` block type, not as a server-rendered fallback page).
 - Runtime Tailwind config swap (CSS-variable theming only; `theme_css` per E-5a is opt-in but still file-based).
 - Multi-`AdminSite` support (single configured site in v1).
