@@ -7,6 +7,7 @@ import { HomePage } from './pages/HomePage';
 import { ListPage } from './pages/ListPage';
 import { DetailPage } from './pages/DetailPage';
 import { LoginPage } from './pages/LoginPage';
+import { CreatePage } from './pages/CreatePage';
 
 export function App() {
   const registry = useRegistry();
@@ -30,6 +31,10 @@ export function App() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path=":appLabel/:modelName" element={<ListPage />} />
+        {/* Literal `add` is ranked above the `:pk` route by React
+            Router, so /app/model/add opens the create form, not a
+            detail with pk="add". */}
+        <Route path=":appLabel/:modelName/add" element={<CreatePage />} />
         <Route path=":appLabel/:modelName/:pk" element={<DetailPage />} />
         <Route
           path="*"
