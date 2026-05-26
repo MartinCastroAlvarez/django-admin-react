@@ -597,9 +597,8 @@ inlines declared).
 - **`rows`** are the existing children gated by the inline's own
   `get_queryset` (Rule 10).
 
-**Write support is deferred** to a follow-up — this v1 closes the read
-half so the SPA can show inlines today. The SPA can fall back to the
-child's own detail URL for edits in the interim.
+**Write support** (Issue #54) round-trips inline edits through Django's
+own inline formset machinery — see §5.6.
 
 ---
 
@@ -756,6 +755,51 @@ Wrapped in `transaction.atomic()`.
 - Calls `ModelAdmin.delete_model(request, obj)`.
 
 Response 204 (no body).
+
+### 5.6 Inline writes (Issue #54)
+
+Both `POST` (create) and `PATCH` (update) accept an optional top-level
+`inlines` key alongside the parent's own fields. Its value maps each
+inline's wire `name` (the same `name` the detail response's `inlines[]`
+descriptor emits) to a list of child rows:
+
+```json
+{
+  "title": "Q3 invoice",
+  "inlines": {
+    "lineitem_set": [
+      { "id": 7, "description": "edited line", "amount": "12.00" },
+      { "description": "new line", "amount": "4.00" },
+      { "id": 9, "DELETE": true }
+    ]
+  }
+}
+```
+
+- A row **without** an `id` **adds** a child — requires the inline's
+  `has_add_permission(request, parent)`.
+- A row **with** an `id` (and no `DELETE`) **changes** that child —
+  requires `has_change_permission`.
+- A row with `id` + `"DELETE": true` **removes** that child — requires
+  `has_delete_permission`.
+- The whole request is **atomic**: the parent and every inline formset
+  save in one `transaction.atomic()`. If any inline formset fails
+  validation, nothing is written and the response is `400` with the
+  per-inline errors under `error.details.inlines`.
+- **No cross-parent reparenting:** every submitted `id` must already
+  belong to *this* parent's child queryset
+  (`InlineModelAdmin.get_queryset(request)` filtered to the parent).
+  An `id` belonging to another parent's child is rejected with `403` —
+  the SPA can never re-parent or mutate a sibling-tree row by guessing
+  a pk.
+- Writes round-trip through Django's own inline formset machinery
+  (`ModelAdmin.save_formset`), preserving every `clean()` hook,
+  `save()` override, and signal — the package never `setattr`s child
+  rows by hand (rule 3 / 6).
+- An unknown inline `name` is rejected with `400`.
+
+Permission failures (forbidden op or cross-parent id) return `403`;
+formset validation failures return `400`.
 
 ---
 

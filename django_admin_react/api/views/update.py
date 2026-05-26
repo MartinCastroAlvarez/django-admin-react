@@ -24,6 +24,10 @@ from django.http import HttpResponse
 from django.http import JsonResponse
 from django.views.generic import View
 
+from django_admin_react.api.inline_writes import InlinePermissionDenied
+from django_admin_react.api.inline_writes import build_inline_formsets
+from django_admin_react.api.inline_writes import inline_validation_failed
+from django_admin_react.api.inline_writes import save_inline_formsets
 from django_admin_react.api.permissions import forbidden_response
 from django_admin_react.api.permissions import is_admin_user
 from django_admin_react.api.registry import get_admin_site
@@ -95,6 +99,10 @@ class UpdateView(View):
             return parsed
         payload: dict[str, Any] = parsed
 
+        # Pull the optional ``inlines`` block out before the parent-field
+        # validation — it's not a parent form field (Issue #54).
+        inlines_payload = payload.pop("inlines", None)
+
         writable = writable_field_names(model, model_admin, request, obj)
         forbidden = readonly_or_excluded_names(model_admin, request, obj)
         rejection = reject_forbidden_keys(payload, writable, forbidden)
@@ -109,10 +117,26 @@ class UpdateView(View):
         if not form.is_valid():
             return validation_failed(form_errors_to_envelope(form))
 
+        # Build + validate inline formsets against the existing parent
+        # *before* opening the transaction, so a bad inline payload
+        # returns 400/403 without any partial write.
+        inline_formsets: list[Any] = []
+        if inlines_payload:
+            try:
+                inline_formsets, inline_errors = build_inline_formsets(
+                    model_admin, obj, request, inlines_payload
+                )
+            except InlinePermissionDenied:
+                return forbidden_response(request)
+            if inline_errors:
+                return inline_validation_failed(inline_errors)
+
         with transaction.atomic():
             instance = form.save(commit=False)
             model_admin.save_model(request, instance, form, change=True)
             form.save_m2m()
+            if inline_formsets:
+                save_inline_formsets(inline_formsets, model_admin, request, change=True)
             log_change(model_admin, request, instance, form)
 
         response = JsonResponse(
