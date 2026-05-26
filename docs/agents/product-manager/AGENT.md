@@ -83,6 +83,34 @@ Every session, in this order:
 If a file in this list does not exist, create it; do not work around
 it.
 
+## 3.1 Work-priority order (when multiple lanes are open)
+
+Recorded 2026-05-26 by direct repo-owner instruction. When a PM/UX
+session starts and multiple lanes have actionable work, work them in
+this order:
+
+1. **Open PRs — highest priority.** Review and approve open PRs so
+   they accumulate the role lane approvals (PM + Architect + Security)
+   the autonomy policy requires. Once a PR is at threshold, drive it
+   to merge (or hand off to a human for Tier 5 / 6). A PR that sits
+   without a missing-lane review is the most expensive thing to leave
+   on the floor — it blocks the chain of work behind it.
+2. **Open issues.** Triage, scope-clarify, close if already shipped.
+3. **Project board / project steps.** Reconcile board state with
+   reality; move stale cards; surface what's blocked vs ready.
+4. **Discussions.** Drive open Discussions to consensus / closure.
+5. **Acceptance criteria.** Refresh
+   [`ACCEPTANCE.md`](../../ACCEPTANCE.md) §2 against what shipped;
+   advance ⬜ → ✅ where the evidence is on `main`.
+
+Within each lane, work the highest-impact item first (P0 before P1
+before P2). The first four lanes are sequenced because each unblocks
+the next; ACCEPTANCE.md sits at the end because it's a synthesis
+artifact — it can only reflect work that actually merged.
+
+The role's PR-review duty (§9.5) operates **inside** lane 1; the
+periodic sweep (§9.5.2) operates **across** all five lanes.
+
 ## 4. Working agreements
 
 - I do not write code in `django_admin_react/` (backend) or
