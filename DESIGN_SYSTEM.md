@@ -228,7 +228,7 @@ new variants in page packages is not allowed.
 | `Toast`         | `success`, `warning`, `danger`                     | Top-right; auto-dismiss 4 s; AA contrast.          |
 | `Dialog`        | One variant                                        | Focus trap, `Esc` to close, restores focus.        |
 | `Drawer`        | One variant                                        | Right-side, mobile-friendly version of Dialog.     |
-| `Skeleton`      | Sizes mirror `Input`, `Table`, `Card`              | Replaces spinners on first load.                   |
+| `Skeleton`      | Sizes mirror `Input`, `Table`, `Card`              | Replaces spinners on first load *and* on route transitions. Never carries text — no "Loading…" inside the skeleton. |
 | `EmptyState`    | One variant                                        | Hero + helper text + optional CTA.                 |
 | `ErrorState`    | One variant                                        | "Couldn't load this"; retry CTA.                   |
 
@@ -270,8 +270,12 @@ not an admin.
 
 See [`docs/ux/states.md`](docs/ux/states.md) for full specs. In short:
 
-- **Loading.** Skeletons matching the final layout. Spinner only for
-  in-progress button actions.
+- **Loading.** Skeletons matching the final layout — including route
+  transitions (sidebar click swaps the table to a skeleton on the
+  same tick, Slack-style). Spinner only for in-progress button
+  actions. The strings "Loading", "Fetching", "Please wait" and
+  similar are banned from the SPA UI; see
+  [`docs/ux/states.md`](docs/ux/states.md) §1 "Banned copy".
 - **Empty.** `EmptyState` primitive: friendly title, one-line
   explanation, optional CTA. Never a blank screen.
 - **Error.** `ErrorState` primitive: short message, retry button,
