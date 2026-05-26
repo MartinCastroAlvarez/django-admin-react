@@ -1,0 +1,88 @@
+name: Consumer integration finding
+description: A gap or rough edge you hit wiring the package into a real Django project.
+title: "[consumer] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this when you've mounted `django-admin-react` in a **real
+        project** (not the package's own examples) and something
+        didn't work, behaved differently from the legacy Django admin,
+        or was missing. These structured drops are the highest-signal
+        feedback we get — they caught the non-root-mount and login
+        bugs in the first pilot (see
+        [Discussions](https://github.com/MartinCastroAlvarez/django-admin-react/discussions)).
+
+        **Security problems do not go here** — use the private
+        Security Advisory link instead (`SECURITY.md` §1).
+  - type: textarea
+    id: finding
+    attributes:
+      label: What you hit
+      description: The gap, rough edge, or divergence from the legacy admin.
+      placeholder: |
+        The list page's filter sidebar ate the whole phone width; there
+        was no way to collapse it. The legacy admin's filter is a
+        sidebar that doesn't dominate the viewport.
+    validations:
+      required: true
+  - type: input
+    id: mount
+    attributes:
+      label: Mount point
+      description: The URL prefix you mounted the package at (this surfaced real bugs before).
+      placeholder: /admin2/
+    validations:
+      required: true
+  - type: input
+    id: dar-version
+    attributes:
+      label: django-admin-react version
+      placeholder: 0.2.0a1
+    validations:
+      required: true
+  - type: input
+    id: django-version
+    attributes:
+      label: Django version
+      placeholder: 5.1.3
+    validations:
+      required: true
+  - type: dropdown
+    id: custom-admin-site
+    attributes:
+      label: Custom AdminSite?
+      description: Do you use a subclass of `AdminSite` (custom `get_app_list`, `has_permission`, etc.)?
+      options:
+        - "No — default django.contrib.admin.site"
+        - "Yes — subclass with get_app_list override"
+        - "Yes — subclass with has_permission override"
+        - "Yes — other customisation"
+    validations:
+      required: true
+  - type: textarea
+    id: surrounding-urls
+    attributes:
+      label: Surrounding URL config / middleware
+      description: >-
+        What else lives near the mount? DRF under `/api/` or
+        `/accounts/`, a custom `LOGIN_URL`, a path-stripping reverse
+        proxy, SSO/MFA middleware — these interact with the package and
+        have surfaced real bugs (e.g. the `/accounts/login/` collision).
+      placeholder: |
+        DRF mounted at /api/; /accounts/ routed to django-allauth;
+        nginx strips the /admin2/ prefix before Django sees it.
+  - type: textarea
+    id: admin-shape
+    attributes:
+      label: Admin shape that triggered it
+      description: The `ModelAdmin` knobs in play — list_display, inlines, list_filter, get_app_list groupings, etc.
+      placeholder: |
+        ~30 models across 8 apps; CustomAdminSite.get_app_list regroups
+        them into "Loans" / "Configuration"; several admins use inlines.
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected (legacy-admin parity)
+      description: How the legacy Django admin handles the same case, if relevant — the baseline is "no lost functionality."
