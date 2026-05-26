@@ -44,23 +44,22 @@ permissions at runtime from `GET /api/v1/registry/`. Add a new
 
 ## Screenshots
 
-> The React SPA shell is in flight. The screenshots below show the
-> **example apps** (`examples/library/`, `examples/fintech/`) rendered
-> by the **legacy Django admin** — i.e. the experience this package
-> modernises. Once the SPA's v0.1 implementation closes, this section
-> regenerates from `docs/screenshots/`.
+Real captures of the **django-admin-react SPA** rendering the bundled
+`examples/` apps — driven entirely by each app's `ModelAdmin`.
+Regenerate any time with `scripts/screenshots.sh` (Playwright against a
+throwaway example server).
 
-| Login                                              | Admin index (legacy)                                    |
-| -------------------------------------------------- | ------------------------------------------------------- |
-| ![Login](docs/screenshots/01-admin-login.png)      | ![Admin index](docs/screenshots/02-admin-index.png)     |
+| Sign in (package login)                            | Registry / home                                       |
+| -------------------------------------------------- | ----------------------------------------------------- |
+| ![Sign in](docs/screenshots/01-spa-login.png)      | ![Registry](docs/screenshots/02-spa-registry.png)     |
 
-| Library — list view                                            | Library — detail view                                            |
-| -------------------------------------------------------------- | ---------------------------------------------------------------- |
-| ![Author list](docs/screenshots/03-admin-library-list.png)     | ![Author detail](docs/screenshots/05-admin-library-detail.png)   |
+| List view (`list_display` + search)                     | Detail view                                          |
+| ------------------------------------------------------- | ---------------------------------------------------- |
+| ![List](docs/screenshots/03-spa-list.png)               | ![Detail](docs/screenshots/05-spa-detail.png)        |
 
-| Mobile (375 px) — `list_display` collapsed                          | API: `GET /api/v1/registry/`                                  |
-| ------------------------------------------------------------------- | ------------------------------------------------------------- |
-| ![Mobile list](docs/screenshots/04-admin-library-list-mobile.png)   | ![Registry JSON](docs/screenshots/06-registry-api-json.png)   |
+| Mobile (375 px)                                            | API: `GET /api/v1/registry/`                               |
+| ---------------------------------------------------------- | ---------------------------------------------------------- |
+| ![Mobile](docs/screenshots/04-spa-list-mobile.png)         | ![Registry JSON](docs/screenshots/06-registry-api-json.png) |
 
 Screenshots use deterministic synthetic fixtures (no real names,
 emails, account numbers, or PII).
