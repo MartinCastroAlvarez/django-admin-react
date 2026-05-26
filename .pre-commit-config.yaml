@@ -65,11 +65,29 @@ repos:
   - repo: local
     hooks:
       # No partial / redacted token references anywhere in the diff.
+      #
+      # The `exclude` list covers the small set of files that
+      # legitimately *document* the forbidden patterns (e.g., the
+      # rule itself in SECURITY.md / ACCEPTANCE.md, the review
+      # checklist, the security test that scans for them, and forum
+      # review files that quote the rule when reviewing it). All
+      # other files in the repo MUST be free of these substrings.
       - id: no-partial-tokens
         name: No partial token redactions (e.g., ghp_…XYZ)
         language: pygrep
         entry: '(ghp_|gho_|ghs_|github_pat_|aws_secret_access_key|AKIA[0-9A-Z]{16}|BEGIN (RSA|EC|OPENSSH) PRIVATE)'
         types_or: [text]
+        exclude: |
+          (?x)^(
+            SECURITY\.md
+            |ACCEPTANCE\.md
+            |\.pre-commit-config\.yaml
+            |docs/threat-model\.md
+            |docs/agents/security-expert/.*
+            |forum/(REVIEW|SECURITY|AGENT)-.*\.md
+            |tests/test_security\.py
+            |scripts/README\.md
+          )$
 
       # No Model.objects.all|filter in django_admin_react/api/.
       - id: no-objects-all-in-api

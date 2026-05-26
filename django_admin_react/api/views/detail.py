@@ -57,6 +57,24 @@ class DetailView(View):
         *args: Any,
         **kwargs: Any,
     ) -> HttpResponse:
+        """Return the full descriptor for one object (contract §4).
+
+        Gates, in order:
+
+        1. ``is_admin_user`` — 403 if not authenticated active staff.
+        2. ``resolve_model`` — 404 if model unknown or unviewable.
+        3. ``load_object_or_none`` — 404 if pk doesn't resolve under
+           the admin's queryset (rule 10) or parse-fails.
+        4. ``has_view_permission(request, obj)`` — per-object gate
+           (rule 5); 403 once we know the object exists but the user
+           may not see *this* row.
+
+        The payload includes the visible field set, fieldsets, the
+        four ``has_*_permission`` booleans, and a friendly label.
+        Excluded / readonly / sensitive-named fields are dropped by
+        the visibility filter (defense in depth on top of the admin
+        form).
+        """
         admin_site = get_admin_site()
         if not is_admin_user(request, admin_site=admin_site):
             return forbidden_response()

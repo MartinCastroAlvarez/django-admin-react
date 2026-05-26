@@ -28,29 +28,44 @@ from django_admin_react.api.views.update import UpdateView
 
 
 class CollectionView(View):
-    """Dispatch GET → list, POST → create for ``/<app>/<model>/``."""
+    """Dispatch GET → list, POST → create for ``/<app>/<model>/``.
+
+    The collection URL serves two HTTP verbs; rather than overloading
+    a single view module, we dispatch to dedicated per-verb views so
+    each verb's security gates and tests stay self-contained.
+    """
 
     http_method_names = ["get", "post"]
 
     def get(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        """Forward GET to ``ListView`` (contract §3)."""
         return ListView.as_view()(request, *args, **kwargs)
 
     def post(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        """Forward POST to ``CreateView`` (contract §5.1)."""
         return CreateView.as_view()(request, *args, **kwargs)
 
 
 class InstanceView(View):
-    """Dispatch GET / PATCH / DELETE for ``/<app>/<model>/<pk>/``."""
+    """Dispatch GET / PATCH / DELETE for ``/<app>/<model>/<pk>/``.
+
+    Same pattern as :class:`CollectionView` — per-verb dispatch keeps
+    the security gates and tests for read / change / delete cleanly
+    separated.
+    """
 
     http_method_names = ["get", "patch", "delete"]
 
     def get(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        """Forward GET to ``DetailView`` (contract §4)."""
         return DetailView.as_view()(request, *args, **kwargs)
 
     def patch(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        """Forward PATCH to ``UpdateView`` (contract §5.2)."""
         return UpdateView.as_view()(request, *args, **kwargs)
 
     def delete(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
+        """Forward DELETE to ``DestroyView`` (contract §5.3)."""
         return DestroyView.as_view()(request, *args, **kwargs)
 
 

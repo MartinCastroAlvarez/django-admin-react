@@ -54,6 +54,25 @@ class UpdateView(View):
         *args: Any,
         **kwargs: Any,
     ) -> HttpResponse:
+        """Partially update an instance (contract §5.2).
+
+        PATCH semantics: any field the payload omits keeps its
+        current value. The implementation builds form ``initial``
+        data by overlaying the payload on the instance's current
+        values, then runs ``ModelAdmin.get_form()`` exactly like the
+        Django admin change view.
+
+        Gates: ``is_admin_user`` → ``resolve_model`` →
+        ``load_object_or_none`` (uses the admin's queryset, never
+        ``Model.objects.all()``) → ``has_change_permission(request,
+        obj)`` per-object gate (rule 5).
+
+        Same payload-shape validation as create (unknown / readonly /
+        excluded / sensitive keys → 400). Write path goes through
+        ``form.save(commit=False)`` →
+        ``model_admin.save_model(..., change=True)`` (rule 6 / B-3),
+        wrapped in ``transaction.atomic()``.
+        """
         admin_site = get_admin_site()
         if not is_admin_user(request, admin_site=admin_site):
             return forbidden_response()

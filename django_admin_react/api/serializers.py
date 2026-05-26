@@ -135,6 +135,13 @@ def field_type_for(field: Field) -> str:
 
 
 def field_choices(field: Field) -> list[dict[str, Any]] | None:
+    """Serialize a Django field's ``choices`` as a list of ``{value, label}``.
+
+    Returns ``None`` when the field has no choices (so the wire payload
+    omits the key entirely rather than emitting a misleading empty
+    list). Labels are coerced via ``str(...)`` so lazy translation
+    proxies resolve to the request locale before serialization.
+    """
     choices = getattr(field, "choices", None)
     if not choices:
         return None

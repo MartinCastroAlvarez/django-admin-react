@@ -43,6 +43,12 @@ class _PackageSettings:
 
 
 def _load() -> _PackageSettings:
+    """Merge the consumer's overrides with ``DEFAULTS``.
+
+    Unknown keys raise ``ValueError`` so a typo in
+    ``settings.DJANGO_ADMIN_REACT`` is caught at startup rather than
+    silently ignored. Returns an immutable ``_PackageSettings``.
+    """
     user_overrides = getattr(django_settings, "DJANGO_ADMIN_REACT", {}) or {}
     merged = {**DEFAULTS, **user_overrides}
     # Reject unknown keys defensively to surface typos early.
@@ -57,6 +63,14 @@ _cached: _PackageSettings | None = None
 
 
 def __getattr__(name: str) -> Any:  # pragma: no cover — thin shim
+    """Module-level ``__getattr__`` (PEP 562) so callers can write
+    ``from django_admin_react.conf import settings`` or
+    ``conf.MAX_PAGE_SIZE`` without a separate accessor.
+
+    First access triggers ``_load()`` and caches the result; later
+    accesses return cached attributes. Reload requires re-importing
+    the module (matches Django's own settings semantics).
+    """
     global _cached
     if _cached is None:
         _cached = _load()

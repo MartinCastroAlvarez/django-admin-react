@@ -71,6 +71,13 @@ def _model_permissions(model_admin: ModelAdmin, request: HttpRequest) -> dict[st
 
 
 def _model_entry(model: type[Model], model_admin: ModelAdmin, request: HttpRequest) -> dict:
+    """Single ``models[]`` element for the registry response.
+
+    Wire shape is documented in ``docs/api-contract.md`` §2. Only
+    metadata + the four ``has_*_permission`` booleans go on the wire;
+    no model field schemas, no row counts — those are detail/list
+    endpoint responsibilities.
+    """
     meta = model._meta
     return {
         "app_label": meta.app_label,
@@ -83,6 +90,18 @@ def _model_entry(model: type[Model], model_admin: ModelAdmin, request: HttpReque
 
 
 def _user_payload(request: HttpRequest) -> dict:
+    """``user`` block on the registry response (contract §2).
+
+    Exposes only data the user already knows about themselves: pk,
+    username, display name, ``is_staff``, ``is_superuser``. No email,
+    no group memberships, no permission codenames, no last-login
+    timestamp — the SPA does not need them and the registry endpoint
+    must stay deny-by-default (``SECURITY.md`` §3 rule 12).
+
+    ``getattr(user, "is_active", False)`` style defaults are used so
+    a custom user model missing an attribute degrades to "no" rather
+    than raising.
+    """
     user = request.user
     full_name = (user.get_full_name() or "").strip() if hasattr(user, "get_full_name") else ""
     display_name = full_name or user.get_username()
