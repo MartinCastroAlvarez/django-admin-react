@@ -211,3 +211,89 @@ class TestSerializeFKTarget:
         out = serialize_fk_value(Group(name="x"), admin_site=_EmptySite())
         assert out is not None
         assert "to" not in out
+
+
+# --------------------------------------------------------------------------- #
+# serialize_value — bare Model fallback + label_for exception fallback         #
+# (coverage: serializers.py model-serialize + __str__-raises paths)            #
+# --------------------------------------------------------------------------- #
+class TestSerializeValueModelAndLabel:
+    def test_bare_model_instance_serializes_to_id_label(self) -> None:
+        """A plain Model value (no field dispatch) → ``{id, label}``."""
+        from django.contrib.auth.models import Group  # pylint: disable=imported-auth-user
+
+        g = Group(name="admins")
+        g.pk = 5
+        assert serialize_value(g) == {"id": 5, "label": "admins"}
+
+    def test_label_for_falls_back_when_str_raises(self) -> None:
+        """``label_for`` must never propagate a ``__str__`` exception — it
+        degrades to ``<ClassName: pk>`` so a half-migrated row can't 500 a
+        list/detail page."""
+        from django_admin_react.api.serializers import label_for
+
+        class Boom:
+            pk = 7
+
+            def __str__(self) -> str:
+                raise ValueError("intentionally broken __str__")
+
+        assert label_for(Boom()) == "<Boom: 7>"
+
+
+# --------------------------------------------------------------------------- #
+# field_choices + field_metadata                                              #
+# --------------------------------------------------------------------------- #
+class TestFieldChoicesAndMetadata:
+    def test_field_choices_returns_value_label_pairs(self) -> None:
+        from django.db import models
+
+        from django_admin_react.api.serializers import field_choices
+
+        field = models.CharField(choices=[("a", "Apple"), ("b", "Banana")])
+        assert field_choices(field) == [
+            {"value": "a", "label": "Apple"},
+            {"value": "b", "label": "Banana"},
+        ]
+
+    def test_decimal_field_metadata_includes_decimal_places(self) -> None:
+        from django.db import models
+
+        from django_admin_react.api.serializers import field_metadata
+
+        field = models.DecimalField(max_digits=6, decimal_places=2)
+        md = field_metadata(
+            field, label="Amount", required=True, readonly=False, help_text="", value="1.00"
+        )
+        assert md["type"] == "decimal"
+        assert md["decimal_places"] == 2
+
+    def test_choices_field_metadata_becomes_choice_type(self) -> None:
+        from django.db import models
+
+        from django_admin_react.api.serializers import field_metadata
+
+        field = models.CharField(max_length=1, choices=[("a", "Apple")])
+        md = field_metadata(
+            field, label="Letter", required=False, readonly=False, help_text="", value="a"
+        )
+        assert md["type"] == "choice"
+        assert md["choices"] == [{"value": "a", "label": "Apple"}]
+
+    def test_fk_with_unresolved_related_model_omits_to(self) -> None:
+        """Defensive guard (serializers.py ``field_metadata``): the
+        ``"self"`` / ``None`` ``related_model`` sentinel only exists during
+        model definition. Pin that the ``to`` block is skipped (not
+        raising) when it's seen, rather than testing it never happens."""
+        from django.db import models
+
+        from django_admin_react.api.serializers import field_metadata
+
+        fk = models.ForeignKey("self", on_delete=models.CASCADE)
+        # cached_property is a non-data descriptor — instance assignment
+        # shadows it, simulating the unresolved-sentinel state.
+        fk.related_model = None
+        md = field_metadata(
+            fk, label="Parent", required=False, readonly=False, help_text="", value=None
+        )
+        assert "to" not in md
