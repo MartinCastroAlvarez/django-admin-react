@@ -298,15 +298,25 @@ See [`docs/ux/states.md`](docs/ux/states.md) for full specs. In short:
 
 ## 10. Theming (consumer customisation)
 
-The supported customisation surface is intentionally tight:
+The supported customisation surface is intentionally tight. The
+**full extensibility contract** (including actions, inlines,
+detail blocks, and custom HTML) lives in
+[`docs/ux/extensibility.md`](docs/ux/extensibility.md); this
+section is only the **theming** slice (X-1 in that contract).
 
-- **CSS variables override.** Consumers ship a `dar-theme.css`
-  before our bundle that re-assigns `--dar-accent`, `--dar-bg`, etc.
-  This is enough for ~90 % of branding needs and does **not**
-  require rebuilding the SPA.
+- **CSS variables override (recommended).** Consumers point
+  `DJANGO_ADMIN_REACT["theme_css"]` at a static CSS file. The
+  package serves it before our bundle, so CSS-variable
+  re-assignments — `--dar-accent`, `--dar-bg`, `--dar-radius-md`,
+  etc. — win the cascade. Editing the file and reloading the
+  page applies the change **without rebuilding the SPA and
+  without restarting Django** (mapped to `ACCEPTANCE.md` §2.9
+  E-5a).
 - **Tailwind config extension** (advanced). A consumer who builds
   from source can extend `tailwind.config.js` to add or recolour
-  classes. Documented under "fork your bundle".
+  classes. Documented under "fork your bundle" — only required
+  for shape / token changes the CSS-variable surface doesn't
+  cover.
 
 Out of scope:
 

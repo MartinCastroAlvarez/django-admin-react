@@ -1,0 +1,513 @@
+# Extensibility contract
+
+Owner: PM/UX lane.
+Status: draft. Architect + Security must co-sign before any
+implementation PR opens (see
+[`forum/UX-DIRECTIVE-extensibility-contract.md`](../../forum/UX-DIRECTIVE-extensibility-contract.md)).
+
+This document defines **what consumers can customise** in
+`django-admin-react` without forking the package, and **how** that
+customisation flows from `ModelAdmin` to the SPA. It is a PM/UX
+contract: it specifies the user-facing surface, not the
+implementation. The architecture lives in
+[`ARCHITECTURE.md`](../../ARCHITECTURE.md); the threat model lives in
+[`SECURITY.md`](../../SECURITY.md).
+
+---
+
+## 0. Tension this document resolves
+
+The repo owner stated:
+
+> django-admin-react should be plug-and-play (minimal configuration
+> needed such as adding to settings.py and then setting the url)
+> but also can be extensible (for example, some users might want to
+> customize the CSS, some users might want to add new actions to
+> the admin which would be picked by the dropdown selector, some
+> users might want to add custom reports in some detail pages,
+> inlines should be supported but reusing the django admin inline
+> definitions) — for adding custom HTML in some detail pages,
+> please work hand in hand with the software architect and security
+> expert to make it happen in a seamless way but also well
+> architectured and secure.
+
+The two halves are in tension:
+
+- **Plug-and-play** wants zero config beyond `INSTALLED_APPS` +
+  `include()` (existing `ACCEPTANCE.md` §2.1 P-1..P-5).
+- **Extensible** wants additional knobs.
+
+The contract: each knob has a **default-off, opt-in** path that
+preserves plug-and-play for the 80 % consumer who needs nothing
+beyond `ModelAdmin`, while exposing the 20 % consumer to the
+extension surface declared here.
+
+---
+
+## 1. Extension surfaces — at a glance
+
+| # | Surface                       | Source of truth                              | Opt-in path                                           | Default for the 80 % consumer |
+| - | ----------------------------- | -------------------------------------------- | ----------------------------------------------------- | ---------------------------- |
+| X-1 | CSS / theming               | A static CSS file in the consumer's project  | `DJANGO_ADMIN_REACT["theme_css"] = "path/to/theme.css"` | Default tokens; no extra files. |
+| X-2 | Custom admin actions        | `ModelAdmin.actions` (Django's own contract) | Just define them on `ModelAdmin`.                     | No actions → no dropdown.    |
+| X-3 | Bulk row selection          | The SPA list page (built-in)                 | Auto-enabled when any X-2 action exists.              | Hidden when X-2 is empty.    |
+| X-4 | Inlines                     | `ModelAdmin.inlines` (Django's own contract) | Just define inline classes.                           | No inlines → no inline section. |
+| X-5 | Custom detail blocks ("reports") | New `ModelAdmin.get_detail_blocks(request, obj)` hook | Return a list of typed block descriptors.        | Returns `[]` → no extra blocks. |
+| X-6 | Custom HTML in detail blocks | A specific block type (`type: "html"`) under X-5 | Server returns sanitised HTML; SPA renders it.    | Not used unless X-5 returns it. |
+| X-7 | Custom React components     | **Not supported in v1.** See §10.            | n/a                                                   | n/a                          |
+
+Each row of this table has a section below. The shared invariant
+across all of them:
+
+> Extensibility never requires the consumer to touch React, build
+> the SPA, or know `frontend/` exists.
+
+This invariant maps to **D-3** in `ACCEPTANCE.md` §2.2.
+
+---
+
+## 2. X-1 — CSS / theming
+
+### Goal
+
+Consumer overrides colour, spacing accents, typography accents — at
+*runtime*, no rebuild — by pointing at a CSS file.
+
+### Contract
+
+- New optional setting in
+  [`conf.py`](../../django_admin_react/conf.py) DEFAULTS:
+
+  ```python
+  "theme_css": None,  # str | None — path resolvable by Django staticfiles
+  ```
+
+- When set, the package serves the CSS file at a known URL and
+  injects a `<link rel="stylesheet">` *before* the bundled CSS so
+  CSS variables in the consumer's file win the cascade.
+- The consumer's file overrides CSS variables only — `--dar-accent`,
+  `--dar-bg`, `--dar-radius-md`, etc. Full token list lives in
+  [`DESIGN_SYSTEM.md`](../../DESIGN_SYSTEM.md) §3.
+
+### What we never do
+
+- Run the consumer's CSS through a build step at runtime.
+- Allow arbitrary `@import` of external stylesheets — same CSP rule
+  the rest of the SPA obeys (no third-party origins).
+
+### UX expectations
+
+- Editing the CSS file and reloading the page applies the new
+  theme. No restart of `runserver` required.
+- A clearly-malformed CSS file does not crash the SPA — the SPA
+  falls back to default tokens, no white screen.
+
+### Acceptance
+
+Maps to **E-5** in `ACCEPTANCE.md` §2.9, plus a new **E-5a** for
+the runtime-no-rebuild behaviour.
+
+---
+
+## 3. X-2 — Custom admin actions
+
+### Goal
+
+The consumer's existing `ModelAdmin.actions` is the source of
+truth. Adding an action to `ModelAdmin.actions` causes it to
+appear in the SPA's action dropdown on the list page, **without
+any frontend change**. The behaviour matches Django's HTML admin:
+the user ticks rows, picks an action from a dropdown, hits "Go".
+
+### Contract
+
+- Backend exposes the action metadata in the list-page response
+  (`GET /api/v1/<app>/<model>/`) under a new `actions` key:
+
+  ```json
+  {
+    "actions": [
+      {
+        "name": "make_published",
+        "label": "Mark selected as published",
+        "description": "Publishes the chosen items.",
+        "requires_confirmation": false
+      }
+    ]
+  }
+  ```
+
+  Source: `ModelAdmin.get_actions(request)`. Permissions are
+  applied server-side, exactly as in `django.contrib.admin`.
+
+- Backend exposes an invocation endpoint:
+
+  ```
+  POST /api/v1/<app>/<model>/actions/<action_name>/
+  Body: {"pks": [1, 7, 12]}
+  ```
+
+  Response is either `{"status": "ok", "summary": "3 items
+  updated."}` or a Django messages payload — Architect to specify
+  the exact shape.
+
+### SPA UX
+
+- Above the list table, when **at least one** action is enabled
+  for the current user on the current model:
+  - Render a checkbox column on the table.
+  - Render the dropdown + "Go" button matching Django's HTML
+    admin layout, but styled per `DESIGN_SYSTEM.md`.
+  - The dropdown reads from `actions` in the list payload.
+- When no actions are available, the entire action toolbar is
+  hidden — the table shows no checkboxes, no dropdown.
+- Confirmation flow: `requires_confirmation: true` actions
+  trigger a Dialog with the count + action name; "Cancel" /
+  "Run" buttons. The `delete_selected` built-in action is always
+  `requires_confirmation: true`.
+- Long-running actions: the "Go" button spins ([`states.md`](states.md)
+  §1) until the request resolves. No skeleton — this is a
+  button state.
+
+### What we never do
+
+- Trust a client-side action name we don't recognise. Server
+  rejects with 400 if the requested action is not in
+  `get_actions(request)`.
+- Run an action the user lacks permission for. Server enforces
+  before dispatching.
+
+### Acceptance
+
+New criteria **E-6 a/b/c** in `ACCEPTANCE.md` §2.9 (drafted
+below in §11).
+
+---
+
+## 4. X-3 — Bulk row selection
+
+Trivial follow-on of X-2. When the SPA renders the action
+dropdown (X-2), the table grows a checkbox column. Master
+checkbox in the header toggles all *visible* rows (one page,
+not the whole queryset).
+
+Selection state is **not persisted** across page changes — that
+is the same trade-off Django's HTML admin makes. A future "select
+across all pages" flow is v1.x.
+
+---
+
+## 5. X-4 — Inlines
+
+### Goal
+
+`ModelAdmin.inlines = [BookInline]` is the source of truth.
+Reusing `InlineModelAdmin`, `TabularInline`, `StackedInline` —
+the same classes the consumer already wrote for the HTML admin.
+**No new Django-side definition step.**
+
+### Contract (PM/UX requirements — Architect designs the API shape)
+
+- The detail response (`GET /api/v1/<app>/<model>/<pk>/`) MUST
+  include an `inlines: [...]` array describing each inline's:
+  - `name` (the inline's underscore-cased class name),
+  - `related_model` (e.g. `library.book`),
+  - `fk_field` (the parent-pointing FK),
+  - `display_kind` (`"tabular"` | `"stacked"`),
+  - `fields`, `readonly_fields`, `extra`, `max_num`,
+  - `permissions` for the inline's model (add / change / delete
+    booleans, computed via `InlineModelAdmin.has_*_permission`),
+  - and a `data` URL or embedded payload to populate it.
+
+- Atomic save: a single `PATCH /api/v1/<app>/<model>/<pk>/`
+  must accept inline child edits in the request body and either
+  commit all changes in one transaction or reject all changes
+  with a per-field error envelope.
+
+### SPA UX
+
+- After the parent form, render each inline as a section card
+  ([`DESIGN_SYSTEM.md`](../../DESIGN_SYSTEM.md) §6 Layout — `Card`):
+  - `display_kind: "tabular"` → a table with one row per child
+    object; "Add row" button at the bottom (if
+    `has_add_permission`); per-row delete (×) if
+    `has_delete_permission`.
+  - `display_kind: "stacked"` → each child rendered as a
+    collapsed-by-default expandable subform.
+- Validation errors on a child surface on that child's row /
+  card, not on the parent.
+- Optimistic UX rules from [`states.md`](states.md) §4 apply
+  to inline edits.
+
+### What we never do
+
+- Build a parallel inline definition system in JavaScript.
+- Render `inlines` whose related model is not registered with
+  the AdminSite (we 404 / hide it).
+- Allow editing child objects the user has no permission for —
+  the SPA must hide the controls; the server must reject if
+  the SPA misbehaves.
+
+### Acceptance
+
+New criteria **E-7 a/b/c** in `ACCEPTANCE.md` §2.9.
+
+---
+
+## 6. X-5 — Custom detail blocks ("reports")
+
+### Goal
+
+A `ModelAdmin` can return one or more "blocks" to render on the
+detail page beyond the form and inlines — a chart, a stats card,
+a related-data table — without any frontend code change.
+
+### Contract (PM/UX requirements)
+
+- New optional hook on `ModelAdmin`:
+
+  ```python
+  def get_detail_blocks(self, request, obj):
+      return [
+          {
+              "title": "Recent transactions",
+              "placement": "after_form",   # before_form | after_form | sidebar
+              "type": "table",             # see §6.1
+              "payload": { ... typed ... },
+          },
+      ]
+  ```
+
+  Default implementation returns `[]`.
+
+- The detail endpoint (`GET /api/v1/<app>/<model>/<pk>/`)
+  serialises the result under `detail_blocks: [...]`.
+
+### 6.1 Allowed block types (closed set in v0.1)
+
+| `type`         | Payload shape                                                       | Renders as                                          |
+| -------------- | ------------------------------------------------------------------- | --------------------------------------------------- |
+| `"stats"`      | `{items: [{label, value, hint?}]}`                                 | Stat cards row.                                     |
+| `"table"`      | `{columns: [{key, label}], rows: [{key: value}]}`                  | Read-only `Table` primitive.                        |
+| `"description_list"` | `{items: [{label, value}]}`                                  | `<dl>` styled per design tokens.                    |
+| `"markdown"`   | `{markdown: "string"}`                                              | Server-rendered → client-rendered through a fixed allowlist of tags (no scripts, no inline events, no iframes). |
+| `"html"`       | `{html: "<sanitised string>"}`                                      | See §7 below — **only** if Security signs off. |
+
+Block types are a closed enum in v0.1. New types require a
+`docs/agents/decisions.md` entry and an Architect + Security
+review.
+
+### SPA UX
+
+- Blocks render in declaration order, per their `placement` slot.
+- A `placement: "sidebar"` block on mobile collapses below the
+  form.
+- A failed block (server returned an error for it) renders an
+  `ErrorState` primitive scoped to that block — the rest of the
+  page keeps working.
+- Blocks respect the page's loading rules
+  ([`states.md`](states.md) §1) — they have their own skeleton
+  on first paint.
+
+### What we never do
+
+- Allow a block type the SPA doesn't know — unrecognised `type`
+  is silently dropped client-side and logged as a warning.
+- Trust block payloads to be safe HTML by default. See §7.
+
+### Acceptance
+
+New criteria **E-8 a/b/c** in `ACCEPTANCE.md` §2.9.
+
+---
+
+## 7. X-6 — Custom HTML in detail blocks (`type: "html"`)
+
+This is the most security-sensitive surface. **PM/UX defers the
+final design to Architect + Security** and documents only the
+acceptance bar here.
+
+### Non-negotiable invariants
+
+1. **Server is the trust boundary.** Sanitisation happens
+   server-side, before the payload leaves Django. Client never
+   re-parses arbitrary HTML through `dangerouslySetInnerHTML`
+   without it having been through the server sanitiser.
+
+2. **Default safe.** The default sanitiser implementation is
+   strict: tags allowlisted to a small set (`p`, `ul`, `ol`,
+   `li`, `strong`, `em`, `a`, `code`, `pre`, `table`, `thead`,
+   `tbody`, `tr`, `th`, `td`, `h2`, `h3`, `h4`, `br`, `hr`);
+   attributes allowlisted (`href` on `a` with `http(s):` only;
+   `colspan`/`rowspan` on table cells); no `style`, no `class`
+   except a documented allowlist of `dar-*` classes; no `script`,
+   `iframe`, `object`, `embed`, `form`, event handlers, or
+   inline `style`.
+
+3. **Sanitiser is opt-out, not opt-in.** A `ModelAdmin` that
+   returns an `html` block is sanitised by default. Opting out
+   requires `DJANGO_ADMIN_REACT["allow_unsafe_html"] = True` in
+   settings *and* a log line every time it serves an
+   un-sanitised block. (Architect + Security: confirm or revise.)
+
+4. **CSP-friendly.** No inline `<script>` is ever emitted —
+   `Content-Security-Policy: script-src 'self'` must remain
+   sound. (Security to lock the CSP spec.)
+
+5. **Auditability.** Every served `html` block is logged
+   server-side with the consumer's package version + the
+   sanitiser version that processed it.
+
+### Preferred design (PM/UX recommendation, non-binding)
+
+PM/UX prefers a **structured-JSON-first** approach: most "custom
+reports" can be expressed as `stats`/`table`/`description_list`
+blocks (§6.1). The `html` type is the escape hatch, not the
+default. The Architect should make `html` feel one step harder
+to reach than the structured types in the docs and examples.
+
+### What we never do
+
+- Render server HTML in the SPA without going through the
+  sanitiser.
+- Accept HTML from the client and echo it back to other users
+  (the consumer's server-side admin is the only HTML source —
+  user-typed admin form HTML is plain text, never executed).
+- Allow a `ModelAdmin` block to install arbitrary CSS into the
+  page. Stylesheet additions go through X-1.
+
+### Open questions for Architect + Security
+
+These are tracked in
+[`forum/UX-DIRECTIVE-extensibility-contract.md`](../../forum/UX-DIRECTIVE-extensibility-contract.md)
+and must be resolved before any implementation PR opens:
+
+- **Q-EXT-01 (Security):** which sanitiser library — `bleach`,
+  `nh3`, hand-rolled? Latency budget for a typical block?
+- **Q-EXT-02 (Architect):** does the `html` block schema embed a
+  `sanitiser_version` field for forward-compat?
+- **Q-EXT-03 (Security):** CSP additions needed to safely allow
+  `style-src` for tokens-only?
+- **Q-EXT-04 (Both):** does `allow_unsafe_html=True` require an
+  additional staff-level confirmation (refuses to serve to
+  non-superusers, even with the setting on)?
+
+### Acceptance
+
+New criterion **E-9** in `ACCEPTANCE.md` §2.9, gated on
+Security sign-off in [`SECURITY.md`](../../SECURITY.md).
+
+---
+
+## 8. The "plug-and-play default" invariant
+
+A consumer who *only* runs:
+
+```
+pip install django-admin-react
+```
+
+and adds the app + URL get:
+
+- No custom CSS (default theme).
+- No actions on any model (unless their existing `ModelAdmin`s
+  already had them — X-2 is opt-in by definition since most
+  `ModelAdmin`s have empty `actions`).
+- No inlines visible (unless their `ModelAdmin` already had
+  `inlines`).
+- No detail blocks (`get_detail_blocks` defaults to `[]`).
+- No HTML rendering — the `html` block type is server-side opt-in.
+
+This is the **80 % consumer**. P-1..P-5 must still hold.
+
+A consumer who *opts in* gets the extensibility surface above,
+each one independently, without forcing them to learn React or
+edit `frontend/`.
+
+---
+
+## 9. What is explicitly NOT extensible in v0.1
+
+- **No React-side plugin / extension API.** Consumers do not
+  ship React code, ever. This is the long-standing
+  `ARCHITECTURE.md` §8 position; we keep it.
+- **No custom widgets** beyond the closed type vocabulary in
+  [`docs/api-contract.md`](../api-contract.md) §4. A custom
+  field-rendering need is a follow-up to `get_detail_blocks` —
+  build a `markdown` or `description_list` block instead.
+- **No multi-`AdminSite` support.** v0.1 binds to one configured
+  site.
+- **No theme runtime swap beyond light/dark.** CSS file is fixed
+  per deploy; we don't let users switch themes via the UI in
+  v0.1.
+
+---
+
+## 10. Roadmap implications
+
+This document promotes the following items from
+`ACCEPTANCE.md` §2.10 v1 non-goals into §2.9 v1 in-scope:
+
+- Inlines (X-4).
+- Custom admin actions (X-2) + bulk row selection (X-3).
+- A constrained "custom widgets / blocks" surface (X-5 / X-6),
+  framed as **detail blocks** rather than as widgets.
+
+Items that **remain** in §2.10 v1 non-goals after this directive:
+
+- React-side plugin / extension API.
+- Server-rendered HTML *fallback pages* (we render via the SPA
+  using the `html` block type, not as a server-rendered page).
+- Runtime Tailwind config swap.
+- Multi-`AdminSite` support.
+- i18n beyond `LANGUAGE_CODE` defaults.
+
+The promotion of X-4 / X-5 / X-6 may push v0.1 by one PR cycle.
+PM/UX recommends sequencing in [`PLAN.md`](../../PLAN.md) §2:
+
+- **PR #9** (new): backend hooks for X-2/X-3.
+- **PR #10** (new): backend hooks for X-4 (inlines) + X-5
+  (detail blocks).
+- **PR #11** (new): X-6 (html block + sanitiser) — Security
+  approval gate.
+- **PR #6 / #7** (existing): SPA consumes X-1..X-5 as it
+  renders.
+
+Final sequencing decision is the Architect's lane — recorded in
+the forum thread for this directive.
+
+---
+
+## 11. Acceptance criteria additions (drafted; Architect + Security
+co-sign before they land in `ACCEPTANCE.md`)
+
+The following extend `ACCEPTANCE.md` §2.9 "Extensibility UX":
+
+| # | Criterion | How to verify |
+| - | --------- | ------------- |
+| E-5a | Consumer can swap their `theme_css` file and reload the SPA with no rebuild and no Django restart. | Edit the file, hit reload, see new colours. |
+| E-6a | Adding `actions = [my_action]` to an existing `ModelAdmin` causes the SPA list page to show the action dropdown + checkbox column, with no frontend change. | Add `make_published` to `Account`; reload list page. |
+| E-6b | An action invocation respects `ModelAdmin.has_*_permission` server-side; the SPA does not even render the action if the user lacks the perm. | Toggle perm, observe. |
+| E-6c | An action that defines `short_description` shows that label in the dropdown; an action that raises an exception renders a toast with the message, never crashes the SPA. | Two example actions covering both paths. |
+| E-7a | Adding `inlines = [BookInline]` to an existing `ModelAdmin` causes the SPA detail page to render the inline section, with no frontend change. | Add an inline to `Author`; open an author's detail. |
+| E-7b | Saving a parent + inline edits hits the server as one atomic PATCH; a validation error on a child rolls back the parent. | Force a child validation error; confirm parent unchanged. |
+| E-7c | A `StackedInline` renders as stacked, a `TabularInline` renders as tabular — the SPA respects the consumer's choice. | Two examples in `examples/library`. |
+| E-8a | Returning a non-empty `get_detail_blocks` from a `ModelAdmin` causes the SPA detail page to render the blocks in their declared `placement` slot. | Add a `stats` block; observe. |
+| E-8b | A block of an unrecognised `type` is silently dropped client-side and logged server-side. | Push a fake `type` in an example; observe console + server log. |
+| E-8c | A block whose server-side computation fails renders an `ErrorState` scoped to that block; sibling blocks keep rendering. | Force a block to raise; observe. |
+| E-9  | A `type: "html"` block runs through the configured sanitiser before reaching the SPA; `<script>` tags and inline event handlers never survive the round-trip. | Try to slip a `<script>` through; observe stripped output. **Security must sign off** before this row turns from drafted to live. |
+
+---
+
+## 12. Cross-references
+
+- [`DESIGN_SYSTEM.md`](../../DESIGN_SYSTEM.md) — design tokens,
+  primitives, theming.
+- [`ARCHITECTURE.md`](../../ARCHITECTURE.md) §5, §8 — extension
+  surfaces from the architecture lane (Architect updates).
+- [`SECURITY.md`](../../SECURITY.md) — threat model, including the
+  sanitiser spec for X-6 (Security updates).
+- [`docs/api-contract.md`](../api-contract.md) — endpoint shapes
+  Architect adds for X-2 / X-4 / X-5.
+- [`forum/UX-DIRECTIVE-extensibility-contract.md`](../../forum/UX-DIRECTIVE-extensibility-contract.md)
+  — coordination thread; cross-role open questions live there.
