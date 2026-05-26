@@ -31,6 +31,7 @@ from django_admin_react.api.registry import resolve_model
 from django_admin_react.api.views.detail import _build_payload
 from django_admin_react.api.writes import form_errors_to_envelope
 from django_admin_react.api.writes import load_object_or_none
+from django_admin_react.api.writes import log_change
 from django_admin_react.api.writes import merged_initial_for_update
 from django_admin_react.api.writes import not_found_response
 from django_admin_react.api.writes import parse_json_body
@@ -112,6 +113,7 @@ class UpdateView(View):
             instance = form.save(commit=False)
             model_admin.save_model(request, instance, form, change=True)
             form.save_m2m()
+            log_change(model_admin, request, instance, form)
 
         response = JsonResponse(
             _build_payload(model, model_admin, instance, request),

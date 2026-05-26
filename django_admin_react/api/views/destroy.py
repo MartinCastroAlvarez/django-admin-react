@@ -27,6 +27,7 @@ from django_admin_react.api.permissions import is_admin_user
 from django_admin_react.api.registry import get_admin_site
 from django_admin_react.api.registry import resolve_model
 from django_admin_react.api.writes import load_object_or_none
+from django_admin_react.api.writes import log_deletion
 from django_admin_react.api.writes import not_found_response
 
 
@@ -82,6 +83,9 @@ class DestroyView(View):
             return forbidden_response(request)
 
         with transaction.atomic():
+            # Log BEFORE the delete while ``obj`` still has its pk —
+            # matches the order ``django.contrib.admin`` uses.
+            log_deletion(model_admin, request, obj)
             model_admin.delete_model(request, obj)
 
         response = HttpResponse(status=204)
