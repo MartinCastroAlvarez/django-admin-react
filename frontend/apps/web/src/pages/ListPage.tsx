@@ -18,7 +18,7 @@ import {
   type FilterOption,
   type ListRow,
 } from '@dar/data';
-import { Card, EmptyState, Input, Spinner, Table } from '@dar/ui';
+import { Button, Card, EmptyState, Input, Modal, Spinner, Table } from '@dar/ui';
 
 import { FieldValueView } from '../components/FieldValueView';
 
@@ -66,6 +66,9 @@ export function ListPage() {
   const [selected, setSelected] = useState<Set<string | number>>(new Set());
   const [actionsOpen, setActionsOpen] = useState(false);
   const [runningAction, setRunningAction] = useState(false);
+  // Action pending confirmation — drives the styled confirm Modal
+  // (#206) instead of a native window.confirm.
+  const [pendingAction, setPendingAction] = useState<ActionDescriptor | null>(null);
 
   // Debounced search: commit `q` to the URL ~300ms after the user
   // stops typing, so the list refetches without a keystroke flood
@@ -128,17 +131,23 @@ export function ListPage() {
     setSelected(() => (checked ? new Set(pageRows.map((r) => r.pk)) : new Set()));
   }
 
-  async function runAction(action: ActionDescriptor): Promise<void> {
-    const pks = Array.from(selected);
-    if (pks.length === 0 || runningAction) return;
-    if (
-      action.requires_confirmation &&
-      !window.confirm(`Run “${action.label}” on ${pks.length} selected item(s)?`)
-    ) {
-      return;
-    }
-    setRunningAction(true);
+  // Clicking an action: destructive ones open the styled confirm
+  // Modal (#206); the rest run immediately.
+  function requestAction(action: ActionDescriptor): void {
+    if (Array.from(selected).length === 0 || runningAction) return;
     setActionsOpen(false);
+    if (action.requires_confirmation) {
+      setPendingAction(action);
+    } else {
+      void executeAction(action);
+    }
+  }
+
+  async function executeAction(action: ActionDescriptor): Promise<void> {
+    const pks = Array.from(selected);
+    if (pks.length === 0) return;
+    setRunningAction(true);
+    setPendingAction(null);
     try {
       const res = await client.runAction(appLabel, modelName, action.name, pks);
       if (res.redirect) {
@@ -191,8 +200,7 @@ export function ListPage() {
             to={`/${appLabel}/${modelName}/add`}
             className="shrink-0 rounded-md border border-blue-600 bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
           >
-            + Add{' '}
-            {data.verbose_name ? capitalize(data.verbose_name) : modelName}
+            + Add {data.verbose_name ? capitalize(data.verbose_name) : modelName}
           </Link>
         )}
       </header>
@@ -223,7 +231,7 @@ export function ListPage() {
                     key={a.name}
                     type="button"
                     role="menuitem"
-                    onClick={() => void runAction(a)}
+                    onClick={() => requestAction(a)}
                     className="block w-full px-3 py-2 text-left text-sm hover:bg-gray-100"
                     title={a.description}
                   >
@@ -359,6 +367,34 @@ export function ListPage() {
           onClose={() => setFilterOpen(false)}
         />
       )}
+
+      {/* Styled action-confirm (#206) — shares the @dar/ui Modal's
+          translucent overlay with the filter modal, replacing the
+          native window.confirm. */}
+      <Modal
+        open={pendingAction !== null}
+        onClose={() => setPendingAction(null)}
+        title="Confirm action"
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setPendingAction(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              disabled={runningAction}
+              onClick={() => pendingAction && void executeAction(pendingAction)}
+            >
+              {runningAction ? 'Running…' : 'Confirm'}
+            </Button>
+          </>
+        }
+      >
+        <p className="text-sm text-gray-700">
+          Run <span className="font-medium">{pendingAction?.label}</span> on {selected.size}{' '}
+          selected {selected.size === 1 ? 'object' : 'objects'}?
+        </p>
+      </Modal>
     </div>
   );
 }
@@ -553,8 +589,7 @@ interface DateHierarchyStripProps {
 function DateHierarchyStrip({ dh, onDrill, onUp }: DateHierarchyStripProps) {
   const { year, month, day } = dh.active;
   // The next drill level is the first granularity not yet pinned.
-  const level: 'year' | 'month' | 'day' =
-    year == null ? 'year' : month == null ? 'month' : 'day';
+  const level: 'year' | 'month' | 'day' = year == null ? 'year' : month == null ? 'month' : 'day';
 
   const bucketLabel = (value: number): string => {
     if (level === 'month') return MONTH_NAMES[value - 1] ?? String(value);
