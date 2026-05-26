@@ -37,6 +37,7 @@ from django_admin_react.api.serializers import field_metadata
 from django_admin_react.api.serializers import filter_sensitive
 from django_admin_react.api.serializers import is_sensitive_field_name
 from django_admin_react.api.serializers import label_for
+from django_admin_react.api.serializers import safe_get_field
 from django_admin_react.api.serializers import serialize_fk_value
 from django_admin_react.api.serializers import serialize_value
 from django_admin_react.api.writes import load_object_or_none
@@ -211,7 +212,7 @@ def _descriptor_for(
     is_readonly: bool,
 ) -> dict[str, Any]:
     """Per-field descriptor for one ``visible_names`` entry."""
-    model_field = _safe_get_field(model, name)
+    model_field = safe_get_field(model, name)
     if model_field is None:
         return _readonly_callable_descriptor(model_admin, model, obj, name)
 
@@ -267,14 +268,6 @@ def _readonly_callable_descriptor(
 # --------------------------------------------------------------------------- #
 # Internals                                                                   #
 # --------------------------------------------------------------------------- #
-def _safe_get_field(model: type[Model], name: str):
-    """Return ``model._meta.get_field(name)`` or ``None`` if not found."""
-    try:
-        return model._meta.get_field(name)
-    except Exception:
-        return None
-
-
 def _field_label(model_admin: ModelAdmin, model: type[Model], name: str) -> str:
     """Human-readable label for a field (Django's own helper, with fallback)."""
     try:

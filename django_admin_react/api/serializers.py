@@ -100,6 +100,25 @@ def label_for(obj: Model) -> str:
         return f"<{obj.__class__.__name__}: {obj.pk}>"
 
 
+def safe_get_field(model_or_instance: type[Model] | Model, name: str) -> Field | None:
+    """Return ``_meta.get_field(name)`` or ``None`` if there is no such field.
+
+    Accepts either a model class or a model instance — both expose
+    ``_meta`` and Django dispatches identically. Returning ``None``
+    lets callers branch cleanly on "is this a real field?" without
+    knowing that ``get_field`` raises ``FieldDoesNotExist``.
+
+    Centralized so the read/write code paths that need this lookup
+    share one implementation; previously each had a private copy,
+    which is one bug fix in three places (see
+    ``docs/architect-verdict-2026-05-26.md`` Condition A).
+    """
+    try:
+        return model_or_instance._meta.get_field(name)
+    except Exception:
+        return None
+
+
 _TYPE_BY_INTERNAL: Final[dict[str, str]] = {
     "AutoField": "integer",
     "BigAutoField": "integer",
