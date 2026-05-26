@@ -199,6 +199,35 @@ def test_custom_action_runs_over_narrowed_queryset(superuser_client: Client) -> 
 
 
 @pytest.mark.django_db
+def test_delete_selected_confirmed_actually_deletes(superuser_client: Client) -> None:
+    """``delete_selected`` with ``confirmed: true`` deletes the rows.
+
+    The SPA runs its own confirm dialog, so it POSTs ``confirmed`` —
+    the runner must signal that to Django's two-phase
+    ``delete_selected`` (which only deletes when ``request.POST['post']``
+    is set, otherwise just renders the confirmation page). Without the
+    fix the confirm would no-op: a page rendered server-side, nothing
+    deleted.
+    """
+    User = get_user_model()
+    doomed1 = User.objects.create_user(username="doomed1", password="x")  # noqa: S106
+    doomed2 = User.objects.create_user(username="doomed2", password="x")  # noqa: S106
+    survivor = User.objects.create_user(username="survivor", password="x")  # noqa: S106
+
+    response = superuser_client.post(
+        ACTIONS_BASE + "delete_selected/",
+        data=f'{{"pks": [{doomed1.pk}, {doomed2.pk}], "confirmed": true}}',
+        content_type="application/json",
+    )
+
+    assert response.status_code == 200
+    assert response.json()["executed"] is True
+    # The selected rows are gone; the un-selected row remains.
+    assert not User.objects.filter(pk__in=[doomed1.pk, doomed2.pk]).exists()
+    assert User.objects.filter(pk=survivor.pk).exists()
+
+
+@pytest.mark.django_db
 def test_action_respects_get_queryset(superuser_client: Client) -> None:
     """Action cannot reach a row the admin's get_queryset excludes."""
     User = get_user_model()

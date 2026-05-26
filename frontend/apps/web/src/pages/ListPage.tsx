@@ -194,11 +194,12 @@ export function ListPage() {
     setRunningAction(true);
     setPendingAction(null);
     try {
-      const res = await client.runAction(appLabel, modelName, action.name, pks);
-      if (res.redirect) {
-        window.location.assign(res.redirect);
-        return;
-      }
+      // Run the action over the wire and stay in the SPA: the styled
+      // confirm modal already replaced Django's intermediate
+      // confirmation page (the request carries `confirmed`), so we
+      // never follow a server-side redirect / full-page navigation.
+      // Clear the selection and re-validate the list in place.
+      await client.runAction(appLabel, modelName, action.name, pks);
       setSelected(new Set());
       await refresh();
     } finally {

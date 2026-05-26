@@ -102,6 +102,19 @@ class ActionView(View):
         if not isinstance(pks, list) or not pks:
             return bad_request("`pks` must be a non-empty list.")
 
+        # The SPA runs its own styled confirm dialog, which stands in
+        # for Django's intermediate HTML confirmation page. When it
+        # reports the user confirmed, signal that to two-phase actions
+        # that gate on the admin's ``post`` flag — most importantly the
+        # built-in ``delete_selected``, which only deletes (via
+        # ``ModelAdmin.delete_queryset``) when ``request.POST['post']``
+        # is set and otherwise just renders the confirmation page.
+        # Without this the SPA confirm would no-op: the page would be
+        # rendered server-side and nothing deleted.
+        if payload.get("confirmed"):
+            request.POST = request.POST.copy()
+            request.POST["post"] = "yes"
+
         # Narrow the queryset by both the admin's own get_queryset
         # (Rule 10) AND the pk filter. Order matters: get_queryset
         # FIRST, so the pk filter only sees rows the user could
