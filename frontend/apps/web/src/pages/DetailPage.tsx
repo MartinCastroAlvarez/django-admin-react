@@ -4,8 +4,10 @@
 // any inlines (#54). Edit mode swaps each field row for a FieldInput
 // (honouring readonly + type); Save PATCHes via updateObject and
 // surfaces field-level errors from the validation envelope. Delete
-// confirms inline, then DELETEs and returns to the list. Edit/Delete
-// are gated by the `permissions` block the API returns.
+// opens a confirm dialog — the shared @dar/ui Modal (translucent dark
+// overlay, Esc / backdrop close), the same primitive the list's filter
+// and bulk-action confirms use — then DELETEs and returns to the list.
+// Edit/Delete are gated by the `permissions` block the API returns.
 
 import { useCallback, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
@@ -23,7 +25,7 @@ import {
   type InlineWritePayload,
   type WriteValue,
 } from '@dar/data';
-import { Button, Card, EmptyState, Spinner, Table } from '@dar/ui';
+import { Button, Card, EmptyState, Modal, Spinner, Table } from '@dar/ui';
 
 import { FieldInput } from '../components/FieldInput';
 import { FieldValueView } from '../components/FieldValueView';
@@ -288,42 +290,63 @@ interface DeleteButtonProps {
   onConfirm: () => Promise<void>;
 }
 
+// Delete affordance: a danger button that opens a proper confirm dialog
+// (the shared @dar/ui Modal — translucent overlay, Esc / backdrop close)
+// rather than an inline button row. While the DELETE is in flight the
+// modal can't be dismissed (backdrop/Esc/Cancel are disabled) so the
+// user can't fire it twice or navigate away mid-request.
 function DeleteButton({ label, onConfirm }: DeleteButtonProps) {
-  const [confirming, setConfirming] = useState(false);
+  const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  if (!confirming) {
-    return (
-      <Button variant="danger" onClick={() => setConfirming(true)}>
+  const close = () => {
+    if (busy) return;
+    setOpen(false);
+    setErr(null);
+  };
+
+  return (
+    <>
+      <Button variant="danger" onClick={() => setOpen(true)}>
         Delete
       </Button>
-    );
-  }
-  return (
-    <div className="flex items-center gap-2">
-      <span className="text-sm text-gray-600">Delete “{label}”?</span>
-      <Button
-        variant="danger"
-        disabled={busy}
-        onClick={async () => {
-          setBusy(true);
-          setErr(null);
-          try {
-            await onConfirm();
-          } catch (e) {
-            setErr(e instanceof Error ? e.message : 'Delete failed.');
-            setBusy(false);
+      {open && (
+        <Modal
+          title="Delete object"
+          onClose={close}
+          footer={
+            <>
+              <Button variant="secondary" disabled={busy} onClick={close}>
+                Cancel
+              </Button>
+              <Button
+                variant="danger"
+                disabled={busy}
+                onClick={async () => {
+                  setBusy(true);
+                  setErr(null);
+                  try {
+                    await onConfirm();
+                  } catch (e) {
+                    setErr(e instanceof Error ? e.message : 'Delete failed.');
+                    setBusy(false);
+                  }
+                }}
+              >
+                {busy ? 'Deleting…' : 'Delete'}
+              </Button>
+            </>
           }
-        }}
-      >
-        {busy ? 'Deleting…' : 'Confirm'}
-      </Button>
-      <Button variant="secondary" disabled={busy} onClick={() => setConfirming(false)}>
-        Cancel
-      </Button>
-      {err && <span className="text-xs text-red-600">{err}</span>}
-    </div>
+        >
+          <p className="text-sm text-gray-700">
+            Are you sure you want to delete <span className="font-medium">“{label}”</span>? This
+            action cannot be undone.
+          </p>
+          {err && <p className="mt-3 text-sm text-red-600">{err}</p>}
+        </Modal>
+      )}
+    </>
   );
 }
 
