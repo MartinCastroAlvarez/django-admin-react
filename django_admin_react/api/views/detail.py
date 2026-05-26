@@ -21,6 +21,7 @@ from typing import Any
 
 from django.contrib.admin.options import ModelAdmin
 from django.contrib.admin.utils import label_for_field
+from django.contrib.admin.utils import lookup_field
 from django.db.models import FileField
 from django.db.models import ForeignKey
 from django.db.models import ManyToManyField
@@ -284,13 +285,26 @@ def _readonly_callable_descriptor(
     ``ModelAdmin.get_fields`` may include method names or
     ``@admin.display`` callables; those have no model field, so they
     are surfaced as ``type=unsupported`` and ``readonly=True``.
+
+    Resolution uses Django's own ``lookup_field(name, obj,
+    model_admin)`` — the same helper the list view + the legacy admin
+    use — so a method defined on the **ModelAdmin** (the common
+    ``@admin.display def display_x(self, obj)`` pattern, called with
+    ``obj``) resolves correctly, not just methods on the model. A naive
+    ``getattr(obj, name)`` misses admin methods and returns ``None``
+    (Issue #226). The defensive ``except`` keeps a raising method from
+    500-ing the detail endpoint.
     """
-    value = getattr(obj, name, None)
-    if callable(value):
-        try:
-            value = value()
-        except Exception:
-            value = None
+    try:
+        _f, _attr, value = lookup_field(name, obj, model_admin)
+    except Exception:
+        # Fallback: a plain attribute / method on the model instance.
+        value = getattr(obj, name, None)
+        if callable(value):
+            try:
+                value = value()
+            except Exception:
+                value = None
     return {
         "type": "unsupported",
         "label": _field_label(model_admin, model, name),
