@@ -36,7 +36,7 @@ Reference behaviour is Slack switching channels.
   ready" delay.
 - The new route's frame (header, breadcrumb, action bar, table
   chrome) renders in the first frame with the **`Skeleton`**
-  primitive ([`DESIGN_SYSTEM.md`](../../DESIGN_SYSTEM.md) §6) filling
+  primitive ([`DESIGN_SYSTEM.md`](../../DESIGN_SYSTEM.md) §5) filling
   the rows.
 - Skeleton row count = the last known page size for that model
   (default 25). Column count + widths match the list's
