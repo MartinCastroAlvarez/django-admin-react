@@ -74,6 +74,19 @@ def test_actions_include_default_delete(superuser_client: Client) -> None:
             assert action["requires_confirmation"] is True
 
 
+@pytest.mark.django_db
+def test_delete_selected_label_is_interpolated(superuser_client: Client) -> None:
+    """``delete_selected``'s ``%(verbose_name_plural)s`` placeholder is
+    interpolated with the model's plural — never shown raw to the SPA."""
+    response = superuser_client.get(LIST_URL)
+    delete = next(a for a in response.json()["actions"] if a["name"] == "delete_selected")
+    # The raw Django short_description is "Delete selected
+    # %(verbose_name_plural)s"; the SPA must receive the finished label.
+    assert "%(" not in delete["label"]
+    assert "verbose_name_plural" not in delete["label"]
+    assert "users" in delete["label"].lower()  # auth.User → "users"
+
+
 # --------------------------------------------------------------------------- #
 # §6 mandatory matrix on the runner                                           #
 # --------------------------------------------------------------------------- #

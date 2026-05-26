@@ -31,6 +31,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from django.contrib.admin.utils import model_format_dict
 from django.db import transaction
 from django.http import HttpRequest
 from django.http import HttpResponse
@@ -138,9 +139,22 @@ def actions_payload(model_admin: Any, request: HttpRequest) -> list[dict[str, An
     confirmation step regardless — this hint is a UX optimisation.
     """
     raw = model_admin.get_actions(request) or {}
+    # Django's built-in `delete_selected` (and any action whose
+    # `short_description` uses the admin's `%(verbose_name)s` /
+    # `%(verbose_name_plural)s` placeholders) ships a *format string*,
+    # not a finished label — Django interpolates it at render time via
+    # `model_format_dict(opts)`. Do the same here so the SPA shows
+    # "Delete selected files", never the raw "%(verbose_name_plural)s".
+    fmt = model_format_dict(model_admin.model._meta)
     out: list[dict[str, Any]] = []
     for name, (_callable, _resolved_name, description) in raw.items():
-        label = str(description) if description else name
+        raw_label = str(description) if description else name
+        try:
+            label = raw_label % fmt
+        except (KeyError, ValueError, TypeError):
+            # Not a %-format string, or references a key we don't
+            # provide — surface the label verbatim rather than crashing.
+            label = raw_label
         requires_conf = "delete" in (label.lower() + " " + name.lower())
         out.append(
             {
