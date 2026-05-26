@@ -33,7 +33,16 @@ urlpatterns: list = [
     # the wire contract (see ``docs/api-contract.md``), not via Django's
     # ``reverse()``, so a namespace would be dead weight.
     path("api/v1/", include("django_admin_react.api.urls")),
-    # SPA fallback — implemented in PR #6. The catch-all is intentionally
-    # last so any future server-rendered route can take precedence.
+    # The package's own login / logout. These let the package replace
+    # the legacy admin's login when the consumer turns
+    # ``django.contrib.admin`` off — ``SpaIndexView`` falls back to
+    # ``django_admin_react:login`` when no admin login is reachable.
+    # Both reuse Django's session auth (``LoginView`` / ``LogoutView``);
+    # no parallel auth system. Declared before the SPA catch-all so the
+    # literal ``login/`` / ``logout/`` segments aren't swallowed.
+    path("login/", views.DarLoginView.as_view(), name="login"),
+    path("logout/", views.DarLogoutView.as_view(), name="logout"),
+    # SPA fallback. The catch-all is intentionally last so any
+    # server-rendered route above takes precedence.
     re_path(r"^.*$", views.SpaIndexView.as_view(), name="spa_index"),
 ]
