@@ -9,9 +9,13 @@ changing API behavior.
 
 Please **do not open a public GitHub issue** for security problems.
 
-Email: `security@<TO-BE-CONFIGURED>` — until this is configured, open a
-private GitHub Security Advisory on this repository
-(`Security → Advisories → New draft advisory`).
+Open a **private GitHub Security Advisory** on this repository:
+`Security → Advisories → New draft advisory`
+(<https://github.com/MartinCastroAlvarez/django-admin-react/security/advisories/new>).
+
+GitHub routes the advisory to the repository maintainers, gives the
+reporter a structured intake form, and creates the durable record
+the advisory + CVE lifecycle relies on.
 
 We will respond within 5 working days. Critical issues will be patched as
 soon as possible and a CVE requested where appropriate.
