@@ -117,6 +117,8 @@ Use the `ErrorState` primitive.
 | Client lost network                          | Inline banner: "You're offline." Optimistic edits keep working. Reconcile on reconnect. |
 | Server `5xx`                                 | Page-level `ErrorState` with **Retry** button.              |
 | Server `4xx` `validation_failed` on a form   | Field-level errors next to each input (`aria-describedby`). |
+| Server `403` `session_expired`               | Re-login modal — see §3.5. Wire-shape per [`docs/api-contract.md`](../api-contract.md) §6.1. |
+| Server `403` `forbidden` (no session cookie) | Hard redirect to `LOGIN_URL?next=<current-spa-path>`. The SPA has no cached session to fall back on. |
 | Server `403` permission lost mid-flow        | Toast: "You don't have permission anymore." Redirect to list.|
 | Server `404` after navigation                | EmptyState ("This isn't here.") with **Back to list**.      |
 | Unknown error envelope                       | "Something went wrong. Try refreshing." Plus copy-to-clipboard request ID. |
@@ -126,6 +128,78 @@ Use the `ErrorState` primitive.
 - Print a stack trace in the UI.
 - Hide a failure silently because we have a cached payload.
 - Refuse to retry without a page reload.
+- Drop the user on a blank page after session loss. The page they
+  were on stays rendered behind the re-login modal (§3.5).
+
+---
+
+### 3.5 Session-expiry flow
+
+The SPA's behaviour when the user *was* signed in and now isn't.
+Wire shape lives in [`docs/api-contract.md`](../api-contract.md) §10.
+
+#### Detect
+
+Any API response with `error.code === "session_expired"` triggers
+the flow. The SPA inspects every response in `@dar/api`; the data
+layer (`@dar/data`) routes the event to a global `<SessionGate />`
+component mounted at the SPA root.
+
+The SPA does **not** retry the failed request — re-authentication
+is the prerequisite, and re-running a write before re-auth would
+double-fire on reconnect.
+
+#### Re-login modal
+
+- The modal blocks all other interactions: focus-trapped, scroll-
+  locked, `aria-modal="true"`.
+- **The page behind it stays rendered** — no white screen, no
+  navigation. The user sees their previous state behind the modal.
+- Title: "Your session expired".
+- Body: "Sign in again to continue. Your work on this page is
+  still here." (Reassurance is load-bearing — operators panic
+  when admin pages disappear mid-edit.)
+- Primary button: **Sign in** → window.location to
+  `<LOGIN_URL>?next=<current SPA pathname + search>`.
+- No "Cancel" / "Dismiss" — the only path forward is re-auth.
+
+#### After re-login
+
+- Django's login view redirects back to the SPA path from `?next=`.
+- The SPA mounts, `@dar/data` hydrates from `localStorage`, then
+  revalidates the route's queries against the API.
+- Any in-flight optimistic mutations from before the expiry stay in
+  `dar:v1:pending:*` and re-flush on the first successful response.
+  If a re-flush hits a permission failure, the standard rollback
+  flow (§4 step 5) fires.
+
+#### Optional pre-expiry warning
+
+If the consumer sets
+`DJANGO_ADMIN_REACT["SESSION_WARNING_SECONDS"] = N` (positive int):
+
+- The SPA polls `GET /api/v1/session/` at most once per minute.
+- At `expires_at - N` it shows a non-blocking toast:
+  - Body: "Your session expires in `<X minutes>`."
+  - Primary button: **Stay signed in** → `POST /api/v1/session/touch/`
+    (silently re-stamps `request.session`).
+- If the user does nothing, the modal in the previous subsection
+  fires when expiry actually lands.
+
+When `SESSION_WARNING_SECONDS` is unset (default), the toast never
+appears and the modal is the only signal.
+
+#### Banned copy in this flow
+
+The skeleton-loading banned-copy list from §1 still applies — the
+modal must never say "Loading…" while we wait for the redirect.
+The "Sign in" button shows a `Spinner` icon while in-flight (the
+button-action rule from §1) — never a label change.
+
+#### Acceptance cross-reference
+
+- [`ACCEPTANCE.md`](../../ACCEPTANCE.md) §2.7 N-5 (updated for the
+  modal) + N-6 (the warning-toast row).
 
 ---
 
@@ -187,5 +261,7 @@ canonical singletons.
 | Route-transition skeletons (sidebar → table swap) | V-4, N-1, N-2  |
 | Empty states         | V-4, O-5, Q-PM-04      |
 | Error states         | V-4, N-4, N-5          |
+| Session-expiry modal | N-5 (modal flow)       |
+| Session-expiry warning toast | N-6            |
 | Optimistic flush     | data-layer.md §4       |
 | First-paint < 100 ms | N-1, PRODUCT_VISION §7 |
