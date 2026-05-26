@@ -185,6 +185,52 @@ bad query parameter. Out-of-range values are bounds-checked
 (`year ∈ [1, 9999]`, `month ∈ [1, 12]`, `day ∈ [1, 31]`) before
 reaching the ORM.
 
+### 3.2 `GET /api/v1/{app_label}/{model_name}/autocomplete/`
+
+Typeahead endpoint for high-cardinality FK pickers
+(`autocomplete_fields` / `raw_id_fields`). Powered by the **target**
+admin's `search_fields` + `get_search_results`; the package never
+re-implements search semantics.
+
+Query parameters:
+
+| Name        | Type    | Default | Notes                                                            |
+| ----------- | ------- | ------- | ---------------------------------------------------------------- |
+| `q`         | string  | `""`    | Forwarded to target `ModelAdmin.get_search_results(request, qs, q)`. |
+| `page`      | int     | `1`     | 1-indexed.                                                       |
+| `page_size` | int     | `20`    | Clamped to `min(50, MAX_PAGE_SIZE)` — typeahead-specific cap.    |
+
+Response 200:
+
+```json
+{
+  "results": [
+    { "id": 7,  "label": "alice" },
+    { "id": 12, "label": "alfred" }
+  ],
+  "pagination": {
+    "page": 1,
+    "page_size": 20,
+    "has_more": false
+  }
+}
+```
+
+- `has_more` is computed via a fetch-one-extra trick (no `COUNT(*)`
+  on every keystroke).
+- `label` is `str(obj)` (admin's display fallback).
+- Returns `400 bad_request` when the target admin doesn't declare
+  `search_fields` — same condition Django's stock
+  `AdminSite.autocomplete_view` raises as `ImproperlyConfigured`.
+
+Permission posture: gated by the **target** model's
+`has_view_permission` — the user can autocomplete into `auth.User`
+only if their view permission on `User` allows it. Unviewable target
+is 404 (not 403) so the endpoint doesn't reveal "this model exists
+but you can't see it" (Rule 12).
+
+`Cache-Control: no-store` (per-user, search-term-specific payload).
+
 ---
 
 ## 4. `GET /api/v1/{app_label}/{model_name}/{pk}/`

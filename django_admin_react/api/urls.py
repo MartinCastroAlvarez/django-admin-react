@@ -19,6 +19,7 @@ from django.http import HttpResponse
 from django.urls import path
 from django.views.generic import View
 
+from django_admin_react.api.views.autocomplete import AutocompleteView
 from django_admin_react.api.views.create import CreateView
 from django_admin_react.api.views.destroy import DestroyView
 from django_admin_react.api.views.detail import DetailView
@@ -71,6 +72,14 @@ class InstanceView(View):
 
 urlpatterns: list = [
     path("registry/", RegistryView.as_view(), name="registry"),
+    # Autocomplete is more specific than the collection / instance
+    # patterns below — it must be listed FIRST so the literal
+    # ``/autocomplete/`` segment isn't swallowed as a ``<str:pk>``.
+    path(
+        "<str:app_label>/<str:model_name>/autocomplete/",
+        AutocompleteView.as_view(),
+        name="autocomplete",
+    ),
     path(
         "<str:app_label>/<str:model_name>/",
         CollectionView.as_view(),
