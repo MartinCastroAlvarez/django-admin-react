@@ -179,8 +179,8 @@ def test_fk_filter_includes_inline_choices_when_small(
     superuser_client: Client,
 ) -> None:
     """ForeignKey filter to a tiny target table inlines the choices."""
-    g1 = Group.objects.create(name="alpha")
-    g2 = Group.objects.create(name="beta")
+    Group.objects.create(name="alpha")
+    Group.objects.create(name="beta")
 
     User = get_user_model()
     with admin_attr(User, list_filter=(("groups", admin.RelatedOnlyFieldListFilter),)):
@@ -190,7 +190,6 @@ def test_fk_filter_includes_inline_choices_when_small(
         pass
     with admin_attr(User, list_filter=("groups",)):
         response = superuser_client.get(LIST_USER_URL)
-    body = response.json()
     # `groups` is a ManyToManyField — not surfaced as a v1 filter type.
     # The filter is silently skipped (back-compat surface; M2M filter
     # support is part of #55 follow-up). We just assert no 500.

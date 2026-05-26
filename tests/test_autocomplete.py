@@ -20,7 +20,6 @@ from contextlib import contextmanager
 import pytest
 from django.contrib import admin
 from django.contrib.auth import get_user_model
-from django.contrib.auth.models import Group
 from django.test import Client
 
 from tests.helpers import admin_override

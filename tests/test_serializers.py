@@ -168,9 +168,6 @@ class TestSerializeFKValue:
         assert serialize_fk_value(None) is None
 
     def test_model_returns_id_label_dict(self) -> None:
-        class _FakeMeta:
-            pass
-
         class _FakeModel:
             pk = 42
 
