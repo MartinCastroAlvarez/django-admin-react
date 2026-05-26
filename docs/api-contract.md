@@ -643,6 +643,51 @@ Response 201:
 
 Response 200: same shape as `GET .../{pk}/`.
 
+#### 5.2.1 Inline writes (Issue #54 write half)
+
+A `PATCH` body may carry an optional top-level `inlines` object to
+add / edit / delete the parent's inline children in the **same atomic
+request**. It is keyed by the inline `name` the detail response emits
+under §4.2 (e.g. `content_type_set`), and each block carries an
+`items` list whose rows use the three Django-formset states:
+
+```json
+{
+  "inlines": {
+    "<inline name from §4.2>": {
+      "items": [
+        { "pk": null, "fields": { "<name>": <value> } },   // add
+        { "pk": 7,    "fields": { "<name>": <value> } },    // change
+        { "pk": 9,    "DELETE": true }                       // delete
+      ]
+    }
+  }
+}
+```
+
+Rules (enforced by `api/inlines_write.py`):
+
+- Writes round-trip through `InlineModelAdmin.get_formset(request,
+  obj=parent)` + `formset.save()` — never a per-row `save()` loop — so
+  the consumer's formset `clean()` / `save_formset` hooks and signals
+  run exactly as in the HTML admin's change view.
+- Each row **state** is gated by the inline's own permission method
+  against the parent: a new row needs `has_add_permission`, an edited
+  row needs `has_change_permission`, a `DELETE` row needs
+  `has_delete_permission`. A single failing gate returns `403` and
+  **rolls back the entire PATCH** (the parent field changes too —
+  the whole thing is one `transaction.atomic()`).
+- An `inlines` key that doesn't match a declared inline returns `400`
+  (deny-by-default; never silently ignored). A malformed `items`
+  shape returns `400`, not `500`.
+- A formset validation failure returns `400` with the per-inline
+  errors under `error` and persists nothing.
+
+Out of scope for v1 (return a follow-up issue, not silent acceptance):
+nested inlines, `GenericInlineModelAdmin`, and M2M-through inlines
+with extra fields. Create-with-inlines (inlines on `POST`) is a
+follow-up; this half covers `PATCH` on an existing parent.
+
 ### 5.5 `PATCH /api/v1/{app_label}/{model_name}/bulk/`
 
 Bulk update of multiple rows in one transaction. Powers

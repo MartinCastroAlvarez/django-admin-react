@@ -24,11 +24,14 @@ from django.http import HttpResponse
 from django.http import JsonResponse
 from django.views.generic import View
 
+from django_admin_react.api.inlines_write import InlinePermissionDenied
+from django_admin_react.api.inlines_write import apply_inline_writes
 from django_admin_react.api.permissions import forbidden_response
 from django_admin_react.api.permissions import is_admin_user
 from django_admin_react.api.registry import get_admin_site
 from django_admin_react.api.registry import resolve_model
 from django_admin_react.api.views.detail import _build_payload
+from django_admin_react.api.writes import bad_request
 from django_admin_react.api.writes import form_errors_to_envelope
 from django_admin_react.api.writes import load_object_or_none
 from django_admin_react.api.writes import log_change
@@ -39,6 +42,21 @@ from django_admin_react.api.writes import readonly_or_excluded_names
 from django_admin_react.api.writes import reject_forbidden_keys
 from django_admin_react.api.writes import validation_failed
 from django_admin_react.api.writes import writable_field_names
+
+
+class _InlineValidationError(Exception):
+    """Carries inline formset errors out of the ``atomic()`` block.
+
+    Raised so the transaction unwinds (reverting the parent write), then
+    caught immediately outside the block and converted to a 400 with the
+    per-inline error detail. Using an exception rather than an early
+    return is what guarantees the rollback — a plain return inside
+    ``atomic()`` would commit the parent.
+    """
+
+    def __init__(self, errors: dict) -> None:
+        super().__init__("inline formset validation failed")
+        self.errors = errors
 
 
 class UpdateView(View):
@@ -95,6 +113,11 @@ class UpdateView(View):
             return parsed
         payload: dict[str, Any] = parsed
 
+        # The optional ``inlines`` block is handled by the formset write
+        # path after the parent form saves; strip it from the parent
+        # payload so it isn't treated as an unknown parent field key.
+        inlines_payload = payload.pop("inlines", None)
+
         writable = writable_field_names(model, model_admin, request, obj)
         forbidden = readonly_or_excluded_names(model_admin, request, obj)
         rejection = reject_forbidden_keys(payload, writable, forbidden)
@@ -109,11 +132,29 @@ class UpdateView(View):
         if not form.is_valid():
             return validation_failed(form_errors_to_envelope(form))
 
-        with transaction.atomic():
-            instance = form.save(commit=False)
-            model_admin.save_model(request, instance, form, change=True)
-            form.save_m2m()
-            log_change(model_admin, request, instance, form)
+        try:
+            with transaction.atomic():
+                instance = form.save(commit=False)
+                model_admin.save_model(request, instance, form, change=True)
+                form.save_m2m()
+                log_change(model_admin, request, instance, form)
+                # Inline formsets (Issue #54 write half) round-trip inside
+                # the SAME transaction so a per-row permission denial or a
+                # formset validation failure reverts the parent write too.
+                if inlines_payload is not None:
+                    inline_errors = apply_inline_writes(
+                        model_admin, request, instance, form, inlines_payload
+                    )
+                    if inline_errors is not None:
+                        # Roll back by raising; convert to a 400 below.
+                        raise _InlineValidationError(inline_errors)
+        except InlinePermissionDenied as exc:
+            return forbidden_response(request)
+        except _InlineValidationError as exc:
+            return validation_failed({"inlines": exc.errors})
+        except ValueError as exc:
+            # Malformed ``inlines`` payload shape (not a 500).
+            return bad_request(str(exc))
 
         response = JsonResponse(
             _build_payload(model, model_admin, instance, request),
