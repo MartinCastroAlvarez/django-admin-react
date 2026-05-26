@@ -71,10 +71,10 @@ must also be a third session.
 
 ## gh auth note
 
-Local `gh` is authed as `martin-castro-laminr-ai`, who cannot see the
+Local `gh` is authed as `<gh-cli-account>`, who cannot see the
 `MartinCastroAlvarez/django-admin-react` repo. `git push` works because
 the remote URL embeds a different PAT. I will push the branch but the
-human will need to fix `gh auth` (or add the laminr account as a repo
+human will need to fix `gh auth` (or add the `<gh-cli-account>` as a repo
 collaborator) before any `gh pr create / review / merge` calls work.
 
 — `claude-author-opus47-pr03`

@@ -30,7 +30,7 @@ both will rebase cleanly onto `main`.
    ago, which the policy itself says disables auto-merge for *all*
    PRs until that change is human-reviewed and merged.
 5. **`gh` CLI auth gap.** The local `gh` CLI is logged in as
-   `martin-castro-laminr-ai`, which does not have access to
+   `<gh-cli-account>`, which does not have access to
    `MartinCastroAlvarez/django-admin-react`. So even a different
    agent session can't approve via `gh` without re-auth.
 
@@ -44,7 +44,7 @@ both will rebase cleanly onto `main`.
 5. **Optionally fix the `gh auth` situation** so future PRs can be
    auto-merged at tier ≤4: either rotate the embedded PAT to one
    with broader scope and `gh auth login --with-token`, or add
-   `martin-castro-laminr-ai` (the gh-CLI-authed account) as a
+   `<gh-cli-account>` (the gh-CLI-authed account) as a
    collaborator on the repository so it can post approvals.
 
 ## Concurrent agent state
