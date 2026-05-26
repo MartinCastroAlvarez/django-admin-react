@@ -209,6 +209,16 @@ Rules:
   can label the search box). Empty list means no search.
 - `results[*].fields` only contains values for `columns[*].name`.
 - `results[*].label` is `str(obj)` (the admin's display fallback).
+- **HTML cells (`#172`):** when a `list_display` value (or a readonly
+  detail value) is a Django `SafeString` — the result of `mark_safe` /
+  `format_html`, typically from an `@admin.display`-decorated method —
+  it is serialized as a typed envelope `{ "html": "<…>" }` rather than
+  a bare string. The SPA renders the envelope as HTML; this matches
+  Django's changelist, which honours `SafeString` from `list_display`.
+  A **bare `str`** (e.g. a `CharField` whose value contains `<script>`)
+  is **never** wrapped — it serializes as a plain string the SPA renders
+  as inert, escaped text. The trust boundary is identical to Django's:
+  only an explicit `SafeString` crosses into HTML.
 - `total` reflects the filtered queryset count **after** search **and
   date-hierarchy drill-down** are applied.
 

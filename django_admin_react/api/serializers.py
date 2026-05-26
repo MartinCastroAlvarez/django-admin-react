@@ -30,6 +30,7 @@ from django.db.models import Field
 from django.db.models import ForeignKey
 from django.db.models import ManyToManyField
 from django.db.models import Model
+from django.utils.safestring import SafeString
 
 SENSITIVE_NAME_SUBSTRINGS: Final[tuple[str, ...]] = (
     "password",
@@ -71,6 +72,18 @@ def serialize_value(value: Any, field: Field | None = None) -> Any:
         custom = _registered_serializer(field)
         if custom is not None:
             return custom(value)
+    # SafeString (the result of ``mark_safe`` / ``format_html``) is the
+    # admin author's explicit opt-in to "render this as HTML" — exactly
+    # what Django's own changelist honours for a ``list_display`` method
+    # decorated with ``@admin.display`` that returns ``format_html(...)``.
+    # Emit a typed ``{"html": ...}`` envelope so the SPA can render it
+    # via ``dangerouslySetInnerHTML`` while a *bare* ``str`` (e.g. a
+    # ``CharField`` containing ``<script>``) below stays a plain string
+    # the SPA renders as inert, escaped text. The trust boundary is
+    # identical to Django's: only a ``SafeString`` — never a raw
+    # ``str`` — crosses into HTML (Closes #172).
+    if isinstance(value, SafeString):
+        return {"html": str(value)}
     if value is None or isinstance(value, bool | int | float | str):
         return value
     if isinstance(value, decimal.Decimal):
@@ -138,8 +151,7 @@ def _looks_like_range(value: Any) -> bool:
     dependency.
     """
     return all(
-        hasattr(value, attr)
-        for attr in ("lower", "upper", "lower_inc", "upper_inc", "isempty")
+        hasattr(value, attr) for attr in ("lower", "upper", "lower_inc", "upper_inc", "isempty")
     )
 
 

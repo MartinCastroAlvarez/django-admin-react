@@ -304,3 +304,53 @@ def test_range_falls_back_to_str_when_attributes_missing() -> None:
 
     out = serialize_value(_NotRange())
     assert out == "<NotRange>"
+
+
+# --------------------------------------------------------------------------- #
+# SafeString → {"html": ...} envelope (#172 — list_display HTML parity)        #
+# --------------------------------------------------------------------------- #
+def test_safestring_serializes_to_html_envelope() -> None:
+    """A ``SafeString`` (mark_safe / format_html) emits a typed
+    ``{"html": ...}`` envelope so the SPA can render it as HTML —
+    matching Django's changelist treatment of a ``@admin.display``
+    method that returns ``format_html(...)``.
+
+    The test constructs ``SafeString`` directly (rather than via
+    ``mark_safe``) so it exercises the serializer's type check without
+    tripping the ``S308`` bandit rule on test-side ``mark_safe`` use —
+    the serializer treats any ``SafeString`` identically.
+    """
+    from django.utils.html import format_html
+    from django.utils.safestring import SafeString
+
+    out = serialize_value(SafeString('<span class="x">ok</span>'))
+    assert out == {"html": '<span class="x">ok</span>'}
+
+    # format_html escapes its interpolated args; the developer-controlled
+    # template is the only raw part — same trust boundary as Django.
+    out2 = serialize_value(format_html("<b>{}</b>", "<script>alert(1)</script>"))
+    assert isinstance(out2, dict) and "html" in out2
+    # The interpolated arg is escaped inside the SafeString.
+    assert "<script>" not in out2["html"]
+    assert "&lt;script&gt;" in out2["html"]
+
+
+def test_bare_string_with_html_stays_inert_text() -> None:
+    """SECURITY: a bare ``str`` (e.g. a CharField holding ``<script>``)
+    must NEVER become an ``{"html": ...}`` envelope — it stays a plain
+    string the SPA renders as escaped, inert text. Only an explicit
+    ``SafeString`` crosses into HTML (#172)."""
+    payload = "<script>alert(1)</script>"
+    out = serialize_value(payload)
+    assert out == payload  # bare string, unchanged
+    assert not isinstance(out, dict)  # NOT wrapped as {"html": ...}
+
+
+def test_safestring_subclass_of_str_ordering() -> None:
+    """Regression guard: because ``SafeString`` subclasses ``str``, the
+    ``SafeString`` branch must run before the generic ``str`` passthrough.
+    A SafeString must not slip through as a bare string."""
+    from django.utils.safestring import SafeString
+
+    out = serialize_value(SafeString("plain-but-safe"))
+    assert out == {"html": "plain-but-safe"}
