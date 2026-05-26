@@ -41,6 +41,21 @@ DEFAULTS: dict[str, Any] = {
     #                        URL or a path under your ``STATIC_URL``.
     "BRAND_TITLE": None,
     "BRAND_LOGO_URL": None,
+    # PWA (Issue #86) — all optional; sane defaults make the manifest
+    # work with zero config. See ``django_admin_react/pwa.py`` +
+    # ``docs/ux/pwa.md``.
+    #
+    # ``PWA_NAME``       — installed-app name. ``None`` (default) falls
+    #                      back to the AdminSite ``site_header``, then
+    #                      ``"Django admin"``.
+    # ``PWA_SHORT_NAME`` — home-screen label. Defaults to ``"Admin"``.
+    # ``PWA_ICONS``      — list of ``{src, sizes, type[, purpose]}``
+    #                      dicts. ``None`` (default) uses the shipped
+    #                      192/512/maskable set under
+    #                      ``static/dar/icons/``.
+    "PWA_NAME": None,
+    "PWA_SHORT_NAME": None,
+    "PWA_ICONS": None,
 }
 
 
@@ -58,6 +73,9 @@ class _PackageSettings:
     ENABLE_PROFILING: bool = DEFAULTS["ENABLE_PROFILING"]
     BRAND_TITLE: str | None = DEFAULTS["BRAND_TITLE"]
     BRAND_LOGO_URL: str | None = DEFAULTS["BRAND_LOGO_URL"]
+    PWA_NAME: str | None = DEFAULTS["PWA_NAME"]
+    PWA_SHORT_NAME: str | None = DEFAULTS["PWA_SHORT_NAME"]
+    PWA_ICONS: list[dict[str, str]] | None = DEFAULTS["PWA_ICONS"]
 
 
 def _load() -> _PackageSettings:
