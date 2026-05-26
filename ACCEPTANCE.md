@@ -40,6 +40,89 @@ same PR.
 
 ---
 
+## 1.1 When can an agent rest?
+
+This file answers the question *"have I done enough to stop?"* The
+short version is below; the long version is the row-by-row rubric
+in §2 / §3 / §4 / §5. Agents must apply the short version honestly
+before claiming the long one.
+
+### 1.1.1 Per-session rest signal
+
+A session can stop when **all five** of these are true at the same
+time. If any one is false, the session keeps working.
+
+| # | Signal                            | "True" looks like                                                                                                                                  |
+| - | --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1 | **Open PR queue is drained.**     | Either `gh pr list --state open` is empty *or* every open PR has the role's review comment posted and the role disagrees / waits on another lane. |
+| 2 | **Open Issue queue is drained.**  | Either `gh issue list --state open` is empty *or* every open issue has been triaged + labelled + assigned (or filed an explicit "blocked on X").  |
+| 3 | **Project board reflects reality.** | Every shipped backend feature in the board is in *Done*; every in-flight has the linked PR; no card is stuck in *In Progress* > 24h with no PR.  |
+| 4 | **Discussions are answered.**     | No thread in Q&A is unanswered; no Announcement awaiting role-acknowledgement; no Idea thread the role would normally weigh in on.                |
+| 5 | **No acceptance drift.**          | Every ✅ row in §2 / §3 / §4 still matches what's on `main` *as of this session*. If a feature regressed or a contract drifted, the row is 🟡 again. |
+
+When all five are true, the session **says so explicitly** and ends.
+Saying nothing is worse than saying "queue is empty" — the next
+session needs to know the previous one finished the sweep.
+
+### 1.1.2 What "I'm done with this PR" means (Author signal)
+
+An Author cannot mark a PR ready-for-merge until **all** of these
+are true for that PR:
+
+- [ ] Local checks pass (`./scripts/lint.sh` if present, full
+      `pytest` suite, `pnpm typecheck` on touched packages).
+- [ ] Every acceptance row in §2 / §3 / §4 that the PR claims to
+      close is greppable in the diff (test or doc), not just
+      asserted in the PR body.
+- [ ] Docs that name the touched code are updated in the **same**
+      PR (`docs/api-contract.md` for wire shape, `ARCHITECTURE.md`
+      for structure, `SECURITY.md` for posture, this file for
+      criterion status).
+- [ ] PR description carries: role declaration, tier
+      classification, the issue/Project card link, and the
+      acceptance-row mapping.
+- [ ] No `# noqa`, no `--no-verify`, no `csrf_exempt`, no
+      `permission_classes = []`, no `try/except: pass` that
+      swallows a write-path error.
+
+### 1.1.3 What "this PR is reviewed" means (Reviewer signal)
+
+A Reviewer (PM/UX / Architect / Security / Consumer) cannot post
+✅ APPROVE on a PR until **all** of these are true:
+
+- [ ] Read the diff end-to-end (not just the description).
+- [ ] Cross-checked the PR's claims against §2 / §3 / §4 — every
+      "this closes E-N" / "this lands N-N" claim verified.
+- [ ] Test plan in the PR body matches what `pytest` runs.
+- [ ] No security-relevant surface touched without `[S]` Security
+      review (Tier 3+ rules in `docs/agents/autonomy-policy.md`).
+- [ ] If the PR is Tier 5 / 6, the Reviewer posts a comment but
+      **does not merge** — that gate is human-only per
+      `CLAUDE.md` §3.
+
+### 1.1.4 What "we can ship v0.1.0 stable" means (Release Merger signal)
+
+The release Merger (Tier 6, human) cannot tag `v0.1.0` until **§5
+is fully green**. §5 is the canonical pre-release checklist;
+nothing in §1.1 overrides it. The criteria below are necessary
+*for any session*; §5 is necessary *for a release*.
+
+### 1.1.5 When NOT to rest
+
+- Mid-investigation: if a previous turn opened a bug and the
+  diagnosis is partial, finish or hand off in writing — don't
+  end the session on "TBD".
+- A green CI on the wrong branch is not green CI on this PR.
+- An empty PR queue with active Project-board *In Progress* cards
+  whose owner is this role is **not** a drained queue. Move the
+  card or post a status comment first.
+- The user has signalled an unfixed real-world bug
+  (laminr `/admin2/` rendering, missing data in the SPA, etc.) —
+  rest is not appropriate until the bug closes, regardless of the
+  PR queue state.
+
+---
+
 ## 2. Product / UX acceptance criteria
 
 Owner: `claude-pm-ux-opus47` (Product Manager / UX Lead).

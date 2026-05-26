@@ -39,6 +39,7 @@ from django.urls import NoReverseMatch
 from django.urls import reverse
 from django.views.generic import View
 
+from django_admin_react import conf as dar_conf
 from django_admin_react.api.permissions import is_admin_user
 from django_admin_react.api.registry import get_admin_site
 
@@ -75,6 +76,8 @@ class SpaIndexView(View):
             {
                 "mount_point": _mount_from_request(request),
                 "bundle": _load_manifest_entry(),
+                "brand_title": _resolve_brand_title(admin_site),
+                "brand_logo_url": dar_conf.BRAND_LOGO_URL,
             },
         )
 
@@ -105,6 +108,27 @@ def _load_manifest_entry() -> dict[str, Any] | None:
 # --------------------------------------------------------------------------- #
 # Helpers                                                                     #
 # --------------------------------------------------------------------------- #
+def _resolve_brand_title(admin_site: Any) -> str:
+    """Compute the SPA brand title.
+
+    Resolution order:
+
+    1. ``DJANGO_ADMIN_REACT["BRAND_TITLE"]`` — explicit consumer override.
+    2. ``admin_site.site_header`` — what the consumer already set on
+       their custom ``AdminSite`` for the legacy admin. Reusing it
+       keeps both admins in sync without a second setting.
+    3. Literal ``"Django Admin"`` — last-resort fallback, mirrors the
+       prior hardcoded ``<title>`` in the template.
+    """
+    configured = dar_conf.BRAND_TITLE
+    if isinstance(configured, str) and configured.strip():
+        return configured
+    site_header = getattr(admin_site, "site_header", None)
+    if site_header:
+        return str(site_header)
+    return "Django Admin"
+
+
 def _mount_from_request(request: HttpRequest) -> str:
     """Reconstruct the consumer-chosen mount prefix from ``request.path``.
 

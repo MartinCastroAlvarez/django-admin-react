@@ -237,12 +237,26 @@ DJANGO_ADMIN_REACT = {
     "DEFAULT_PAGE_SIZE": 25,
     "MAX_PAGE_SIZE": 200,
     "ENABLE_PROFILING": False,
+
+    # Branding (consumer-facing SPA shell)
+    "BRAND_TITLE":    None,   # str | None — sidebar header + tab title.
+                              # None → falls back to ADMIN_SITE.site_header,
+                              # then to "Django Admin".
+    "BRAND_LOGO_URL": None,   # str | None — favicon + sidebar logo.
+                              # Absolute URL or a path under STATIC_URL.
 }
 ```
 
 The package reads these via `django_admin_react/conf.py` (a thin lazy
 wrapper). Nothing in the package may read `settings.DJANGO_ADMIN_REACT`
 directly.
+
+`BRAND_TITLE` and `BRAND_LOGO_URL` are rendered server-side into the
+SPA index template (`templates/admin_react/index.html`) as
+`<meta name="dar-brand-title">` and `<meta name="dar-brand-logo">`.
+The React shell reads them at boot — first paint already carries the
+consumer's brand; no FOUC against the package defaults. They are
+plain text / URL; no markup is interpolated.
 
 ---
 

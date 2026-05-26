@@ -25,6 +25,22 @@ DEFAULTS: dict[str, Any] = {
     "DEFAULT_PAGE_SIZE": 25,
     "MAX_PAGE_SIZE": 200,
     "ENABLE_PROFILING": False,
+    # Branding — consumer overrides surface in the SPA shell. Both are
+    # rendered server-side into the SPA index template so the SPA
+    # picks them up on first paint (no FOUC).
+    #
+    # ``BRAND_TITLE``      — string shown in the sidebar header *and*
+    #                        the browser tab title. ``None`` (default)
+    #                        falls back to the configured AdminSite's
+    #                        ``site_header`` if set, else the package
+    #                        name. Plain text; no HTML.
+    # ``BRAND_LOGO_URL``   — URL to a square logo / favicon. Written
+    #                        into the SPA's ``<link rel="icon">``.
+    #                        ``None`` (default) keeps the no-op
+    #                        ``data:,`` placeholder. Either an absolute
+    #                        URL or a path under your ``STATIC_URL``.
+    "BRAND_TITLE": None,
+    "BRAND_LOGO_URL": None,
 }
 
 
@@ -40,6 +56,8 @@ class _PackageSettings:
     DEFAULT_PAGE_SIZE: int = DEFAULTS["DEFAULT_PAGE_SIZE"]
     MAX_PAGE_SIZE: int = DEFAULTS["MAX_PAGE_SIZE"]
     ENABLE_PROFILING: bool = DEFAULTS["ENABLE_PROFILING"]
+    BRAND_TITLE: str | None = DEFAULTS["BRAND_TITLE"]
+    BRAND_LOGO_URL: str | None = DEFAULTS["BRAND_LOGO_URL"]
 
 
 def _load() -> _PackageSettings:

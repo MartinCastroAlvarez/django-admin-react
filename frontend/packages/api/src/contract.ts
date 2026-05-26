@@ -79,7 +79,14 @@ export interface ListRow {
 
 export interface ListResponse {
   app_label: string;
+  /** Lowercase, no separators — used to build URLs. Do not display. */
   model_name: string;
+  /** Model class name as written (e.g. ``PackageModelDisclaimerDisplayed``). */
+  object_name: string;
+  /** ``Meta.verbose_name`` (singular). Falls back to the auto-derived form. */
+  verbose_name: string;
+  /** ``Meta.verbose_name_plural``. Use this for list-view titles. */
+  verbose_name_plural: string;
   permissions: Permissions;
   columns: ColumnDescriptor[];
   search_fields: string[];

@@ -115,8 +115,43 @@ DJANGO_ADMIN_REACT = {
     "DEFAULT_PAGE_SIZE": 25,
     "MAX_PAGE_SIZE": 200,
     "ENABLE_PROFILING": False,
+
+    # Branding — rendered server-side into the SPA shell, so the
+    # consumer's title + favicon are present on first paint (no FOUC).
+    "BRAND_TITLE": None,        # str | None — sidebar header + browser tab.
+    "BRAND_LOGO_URL": None,     # str | None — used as the favicon and
+                                # the sidebar logo. Absolute URL or a
+                                # path under your STATIC_URL.
 }
 ```
+
+#### Branding (`BRAND_TITLE` + `BRAND_LOGO_URL`)
+
+Both default to `None`. Resolution order for the title:
+
+1. `DJANGO_ADMIN_REACT["BRAND_TITLE"]` — explicit override.
+2. `<your AdminSite>.site_header` — if you already set `site_header`
+   on a custom `AdminSite`, the SPA reuses it automatically. No need
+   to repeat yourself.
+3. `"Django Admin"` — last-resort fallback.
+
+`BRAND_LOGO_URL` accepts either an absolute URL or a path the browser
+can resolve under your `STATIC_URL`. It is used both as the favicon
+(`<link rel="icon">` in the SPA shell) and as the small logo next to
+the brand title in the sidebar.
+
+```python
+# settings.py
+DJANGO_ADMIN_REACT = {
+    "BRAND_TITLE":    "Laminr",
+    "BRAND_LOGO_URL": "/static/laminr/logo.svg",
+}
+```
+
+Both values are written into the SPA index template as standard
+`<meta>` tags (`dar-brand-title`, `dar-brand-logo`); the React shell
+reads them at boot, so the first paint already carries the consumer's
+brand. No flash of the package's defaults.
 
 ### Requirements
 

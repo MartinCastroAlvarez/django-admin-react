@@ -136,3 +136,67 @@ def test_starts_from_admin_get_queryset(superuser_client: Client) -> None:
     assert response.status_code == 200
     assert response.json()["results"] == []
     assert response.json()["total"] == 0
+
+
+@pytest.mark.django_db
+def test_list_response_exposes_object_name_and_verbose_name(superuser_client: Client) -> None:
+    """The list response carries enough metadata for the SPA to render
+    the model name *as written* — not the lowercased ``model_name``.
+
+    Without ``object_name`` / ``verbose_name`` / ``verbose_name_plural``
+    on the wire, the SPA can only fall back to ``model_name`` (lowercase,
+    no separators), which produces titles like
+    ``Packagemodeldisclaimerdisplayed`` for a class literally named
+    ``PackageModelDisclaimerDisplayed``.
+    """
+    response = superuser_client.get(LIST_URL)
+    assert response.status_code == 200
+    body = response.json()
+    # auth.Group has no Meta.verbose_name override, so Django auto-derives.
+    assert body["object_name"] == "Group"  # class name as written
+    assert body["verbose_name"] == "group"
+    assert body["verbose_name_plural"] == "groups"
+    # ``model_name`` stays lowercase (used in URLs) — regression guard.
+    assert body["model_name"] == "group"
+
+
+@pytest.mark.django_db
+def test_columns_payload_passes_request_to_get_sortable_by(
+    superuser_client: Client,
+) -> None:
+    """Regression: ``_columns_payload`` must call ``get_sortable_by(request)``
+    with a real request, not ``None``.
+
+    Third-party admin wrappers (e.g. ``django-admin-flexlist``) replace
+    ``ModelAdmin.get_list_display`` with a function that reads
+    ``request.user``. ``get_sortable_by`` falls back to
+    ``get_list_display`` when the admin has no explicit ``sortable_by``,
+    so a stale ``None`` here crashes the wrapped function and the whole
+    list endpoint 500s — which in the SPA presents as ``"No objects yet."``
+    even when the DB has rows.
+
+    This test asserts the request flows through. The cheapest signal is
+    that ``get_sortable_by`` was called *at all* with the request that
+    the SPA passed in.
+    """
+    seen: dict[str, object] = {}
+
+    def _gsb(self, request) -> tuple[str, ...]:
+        seen["request"] = request
+        return ("name",)
+
+    with admin_override(Group, get_sortable_by=_gsb):
+        response = superuser_client.get(LIST_URL)
+
+    assert response.status_code == 200
+    assert "request" in seen, "_columns_payload did not call get_sortable_by"
+    assert seen["request"] is not None, (
+        "_columns_payload called get_sortable_by(None) — third-party wrappers "
+        "(django-admin-flexlist, etc.) that read request.user will crash, "
+        "and the whole list endpoint will 500."
+    )
+    # And the `sortable` flag should reflect the override.
+    columns = response.json()["columns"]
+    by_name = {c["name"]: c for c in columns}
+    if "name" in by_name:
+        assert by_name["name"]["sortable"] is True
