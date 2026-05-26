@@ -26,6 +26,7 @@ from django_admin_react.api.views.bulk import BulkUpdateView
 from django_admin_react.api.views.create import CreateView
 from django_admin_react.api.views.destroy import DestroyView
 from django_admin_react.api.views.detail import DetailView
+from django_admin_react.api.views.history import HistoryView
 from django_admin_react.api.views.list import ListView
 from django_admin_react.api.views.registry import RegistryView
 from django_admin_react.api.views.schema import SchemaView
@@ -111,6 +112,14 @@ urlpatterns: list = [
         "<str:app_label>/<str:model_name>/<str:pk>/panel/<str:panel_name>/",
         PanelView.as_view(),
         name="panel",
+    ),
+    # History sub-resource (#155) — LogEntry timeline for one object.
+    # Must precede the instance pattern so ``/history/`` isn't
+    # swallowed as part of the ``<pk>`` route.
+    path(
+        "<str:app_label>/<str:model_name>/<str:pk>/history/",
+        HistoryView.as_view(),
+        name="history",
     ),
     path(
         "<str:app_label>/<str:model_name>/<str:pk>/",
