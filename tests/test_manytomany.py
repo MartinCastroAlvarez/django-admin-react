@@ -140,3 +140,53 @@ def test_patch_with_unrelated_field_does_not_clear_m2m(
     g.refresh_from_db()
     # Crucial: the M2M was NOT cleared by a PATCH that didn't mention it.
     assert set(g.permissions.values_list("pk", flat=True)) == {p1.pk}
+
+
+@pytest.mark.django_db
+def test_merged_initial_raises_on_broken_m2m_descriptor() -> None:
+    """Closes #119 / S-CRIT-1: a broken M2M descriptor must NOT fall back to ``[]``.
+
+    The previous implementation wrapped the M2M read in
+    ``try/except Exception: merged[name] = []``. If the descriptor
+    ever did raise (half-migrated state, broken ``through``, etc.),
+    the bare list would flow into ``form.save_m2m()`` during a
+    subsequent PATCH and **silently wipe** every existing related
+    row. The fix removes the fallback — failures now propagate so
+    the caller fails closed (HTTP 500) instead of corrupting data.
+
+    This test simulates a raising descriptor and asserts the
+    exception is not swallowed.
+    """
+    from unittest.mock import PropertyMock
+    from unittest.mock import patch as mock_patch
+
+    from django_admin_react.api.writes import merged_initial_for_update
+
+    p1, _ = _make_permissions()
+    g = Group.objects.create(name="alpha")
+    g.permissions.add(p1)
+
+    # Patch the manager's ``all`` to raise — simulates a broken
+    # descriptor (e.g. corrupted through-table). With S-CRIT-1
+    # patched out, this exception now propagates instead of being
+    # swallowed into a wipe-shaped ``[]``.
+    class _Boom(Exception):
+        pass
+
+    with mock_patch.object(
+        type(g.permissions),
+        "all",
+        side_effect=_Boom("simulated descriptor failure"),
+    ):
+        with pytest.raises(_Boom):
+            merged_initial_for_update(
+                obj=g,
+                writable=["name", "permissions"],
+                payload={"name": "alpha-renamed"},
+                model=Group,
+            )
+
+    # Belt-and-braces: the descriptor failure must not have wiped
+    # the existing M2M as a side effect of the failed read.
+    g.refresh_from_db()
+    assert set(g.permissions.values_list("pk", flat=True)) == {p1.pk}

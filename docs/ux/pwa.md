@@ -77,6 +77,22 @@ The SW respects `Cache-Control: no-store` from the server and
 skips caching that response — preserves the existing 200/401/403
 `no-store` policy from [`SECURITY.md`](../../SECURITY.md) §4.7.
 
+> **Note on offline reads (Security-lane reconciliation, 2026-05-26).**
+> The package today emits `Cache-Control: no-store` on every list
+> and detail response per `SECURITY.md` §4.7. When the SW honours
+> `no-store` (which it must), those responses are never cached.
+> The "Network-first, last-good cache" rows above therefore reduce
+> in practice to *"Network-first; cache is empty for `no-store`
+> responses; the SPA's `@dar/data` localStorage SWR layer is the
+> offline degrade path."* This is intentional: I-3 ships as
+> "shell + reconnect state", not "offline API reads".
+>
+> Loosening `no-store` on read endpoints is a real Security-posture
+> change and would land as a separate Tier 5 PR with a dedicated
+> security review (proposed key:
+> `DJANGO_ADMIN_REACT["PWA_API_CACHE_SECONDS"]`, opt-in, default
+> unset). Out of scope for this contract.
+
 ### 2.2 Scope guarantee
 
 The SW does **not** claim any URL outside the SPA mount. A
@@ -158,7 +174,7 @@ expiry, not a replacement for it.
 | ---- | -------------------------------------------------------------------------------------------------------- |
 | I-1  | Visiting the SPA on Android Chrome over HTTPS fires the install prompt within the browser's heuristics.  |
 | I-2  | The installed app launches in `display: standalone` mode and serves a cached shell on cold start.        |
-| I-3  | Read paths (registry, list, detail) work for ≥5 minutes after killing the network.                        |
+| I-3  | Read paths render the SPA shell with the existing offline banner and the "reconnect to load" state — never a blank page or crash. Cached responses are honoured only where `Cache-Control` allows (i.e. `no-store` responses are never served stale). | Kill the network mid-session; observe shell + reconnect state. |
 | I-4  | Write attempts during offline render the "Changes will save when you reconnect" banner and queue mutations. |
 | I-5  | The Install affordance respects a 14-day cooldown after dismissal and disappears post-install.            |
 | I-6  | Logout fires `caches.delete(dar:v1:*)`; a follow-up cold load against the same browser shows fresh data. |
