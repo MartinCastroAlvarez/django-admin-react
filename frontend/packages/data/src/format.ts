@@ -9,7 +9,13 @@ import type { FieldValue, ForeignKeyValue, HtmlValue } from '@dar/api';
 
 const EMPTY_PLACEHOLDER = '—';
 
-function isForeignKeyValue(value: unknown): value is ForeignKeyValue {
+/**
+ * True when the value is a ForeignKey envelope (`{ id, label }`) — the
+ * related object's pk + `str()`. Callers render it as a link so FK
+ * cells read as navigable, matching Django admin's `list_display` FK
+ * columns.
+ */
+export function isForeignKeyValue(value: unknown): value is ForeignKeyValue {
   return typeof value === 'object' && value !== null && 'id' in value && 'label' in value;
 }
 
