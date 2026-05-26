@@ -21,3 +21,44 @@ body,
 *::-webkit-scrollbar {
   display: none; /* WebKit (Chrome / Safari / new Edge) */
 }
+
+/* Dark mode (#84). The shell + @dar/ui primitives are built with
+   hardcoded light utilities (bg-white, text-gray-900, …). Rather than
+   add a `dark:` variant to every class in every component, we remap the
+   handful of light utilities the app actually uses to dark values,
+   scoped under `.dark` on <html> (toggled by src/theme.ts). Light mode
+   is completely untouched; this only takes effect when `.dark` is set.
+   The sidebar is intentionally dark in both themes, so its gray-900 is
+   left alone. */
+.dark body {
+  background-color: #0b1020;
+  color: #e5e7eb;
+}
+.dark .bg-white {
+  background-color: #111827 !important;
+}
+.dark .bg-gray-50 {
+  background-color: #0b1020 !important;
+}
+.dark .text-gray-900,
+.dark .text-gray-800 {
+  color: #f3f4f6 !important;
+}
+.dark .text-gray-700,
+.dark .text-gray-600,
+.dark .text-gray-500 {
+  color: #9ca3af !important;
+}
+.dark .border-gray-200,
+.dark .border-gray-300,
+.dark .border-gray-100 {
+  border-color: #1f2937 !important;
+}
+.dark .divide-gray-100 > :not([hidden]) ~ :not([hidden]),
+.dark .divide-gray-200 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #1f2937 !important;
+}
+.dark .hover\:bg-gray-50:hover,
+.dark .hover\:bg-gray-100:hover {
+  background-color: #1f2937 !important;
+}
