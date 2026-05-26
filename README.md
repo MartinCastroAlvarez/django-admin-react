@@ -51,15 +51,15 @@ throwaway example server).
 
 | Sign in (package login)                            | Registry / home                                       |
 | -------------------------------------------------- | ----------------------------------------------------- |
-| ![Sign in](docs/screenshots/01-spa-login.png)      | ![Registry](docs/screenshots/02-spa-registry.png)     |
+| ![Sign in](https://raw.githubusercontent.com/MartinCastroAlvarez/django-admin-react/main/docs/screenshots/01-spa-login.png)      | ![Registry](https://raw.githubusercontent.com/MartinCastroAlvarez/django-admin-react/main/docs/screenshots/02-spa-registry.png)     |
 
 | List view (`list_display` + search)                     | Detail view                                          |
 | ------------------------------------------------------- | ---------------------------------------------------- |
-| ![List](docs/screenshots/03-spa-list.png)               | ![Detail](docs/screenshots/05-spa-detail.png)        |
+| ![List](https://raw.githubusercontent.com/MartinCastroAlvarez/django-admin-react/main/docs/screenshots/03-spa-list.png)               | ![Detail](https://raw.githubusercontent.com/MartinCastroAlvarez/django-admin-react/main/docs/screenshots/05-spa-detail.png)        |
 
 | Mobile (375 px)                                            | API: `GET /api/v1/registry/`                               |
 | ---------------------------------------------------------- | ---------------------------------------------------------- |
-| ![Mobile](docs/screenshots/04-spa-list-mobile.png)         | ![Registry JSON](docs/screenshots/06-registry-api-json.png) |
+| ![Mobile](https://raw.githubusercontent.com/MartinCastroAlvarez/django-admin-react/main/docs/screenshots/04-spa-list-mobile.png)         | ![Registry JSON](https://raw.githubusercontent.com/MartinCastroAlvarez/django-admin-react/main/docs/screenshots/06-registry-api-json.png) |
 
 Screenshots use deterministic synthetic fixtures (no real names,
 emails, account numbers, or PII).
