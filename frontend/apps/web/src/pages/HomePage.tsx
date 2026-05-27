@@ -1,10 +1,42 @@
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import { Star } from 'lucide-react';
 
 import { Card, EmptyState, Skeleton } from '@dar/ui';
-import { useRegistry } from '@dar/data';
+import { useRegistry, type RegistryAppEntry, type RegistryModelEntry } from '@dar/data';
+import { usePersistedSet } from '@dar/customization';
+
+// Pinned models (#407) persist per device, like the other UI prefs.
+// Keyed by the routing pair `<real_app_label>/<model_name>` so it's
+// stable regardless of get_app_list grouping.
+const PINNED_KEY = 'dar:pinned-models';
+
+function routeAppFor(app: RegistryAppEntry, model: RegistryModelEntry): string {
+  // Route by real_app_label (see Layout.tsx) — app.app_label may be a
+  // consumer get_app_list grouping that 404s.
+  return model.real_app_label || app.app_label;
+}
+
+function pinKey(app: RegistryAppEntry, model: RegistryModelEntry): string {
+  return `${routeAppFor(app, model)}/${model.model_name}`;
+}
 
 export function HomePage() {
   const { data, loading, error } = useRegistry();
+  const [pinned, setPinned] = usePersistedSet(PINNED_KEY);
+
+  // Flatten registry models keyed for pinning, then pull out the pinned
+  // ones (in registry order) for the top "Pinned" section.
+  const pinnedModels = useMemo(() => {
+    const out: Array<{ app: RegistryAppEntry; model: RegistryModelEntry; key: string }> = [];
+    for (const app of data?.apps ?? []) {
+      for (const model of app.models) {
+        const key = pinKey(app, model);
+        if (pinned.has(key)) out.push({ app, model, key });
+      }
+    }
+    return out;
+  }, [data, pinned]);
 
   if (loading && !data) return <HomeSkeleton />;
 
@@ -23,6 +55,14 @@ export function HomePage() {
     );
   }
 
+  const togglePin = (key: string): void =>
+    setPinned((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+
   return (
     <div className="space-y-8">
       <header>
@@ -31,6 +71,27 @@ export function HomePage() {
           Choose a model from the sidebar or click a card below.
         </p>
       </header>
+
+      {/* Pinned models (#407) surface at the top for quick access. */}
+      {pinnedModels.length > 0 && (
+        <section>
+          <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
+            Pinned
+          </h2>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {pinnedModels.map(({ app, model, key }) => (
+              <ModelCard
+                key={key}
+                app={app}
+                model={model}
+                pinned
+                onTogglePin={() => togglePin(key)}
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
       {/* One section per app, in registry (get_app_list) order — matching
           Django admin's grouped index instead of a flat card soup. */}
       {data.apps.map((app) => (
@@ -40,40 +101,73 @@ export function HomePage() {
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {app.models.map((model) => {
-              // Route by real_app_label (see Layout.tsx) — app.app_label
-              // may be a consumer get_app_list grouping that 404s.
-              const routeApp = model.real_app_label || app.app_label;
+              const key = pinKey(app, model);
               return (
-                <Link
-                  key={`${routeApp}.${model.model_name}`}
-                  to={`/${routeApp}/${model.model_name}`}
-                  className="block hover:no-underline"
-                >
-                  <Card title={model.verbose_name_plural || model.model_name}>
-                    <div className="text-xs text-gray-500">{model.object_name}</div>
-                    <div className="mt-2 flex gap-2 text-xs">
-                      {model.permissions.view ? (
-                        <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-700">view</span>
-                      ) : null}
-                      {model.permissions.add ? (
-                        <span className="px-2 py-0.5 rounded bg-green-50 text-green-700">add</span>
-                      ) : null}
-                      {model.permissions.change ? (
-                        <span className="px-2 py-0.5 rounded bg-amber-50 text-amber-700">
-                          change
-                        </span>
-                      ) : null}
-                      {model.permissions.delete ? (
-                        <span className="px-2 py-0.5 rounded bg-red-50 text-red-700">delete</span>
-                      ) : null}
-                    </div>
-                  </Card>
-                </Link>
+                <ModelCard
+                  key={key}
+                  app={app}
+                  model={model}
+                  pinned={pinned.has(key)}
+                  onTogglePin={() => togglePin(key)}
+                />
               );
             })}
           </div>
         </section>
       ))}
+    </div>
+  );
+}
+
+function ModelCard({
+  app,
+  model,
+  pinned,
+  onTogglePin,
+}: {
+  app: RegistryAppEntry;
+  model: RegistryModelEntry;
+  pinned: boolean;
+  onTogglePin: () => void;
+}) {
+  const routeApp = routeAppFor(app, model);
+  return (
+    <div className="relative">
+      <Link to={`/${routeApp}/${model.model_name}`} className="block hover:no-underline">
+        <Card title={model.verbose_name_plural || model.model_name}>
+          <div className="text-xs text-gray-500">{model.object_name}</div>
+          <div className="mt-2 flex gap-2 text-xs">
+            {model.permissions.view ? (
+              <span className="px-2 py-0.5 rounded bg-blue-50 text-blue-700">view</span>
+            ) : null}
+            {model.permissions.add ? (
+              <span className="px-2 py-0.5 rounded bg-green-50 text-green-700">add</span>
+            ) : null}
+            {model.permissions.change ? (
+              <span className="px-2 py-0.5 rounded bg-amber-50 text-amber-700">change</span>
+            ) : null}
+            {model.permissions.delete ? (
+              <span className="px-2 py-0.5 rounded bg-red-50 text-red-700">delete</span>
+            ) : null}
+          </div>
+        </Card>
+      </Link>
+      {/* Star sits over the card; preventDefault stops the wrapping Link
+          from navigating when toggling the pin. */}
+      <button
+        type="button"
+        aria-label={pinned ? 'Unpin from top' : 'Pin to top'}
+        aria-pressed={pinned}
+        title={pinned ? 'Unpin from top' : 'Pin to top'}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          onTogglePin();
+        }}
+        className="absolute right-2 top-2 rounded p-1 text-gray-300 hover:bg-gray-100 hover:text-amber-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+      >
+        <Star className={`h-4 w-4 ${pinned ? 'fill-amber-400 text-amber-400' : ''}`} aria-hidden />
+      </button>
     </div>
   );
 }
