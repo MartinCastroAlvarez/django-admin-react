@@ -34,6 +34,7 @@ import { FieldInput } from '../components/FieldInput';
 import { FieldValueView } from '../components/FieldValueView';
 import { InlineEditor } from '../components/InlineEditor';
 import { useToast } from '../toast';
+import { useUnsavedGuard } from '../useUnsavedGuard';
 
 // Render a detail field's value. ForeignKey values become a navigable
 // link to the related object's detail page (#184 — Django-admin
@@ -247,6 +248,13 @@ function EditForm({ data, onCancel, onSave }: EditFormProps) {
   // Inline write items collected from each InlineEditor, keyed by name.
   const [inlineItems, setInlineItems] = useState<Record<string, InlineWriteItem[]>>({});
 
+  // Unsaved-changes guard (#290): snapshot the initial values once, then
+  // warn on tab-close/reload while the form differs from that snapshot.
+  const initialJsonRef = useRef<string | null>(null);
+  if (initialJsonRef.current === null) initialJsonRef.current = JSON.stringify(values);
+  const dirty = JSON.stringify(values) !== initialJsonRef.current;
+  useUnsavedGuard(dirty && !saving);
+
   // Stable so InlineEditor's effect doesn't re-fire every render.
   const handleInlineItems = useCallback((name: string, items: InlineWriteItem[]) => {
     setInlineItems((prev) => ({ ...prev, [name]: items }));
@@ -272,6 +280,10 @@ function EditForm({ data, onCancel, onSave }: EditFormProps) {
     if (Object.keys(inlines).length > 0) payload.inlines = inlines;
     try {
       await onSave(payload, action);
+      // Save succeeded — rebase the dirty snapshot so "Save and continue
+      // editing" (form stays mounted) doesn't keep warning about edits
+      // that are now persisted.
+      initialJsonRef.current = JSON.stringify(values);
     } catch (err) {
       if (err instanceof ApiError && err.envelope?.error) {
         const fieldErrors = err.envelope.error.fields ?? {};
