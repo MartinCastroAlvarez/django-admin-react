@@ -17,6 +17,8 @@ Public surface:
 
 - :func:`object_log_entries` — the ``LogEntry`` queryset for one object,
   newest-first, with the acting user pre-fetched.
+- :func:`user_log_entries` — a user's own recent ``LogEntry`` rows
+  (the index "Recent actions" feed), newest-first.
 """
 
 from __future__ import annotations
@@ -40,3 +42,17 @@ def object_log_entries(obj: Model) -> QuerySet[LogEntry]:
         .select_related("user")
         .order_by("-action_time")
     )
+
+
+def user_log_entries(user_pk: str | int, limit: int) -> list[LogEntry]:
+    """Return ``user_pk``'s most recent ``LogEntry`` rows, newest first.
+
+    Backs the index "Recent actions" panel — the same per-user scope
+    Django's ``AdminSite.index`` applies
+    (``LogEntry.objects.filter(user=request.user)``). ``limit`` is sliced
+    in the database; callers must gate the request first and pass an
+    authenticated user's pk (int or str, per the user model). The
+    ``user`` filter is the security boundary: the feed never surfaces
+    another user's actions.
+    """
+    return list(LogEntry.objects.filter(user__pk=user_pk).order_by("-action_time")[:limit])

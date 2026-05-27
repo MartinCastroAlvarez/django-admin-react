@@ -29,6 +29,7 @@ from django.views.generic import View
 from django_admin_react.api.permissions import forbidden_response
 from django_admin_react.api.permissions import is_admin_user
 from django_admin_react.api.registry import get_admin_site
+from django_admin_react.audit import user_log_entries
 
 # Default / ceiling for the number of entries returned. Django's index
 # shows 10; the ceiling keeps a hand-crafted ``?limit=`` from scanning
@@ -60,12 +61,13 @@ class RecentActionsView(View):
 
         # ``is_admin_user`` guarantees an authenticated user, so pk is set
         # (it may be int or str for a custom user model — both are valid
-        # lookups). Scoped to this user only — Django's own index panel
-        # filters the same way.
+        # lookups). The LogEntry query lives in ``django_admin_react.audit``
+        # (outside ``api/``): LogEntry is Django's own audit table, not a
+        # consumer model, so the get_queryset rule is inapplicable — and
+        # keeping ``.objects.filter`` out of ``api/`` honours SECURITY §3
+        # rule 10 at the file-system level (see audit.py + test_s15).
         user_pk = cast("str | int", request.user.pk)
-        entries = list(
-            LogEntry.objects.filter(user__pk=user_pk).order_by("-action_time")[: _limit(request)]
-        )
+        entries = user_log_entries(user_pk, _limit(request))
         body = {"actions": [_serialize_action(e, admin_site, request) for e in entries]}
         response = JsonResponse(body, status=200)
         response["Cache-Control"] = "no-store"
