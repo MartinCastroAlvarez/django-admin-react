@@ -102,12 +102,13 @@ if [[ "$PY_ONLY" != "1" ]]; then
     step "tsc --noEmit (typecheck across workspace)"
     pnpm -r typecheck
 
-    step "eslint (if configured)"
-    if pnpm -r --filter "{packages/*}" exec test -f .eslintrc.cjs >/dev/null 2>&1; then
-      pnpm -r lint
-    else
-      echo "(no eslint config yet — wired in PR #6)"
-    fi
+    step "eslint + stylelint (pnpm lint — root flat config, eslint --max-warnings 0)"
+    # `frontend/eslint.config.mjs` (flat config) + `.stylelintrc.json`
+    # are at the workspace root, not per-package, so probing each package
+    # for a legacy `.eslintrc.cjs` (the old behaviour) silently skipped
+    # the whole gate. Invoke the package.json `lint` script directly so
+    # the Merger's sweep actually runs the eslint + stylelint gate (#261).
+    pnpm lint
   fi
 fi
 
