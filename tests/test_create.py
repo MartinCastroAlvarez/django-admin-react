@@ -149,6 +149,24 @@ def test_sensitive_field_name_rejected(superuser_client: Client) -> None:
 
 
 @pytest.mark.django_db
+def test_create_invokes_save_related_hook(superuser_client: Client) -> None:
+    """Writes route M2M / related saves through ``ModelAdmin.save_related``
+    (#402), not a bare ``form.save_m2m()`` — so a consumer override runs.
+    Called with ``change=False`` on the add path."""
+    seen: dict[str, object] = {}
+
+    def fake_save_related(self, request, form, formsets, change):  # noqa: ANN001
+        seen["called"] = True
+        seen["change"] = change
+        form.save_m2m()  # preserve the default work so M2M still persists
+
+    with admin_override(Group, save_related=fake_save_related):
+        response = _post(superuser_client, {"name": "with-hook"})
+    assert response.status_code == 201
+    assert seen == {"called": True, "change": False}
+
+
+@pytest.mark.django_db
 def test_db_integrity_error_returns_clean_409(superuser_client: Client) -> None:
     """A DB IntegrityError at save (a constraint the form didn't catch, or a
     uniqueness race) returns a clean 409 conflict envelope — not an uncaught

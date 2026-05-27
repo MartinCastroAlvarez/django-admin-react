@@ -239,7 +239,9 @@ def _apply_one(
         with transaction.atomic():
             instance = form.save(commit=False)
             model_admin.save_model(request, instance, form, change=True)
-            form.save_m2m()
+            # M2M / related via the admin hook (#402) so a consumer's
+            # save_related override runs (default = save_m2m).
+            model_admin.save_related(request, form, [], change=True)
             log_change(model_admin, request, instance, form)
     except IntegrityError:
         return {"pk": pk, "ok": False, "error": conflict_error()}

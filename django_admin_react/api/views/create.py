@@ -110,7 +110,12 @@ class CreateView(View):
             with transaction.atomic():
                 instance = form.save(commit=False)
                 model_admin.save_model(request, instance, form, change=False)
-                form.save_m2m()
+                # Save M2M / related through the admin hook (#402), not a
+                # bare form.save_m2m(), so a consumer's save_related override
+                # is honoured. The default save_related just runs save_m2m;
+                # inline formsets flow through our own write path, so the
+                # `formsets` list is empty here.
+                model_admin.save_related(request, form, [], change=False)
                 log_addition(model_admin, request, instance, form)
         except IntegrityError:
             return conflict_response()
