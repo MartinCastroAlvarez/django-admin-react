@@ -230,3 +230,14 @@ exclude_lines = [
     "if TYPE_CHECKING:",
     "if __name__ == .__main__.:",
 ]
+
+# --------------------------------------------------------------------------- #
+# Bandit — Python security linter (single source of truth for its scope).
+# Read via `bandit -c pyproject.toml ...` (scripts/lint.sh + the pre-commit
+# hook). The shipped package is the security-relevant code; tests, the
+# frontend, and example apps are excluded — their `assert` use (B101) and
+# intentional test-only passwords (B106) are not production risks and would
+# otherwise be noise. Runtime code must stay clean: 0 findings is the gate.
+# --------------------------------------------------------------------------- #
+[tool.bandit]
+exclude_dirs = ["tests", "frontend", "examples", ".venv", "node_modules", "build", "dist"]
