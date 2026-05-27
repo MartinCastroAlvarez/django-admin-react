@@ -451,7 +451,7 @@ export function ListPage() {
             }}
           >
             <Input
-              placeholder={`Search by ${data.search_fields.join(', ')}…`}
+              placeholder="Search…"
               value={searchDraft}
               onChange={(e) => setSearchDraft(e.target.value)}
               onBlur={commitSearch}
@@ -545,7 +545,7 @@ export function ListPage() {
         {data.results.length === 0 ? (
           <EmptyState
             title={q || chips.length > 0 ? 'No matches' : 'No objects yet'}
-            description={emptyLabel(Boolean(q), chips.length, hasFilters)}
+            description={emptyLabel(Boolean(q), chips.length)}
             action={
               data.permissions.add ? (
                 <Link
@@ -863,17 +863,11 @@ function capitalize(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
-// Empty-state copy. When a search / filter is active, say so. When the
-// list is empty with NO query applied but the model HAS filters, hint
-// that a default server-side view may be hiding rows — a `ModelAdmin`
-// often scopes `get_queryset` (e.g. hiding test/archived rows) so a
-// row exists but isn't in the default list. This is the most common
-// "I know there's data but the list is empty" confusion.
-function emptyLabel(hasQuery: boolean, chipCount: number, hasFilters: boolean): string {
+// Empty-state copy. When a search / filter is active, say so; otherwise a
+// plain "No objects yet." An active server-side default filter is surfaced
+// by the Filter button + modal (see #283), not by over-explaining it here.
+function emptyLabel(hasQuery: boolean, chipCount: number): string {
   if (hasQuery || chipCount > 0) return 'No results match the current search / filters.';
-  if (hasFilters) {
-    return 'No objects in the default view. This model has filters — some rows may be hidden by a default view (e.g. test or archived data). Open Filter to adjust.';
-  }
   return 'No objects yet.';
 }
 
