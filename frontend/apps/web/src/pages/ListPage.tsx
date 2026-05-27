@@ -13,6 +13,7 @@ import {
   useApiClient,
   useList,
   type ActionDescriptor,
+  type DateHierarchy,
   type FilterDescriptor,
   type FilterOption,
   type ListRow,
@@ -25,6 +26,27 @@ import { useToast } from '../toast';
 // Query params the page manages itself; everything else is a
 // `list_filter` key.
 const RESERVED_PARAMS = new Set(['q', 'page']);
+
+// `date_hierarchy` drill-down params (Django's standard year/month/day).
+// They DO flow to the backend (as non-reserved params), but they're not
+// `list_filter` keys: excluded from the persisted "saved view" so a date
+// drill doesn't silently resurrect on a later bare visit.
+const DATE_PARAMS = new Set(['year', 'month', 'day']);
+
+const MONTH_NAMES = [
+  'January',
+  'February',
+  'March',
+  'April',
+  'May',
+  'June',
+  'July',
+  'August',
+  'September',
+  'October',
+  'November',
+  'December',
+];
 
 export function ListPage() {
   const params = useParams<{ appLabel: string; modelName: string }>();
@@ -90,8 +112,13 @@ export function ListPage() {
   const filtersStorageKey = `dar:filters:${appLabel}:${modelName}`;
   useEffect(() => {
     try {
-      if (Object.keys(activeFilters).length > 0) {
-        localStorage.setItem(filtersStorageKey, JSON.stringify(activeFilters));
+      // Persist only real list_filter selections — never the
+      // date_hierarchy drill (year/month/day), which shouldn't resurrect.
+      const toPersist = Object.fromEntries(
+        Object.entries(activeFilters).filter(([k]) => !DATE_PARAMS.has(k)),
+      );
+      if (Object.keys(toPersist).length > 0) {
+        localStorage.setItem(filtersStorageKey, JSON.stringify(toPersist));
       } else {
         // Clearing all filters clears the saved view — a later visit
         // shouldn't resurrect filters the user deliberately removed.
@@ -188,6 +215,19 @@ export function ListPage() {
     patchParams((next) => {
       if (value === '') next.delete(name);
       else next.set(name, value);
+    });
+  }
+
+  // date_hierarchy drill (Django parity): set the URL to an exact
+  // {year?, month?, day?} state, clearing any deeper levels. Reuses
+  // patchParams so the page also resets to 1.
+  function setDatePath(path: { year?: number | null; month?: number | null; day?: number | null }) {
+    patchParams((next) => {
+      for (const key of ['year', 'month', 'day'] as const) {
+        const v = path[key];
+        if (v === undefined || v === null) next.delete(key);
+        else next.set(key, String(v));
+      }
     });
   }
 
@@ -311,6 +351,10 @@ export function ListPage() {
           </Link>
         )}
       </header>
+
+      {data.date_hierarchy && (
+        <DateHierarchyBar dh={data.date_hierarchy} onNavigate={setDatePath} />
+      )}
 
       {/* Toolbar row (#177 / #182): Actions dropdown (only when rows are
           selected) + a left-aligned debounced search + the Filter
@@ -535,6 +579,94 @@ export function ListPage() {
         </Modal>
       )}
     </div>
+  );
+}
+
+// date_hierarchy drill-down bar (#304 — Django changelist parity). Reads
+// `active` for the current drill path (breadcrumb, each crumb navigates
+// up) and `buckets` for the next level's options (drill down). The
+// backend caps the level by the field; clicking wires ?year/?month/?day.
+function DateHierarchyBar({
+  dh,
+  onNavigate,
+}: {
+  dh: DateHierarchy;
+  onNavigate: (path: { year?: number | null; month?: number | null; day?: number | null }) => void;
+}) {
+  const { active, buckets } = dh;
+  const level: 'year' | 'month' | 'day' | 'done' =
+    active.year == null
+      ? 'year'
+      : active.month == null
+        ? 'month'
+        : active.day == null
+          ? 'day'
+          : 'done';
+
+  const bucketLabel = (v: number): string =>
+    level === 'month' ? (MONTH_NAMES[v - 1] ?? String(v)) : String(v);
+
+  const nextPath = (v: number) => {
+    if (level === 'year') return { year: v };
+    if (level === 'month') return { year: active.year, month: v };
+    return { year: active.year, month: active.month, day: v };
+  };
+
+  const crumb = 'rounded px-1.5 py-0.5 text-blue-600 hover:bg-blue-50 hover:underline';
+
+  return (
+    <nav aria-label="Date hierarchy" className="flex flex-wrap items-center gap-3 text-sm">
+      <div className="flex flex-wrap items-center gap-1 text-gray-500">
+        <button type="button" className={crumb} onClick={() => onNavigate({})}>
+          All dates
+        </button>
+        {active.year != null && (
+          <>
+            <span aria-hidden>/</span>
+            <button
+              type="button"
+              className={crumb}
+              onClick={() => onNavigate({ year: active.year })}
+            >
+              {active.year}
+            </button>
+          </>
+        )}
+        {active.month != null && (
+          <>
+            <span aria-hidden>/</span>
+            <button
+              type="button"
+              className={crumb}
+              onClick={() => onNavigate({ year: active.year, month: active.month })}
+            >
+              {MONTH_NAMES[active.month - 1] ?? active.month}
+            </button>
+          </>
+        )}
+        {active.day != null && (
+          <>
+            <span aria-hidden>/</span>
+            <span className="px-1.5 py-0.5 font-medium text-gray-700">{active.day}</span>
+          </>
+        )}
+      </div>
+      {level !== 'done' && buckets.length > 0 && (
+        <div className="flex flex-wrap items-center gap-2">
+          {buckets.map((b) => (
+            <button
+              key={b.value}
+              type="button"
+              onClick={() => onNavigate(nextPath(b.value))}
+              className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 px-2.5 py-0.5 text-xs text-gray-700 hover:bg-gray-50"
+            >
+              {bucketLabel(b.value)}
+              <span className="text-gray-400">{b.count}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </nav>
   );
 }
 
