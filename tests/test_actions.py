@@ -231,9 +231,7 @@ def test_delete_selected_confirmed_actually_deletes(superuser_client: Client) ->
 def test_action_respects_get_queryset(superuser_client: Client) -> None:
     """Action cannot reach a row the admin's get_queryset excludes."""
     User = get_user_model()
-    visible = User.objects.create_user(
-        username="visible", password="x", is_active=True
-    )  # noqa: S106
+    visible = User.objects.create_user(username="visible", password="x", is_active=True)  # noqa: S106
     hidden = User.objects.create_user(username="hidden", password="x", is_active=True)  # noqa: S106
 
     # Pin get_queryset to exclude ``hidden`` by pk.
@@ -267,3 +265,84 @@ def test_action_response_has_no_store_cache(superuser_client: Client) -> None:
             content_type="application/json",
         )
     assert response["Cache-Control"] == "no-store"
+
+
+# --------------------------------------------------------------------------- #
+# Coverage: change-perm gate, malformed body, response-returning action,      #
+# unformattable label (T-2)                                                   #
+# --------------------------------------------------------------------------- #
+@pytest.mark.django_db
+def test_action_without_change_permission_forbidden(superuser_client: Client) -> None:
+    """Actions are change-shaped: a user without change permission is 403
+    even if the action exists (actions.py change-perm gate)."""
+    User = get_user_model()
+    User.objects.create_user(username="a", password="x")  # noqa: S106
+    with (
+        admin_attr(User, actions=[_mark_inactive]),
+        admin_override(User, has_change_permission=lambda self, request, obj=None: False),
+    ):
+        response = superuser_client.post(
+            ACTIONS_BASE + "_mark_inactive/",
+            data='{"pks": [1]}',
+            content_type="application/json",
+        )
+    assert response.status_code == 403
+
+
+@pytest.mark.django_db
+def test_action_malformed_json_is_bad_request(superuser_client: Client) -> None:
+    """A non-JSON body → 400 from parse_json_body, not a 500
+    (actions.py malformed-body path). `delete_selected` always exists."""
+    response = superuser_client.post(
+        ACTIONS_BASE + "delete_selected/",
+        data="not json{",
+        content_type="application/json",
+    )
+    assert response.status_code == 400
+    assert response.json()["error"]["code"] == "bad_request"
+
+
+def _redirecting_action(model_admin, request, queryset):  # noqa: ANN001, ANN201
+    """Test action that returns an HttpResponse (Django allows this — e.g.
+    an action that redirects to an intermediate page)."""
+    from django.http import HttpResponseRedirect
+
+    return HttpResponseRedirect("/admin-react/intermediate/")
+
+
+@pytest.mark.django_db
+def test_action_returning_response_is_surfaced_as_redirect(superuser_client: Client) -> None:
+    """When the action callable returns an HttpResponse with a Location,
+    the SPA gets a `{redirect: ...}` envelope (actions.py response path)."""
+    User = get_user_model()
+    u1 = User.objects.create_user(username="a", password="x")  # noqa: S106
+    with admin_attr(User, actions=[_redirecting_action]):
+        response = superuser_client.post(
+            ACTIONS_BASE + "_redirecting_action/",
+            data=f'{{"pks": [{u1.pk}]}}',
+            content_type="application/json",
+        )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["redirect"] == "/admin-react/intermediate/"
+    assert body["executed"] is True
+
+
+def _unformattable_label_action(model_admin, request, queryset):  # noqa: ANN001, ANN201
+    return None
+
+
+# A %-format short_description referencing a key the package doesn't supply.
+_unformattable_label_action.short_description = "Frobnicate %(nonexistent)s rows"
+
+
+@pytest.mark.django_db
+def test_action_with_unformattable_label_degrades_gracefully(superuser_client: Client) -> None:
+    """`actions_payload` must not crash on a `short_description` whose
+    %-format references a missing key — it surfaces the label verbatim
+    (actions.py label-fallback). Exercised via the list endpoint."""
+    User = get_user_model()
+    with admin_attr(User, actions=[_unformattable_label_action]):
+        body = superuser_client.get(LIST_URL).json()
+    labels = {a["name"]: a["label"] for a in body["actions"]}
+    assert labels["_unformattable_label_action"] == "Frobnicate %(nonexistent)s rows"
