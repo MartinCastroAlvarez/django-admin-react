@@ -18,7 +18,7 @@ import {
   type FilterOption,
   type ListRow,
 } from '@dar/data';
-import { Button, Card, EmptyState, Input, Modal, Spinner, Table } from '@dar/ui';
+import { Button, Card, EmptyState, Input, Modal, Skeleton, Table } from '@dar/ui';
 
 import { FieldValueView } from '../components/FieldValueView';
 import { useToast } from '../toast';
@@ -300,7 +300,7 @@ export function ListPage() {
     }
   }
 
-  if (loading && !data) return <Spinner label="Loading…" />;
+  if (loading && !data) return <ListSkeleton />;
   if (error && !data) {
     return <EmptyState title="Couldn't load the list" description={error.message} />;
   }
@@ -477,7 +477,13 @@ export function ListPage() {
           empty-state with a "+ Add" call-to-action (#293) instead of a
           bare message, so a fresh model has an obvious next step. */}
       <Card>
-        {data.results.length === 0 ? (
+        {/* A foreground refetch (filter / search / sort / page change)
+            keeps the previous `data` in hand, so without this the stale
+            rows would just sit there with no sign anything is happening.
+            Show skeleton rows while `loading` so the reload is visible —
+            and only fall back to the empty-state when we're genuinely
+            idle-and-empty, not mid-fetch. */}
+        {!loading && data.results.length === 0 ? (
           <EmptyState
             title={q || chips.length > 0 ? 'No matches' : 'No objects yet'}
             description={emptyLabel(Boolean(q), chips.length, hasFilters)}
@@ -505,6 +511,7 @@ export function ListPage() {
             selectedKeys={selected}
             onToggleRow={toggleRow}
             onToggleAll={(checked) => toggleAll(checked, data.results)}
+            loading={loading}
           />
         )}
       </Card>
@@ -578,6 +585,42 @@ export function ListPage() {
           </ul>
         </Modal>
       )}
+    </div>
+  );
+}
+
+// First-paint skeleton: shown while the very first list load is in
+// flight (no cached/stale data yet, so the columns aren't known). Mirrors
+// the real layout — title + count, the toolbar row, then a card of rows —
+// with a sensible default column count so the page has weight instead of
+// a lone spinner. Once `data` exists, refetch loading is shown inline by
+// the Table's own `loading` skeleton (which uses the real columns).
+function ListSkeleton() {
+  return (
+    <div className="space-y-4" aria-busy="true">
+      <span role="status" className="sr-only">
+        Loading…
+      </span>
+      <div className="space-y-2">
+        <Skeleton className="h-7 w-48" />
+        <Skeleton className="h-4 w-24" />
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <Skeleton className="h-9 w-72" />
+        <Skeleton className="h-9 w-24" />
+        <Skeleton className="h-9 w-28" />
+      </div>
+      <Card>
+        <div className="divide-y divide-gray-100">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="flex items-center gap-4 px-4 py-3">
+              {Array.from({ length: 5 }).map((__, j) => (
+                <Skeleton key={j} className="h-4 flex-1" />
+              ))}
+            </div>
+          ))}
+        </div>
+      </Card>
     </div>
   );
 }

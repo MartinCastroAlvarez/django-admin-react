@@ -40,6 +40,11 @@ body,
 .dark .bg-gray-50 {
   background-color: #0b1020 !important;
 }
+/* Skeleton placeholders (@dar/ui Skeleton) use bg-gray-200; on a dark
+   surface that reads as bright bars, so remap to an elevated gray. */
+.dark .bg-gray-200 {
+  background-color: #1f2937 !important;
+}
 .dark .text-gray-900,
 .dark .text-gray-800 {
   color: #f3f4f6 !important;
