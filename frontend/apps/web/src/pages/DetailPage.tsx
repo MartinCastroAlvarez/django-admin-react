@@ -10,7 +10,7 @@
 // Edit/Delete are gated by the `permissions` block the API returns.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, ExternalLink } from 'lucide-react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import {
@@ -171,6 +171,16 @@ export function DetailPage() {
         </div>
         {!editing && (
           <div className="flex gap-2">
+            {data.view_on_site_url && (
+              <a
+                href={data.view_on_site_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                <ExternalLink className="h-4 w-4" aria-hidden /> View on site
+              </a>
+            )}
             {canChange && (
               <Button variant="primary" onClick={() => setEditing(true)}>
                 Edit
