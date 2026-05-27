@@ -200,3 +200,68 @@ def test_columns_payload_passes_request_to_get_sortable_by(
     by_name = {c["name"]: c for c in columns}
     if "name" in by_name:
         assert by_name["name"]["sortable"] is True
+
+
+# --------------------------------------------------------------------------- #
+# Pagination / ordering / search query-param handling (T-2 coverage)          #
+# --------------------------------------------------------------------------- #
+@pytest.mark.django_db
+def test_garbage_page_param_defaults_to_one(superuser_client: Client) -> None:
+    """``?page=abc`` must not 500 — falls back to page 1 (list.py _clamp_page)."""
+    Group.objects.create(name="g")
+    response = superuser_client.get(LIST_URL + "?page=abc")
+    assert response.status_code == 200
+    assert response.json()["page"] == 1
+
+
+@pytest.mark.django_db
+def test_garbage_page_size_defaults(superuser_client: Client) -> None:
+    """``?page_size=abc`` falls back to the default (list.py _clamp_page_size)."""
+    Group.objects.create(name="g")
+    response = superuser_client.get(LIST_URL + "?page_size=abc")
+    assert response.status_code == 200
+    assert response.json()["page_size"] >= 1
+
+
+@pytest.mark.django_db
+def test_page_size_below_one_defaults(superuser_client: Client) -> None:
+    """``?page_size=0`` falls back to the default rather than an empty window."""
+    Group.objects.create(name="g")
+    response = superuser_client.get(LIST_URL + "?page_size=0")
+    assert response.status_code == 200
+    assert response.json()["page_size"] >= 1
+
+
+@pytest.mark.django_db
+def test_ordering_valid_token_applied(superuser_client: Client) -> None:
+    """A ``?ordering=`` token in the admin's sortable set is honoured
+    (list.py _apply_ordering valid-token path)."""
+    Group.objects.create(name="b")
+    Group.objects.create(name="a")
+    # Pin "name" as sortable so the token is definitely allowed.
+    with admin_override(Group, get_sortable_by=lambda self, request: ("name",)):
+        response = superuser_client.get(LIST_URL + "?ordering=name")
+    assert response.status_code == 200
+    assert response.json()["results"]
+
+
+@pytest.mark.django_db
+def test_ordering_unknown_token_is_dropped(superuser_client: Client) -> None:
+    """An ``?ordering=`` token NOT in the admin's allowed set is silently
+    dropped (no crash, no injection) — list.py _apply_ordering."""
+    Group.objects.create(name="g")
+    response = superuser_client.get(LIST_URL + "?ordering=not_a_real_field")
+    assert response.status_code == 200
+
+
+@pytest.mark.django_db
+def test_search_distinct_when_may_have_duplicates(superuser_client: Client) -> None:
+    """When the admin's search signals possible duplicates, the list
+    de-duplicates with ``.distinct()`` (list.py search branch)."""
+    Group.objects.create(name="alpha")
+    with admin_override(
+        Group,
+        get_search_results=lambda self, request, queryset, term: (queryset, True),
+    ):
+        response = superuser_client.get(LIST_URL + "?q=al")
+    assert response.status_code == 200

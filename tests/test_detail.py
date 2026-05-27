@@ -290,9 +290,9 @@ def test_readonly_method_on_admin_resolves_in_detail(superuser_client: Client) -
     assert response.status_code == 200, response.content
     field = response.json()["fields"].get("computed_label")
     assert field is not None, "admin readonly method missing from fields"
-    assert field["value"] == "admin-says-example", (
-        f"admin-defined readonly method should resolve to its return value; got {field['value']!r}"
-    )
+    assert (
+        field["value"] == "admin-says-example"
+    ), f"admin-defined readonly method should resolve to its return value; got {field['value']!r}"
 
 
 @pytest.mark.django_db
@@ -355,9 +355,7 @@ def test_detail_fk_value_includes_navigation_target_when_registered(
     assert perm is not None
 
     with _registered(Permission, ContentType):
-        response = superuser_client.get(
-            f"/admin-react/api/v1/auth/permission/{perm.pk}/"
-        )
+        response = superuser_client.get(f"/admin-react/api/v1/auth/permission/{perm.pk}/")
         assert response.status_code == 200, response.content
         ct_value = response.json()["fields"]["content_type"]["value"]
 
@@ -380,9 +378,7 @@ def test_detail_fk_value_omits_target_when_unregistered(
     # Register only Permission (so the endpoint resolves); ContentType stays
     # unregistered → its FK envelope must not carry `to`.
     with _registered(Permission):
-        response = superuser_client.get(
-            f"/admin-react/api/v1/auth/permission/{perm.pk}/"
-        )
+        response = superuser_client.get(f"/admin-react/api/v1/auth/permission/{perm.pk}/")
         assert response.status_code == 200, response.content
         ct_value = response.json()["fields"]["content_type"]["value"]
 
@@ -425,3 +421,58 @@ def test_readonly_callable_that_raises_degrades_to_none() -> None:
     assert desc["value"] is None
     assert desc["readonly"] is True
     assert desc["type"] == "unsupported"
+
+
+# --------------------------------------------------------------------------- #
+# Coverage: per-object view gate + named-fieldsets loop (T-2)                  #
+# --------------------------------------------------------------------------- #
+@pytest.mark.django_db
+def test_per_object_view_permission_denied_is_403(superuser_client: Client) -> None:
+    """The object-level gate (detail.py) must 403 once the row is known to
+    exist but `has_view_permission(request, obj)` is False.
+
+    The override returns True at the model level (`obj is None`, so
+    `resolve_model` passes) and False per-object — so the request reaches
+    the object gate rather than 404'ing at resolution."""
+    g = Group.objects.create(name="g")
+    with admin_override(Group, has_view_permission=lambda self, request, obj=None: obj is None):
+        response = superuser_client.get(_url(g.pk))
+    assert response.status_code == 403
+
+
+@pytest.mark.django_db
+def test_named_fieldsets_are_honoured(superuser_client: Client) -> None:
+    """A `get_fieldsets` returning real titled groups is reflected in the
+    response (`_fieldsets_payload` loop); an all-empty group is dropped."""
+    g = Group.objects.create(name="example")
+    with admin_override(
+        Group,
+        get_fieldsets=lambda self, request, obj=None: [
+            ("Main", {"fields": ("name",)}),
+            ("Empty", {"fields": ()}),
+        ],
+    ):
+        body = superuser_client.get(_url(g.pk)).json()
+    titles = [fs["title"] for fs in body["fieldsets"]]
+    assert "Main" in titles
+    main = next(fs for fs in body["fieldsets"] if fs["title"] == "Main")
+    assert "name" in main["fields"]
+    assert "Empty" not in titles
+
+
+def test_fieldsets_payload_swallows_get_fieldsets_exception() -> None:
+    """`_fieldsets_payload` must degrade to a single flat group when the
+    admin's `get_fieldsets` raises (the except + empty-raw fallback).
+
+    Tested at the unit level rather than via the endpoint because Django's
+    `get_form` *also* calls `get_fieldsets`, so a raising override would
+    500 the request before this defensive branch is reached — the branch
+    exists precisely to keep `_fieldsets_payload` itself robust."""
+    from django_admin_react.api.views.detail import _fieldsets_payload
+
+    class _RaisingAdmin:
+        def get_fieldsets(self, request, obj=None):  # noqa: ANN001, ANN202
+            raise RuntimeError("consumer get_fieldsets blew up")
+
+    result = _fieldsets_payload(_RaisingAdmin(), None, None, ["name", "email"])
+    assert result == [{"title": None, "fields": ["name", "email"]}]

@@ -27,6 +27,8 @@ from django.contrib import admin
 from django.contrib.auth.models import Group
 from django.test import Client
 
+from tests.helpers import admin_override
+
 BULK_URL = "/admin-react/api/v1/auth/group/bulk/"
 LIST_URL = "/admin-react/api/v1/auth/group/"
 
@@ -223,3 +225,68 @@ def test_bulk_response_has_no_store(superuser_client: Client) -> None:
         BULK_URL, data=json.dumps(payload), content_type="application/json"
     )
     assert response["Cache-Control"] == "no-store"
+
+
+# --------------------------------------------------------------------------- #
+# Coverage: malformed body, cap, per-row error envelopes (T-2)                #
+# --------------------------------------------------------------------------- #
+@pytest.mark.django_db
+def test_bulk_malformed_json_is_bad_request(superuser_client: Client) -> None:
+    """A non-JSON body → 400 from parse_json_body (bulk.py malformed path)."""
+    response = superuser_client.patch(BULK_URL, data="not json{", content_type="application/json")
+    assert response.status_code == 400
+    assert response.json()["error"]["code"] == "bad_request"
+
+
+@pytest.mark.django_db
+def test_bulk_exceeds_cap_is_bad_request(superuser_client: Client) -> None:
+    """`updates` beyond the bulk cap → 400 (bulk.py cap guard)."""
+    from django_admin_react.api.views.bulk import _BULK_MAX_UPDATES
+
+    payload = {"updates": [{"pk": 1, "fields": {"name": "x"}}] * (_BULK_MAX_UPDATES + 1)}
+    response = superuser_client.patch(
+        BULK_URL, data=json.dumps(payload), content_type="application/json"
+    )
+    assert response.status_code == 400
+    assert "cap" in response.json()["error"]["message"].lower()
+
+
+@pytest.mark.django_db
+def test_bulk_per_row_error_envelopes(superuser_client: Client) -> None:
+    """Per-row validation failures (bulk.py `_apply_one`) become structured
+    `ok: False` envelopes — entry-not-an-object, missing pk, empty fields —
+    without raising, and the batch rolls back (rejected > 0)."""
+    g = Group.objects.create(name="g")
+    payload = {
+        "updates": [
+            "not-an-object",
+            {"fields": {"name": "x"}},  # missing pk
+            {"pk": g.pk, "fields": {}},  # empty fields
+        ]
+    }
+    response = superuser_client.patch(
+        BULK_URL, data=json.dumps(payload), content_type="application/json"
+    )
+    assert response.status_code == 200
+    results = response.json()["results"]
+    assert all(r["ok"] is False for r in results)
+    codes = {r["error"]["code"] for r in results}
+    assert codes == {"bad_request"}
+
+
+@pytest.mark.django_db
+def test_bulk_per_row_change_permission_denied(superuser_client: Client) -> None:
+    """A row the user can't change becomes a `forbidden` envelope
+    (bulk.py per-row change-perm gate), not a hard 403."""
+    g = Group.objects.create(name="g")
+    payload = {"updates": [{"pk": g.pk, "fields": {"name": "renamed"}}]}
+    with admin_override(Group, has_change_permission=lambda self, request, obj=None: obj is None):
+        response = superuser_client.patch(
+            BULK_URL, data=json.dumps(payload), content_type="application/json"
+        )
+    assert response.status_code == 200
+    results = response.json()["results"]
+    assert results[0]["ok"] is False
+    assert results[0]["error"]["code"] == "forbidden"
+    g.refresh_from_db()
+    assert g.name == "g"  # unchanged (rolled back)
