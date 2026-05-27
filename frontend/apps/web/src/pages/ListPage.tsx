@@ -18,6 +18,14 @@ import {
   type FilterOption,
   type ListRow,
 } from '@dar/data';
+import {
+  columnsKey,
+  filtersKey,
+  readJSON,
+  usePersistedSet,
+  writeJSON,
+  removeKey,
+} from '@dar/customization';
 import { Breadcrumb, Button, Card, EmptyState, Input, Modal, Skeleton, Table } from '@dar/ui';
 import { FieldValueView } from '@dar/details';
 
@@ -101,18 +109,10 @@ export function ListPage() {
   // pk → field → string value, submitted together via the bulk PATCH.
   const [edits, setEdits] = useState<Record<string, Record<string, string>>>({});
   const [savingEdits, setSavingEdits] = useState(false);
-  // Column customizer (#196): hidden columns persist per app/model in
-  // localStorage so the operator's layout survives reloads. UI-only
-  // preference (not data) — keyed outside the `dar:v1:*` cache.
-  const colsStorageKey = `dar:cols:${appLabel}:${modelName}`;
-  const [hiddenCols, setHiddenCols] = useState<Set<string>>(() => {
-    try {
-      const raw = localStorage.getItem(`dar:cols:${appLabel}:${modelName}`);
-      return raw ? new Set(JSON.parse(raw) as string[]) : new Set();
-    } catch {
-      return new Set();
-    }
-  });
+  // Column customizer (#196): hidden columns persist per app/model so the
+  // operator's layout survives reloads. A UI preference (not data) —
+  // stored via @dar/customization, the single home for such prefs.
+  const [hiddenCols, setHiddenCols] = usePersistedSet(columnsKey(appLabel, modelName));
   const [colsOpen, setColsOpen] = useState(false);
 
   // Drag-to-resize column widths, persisted per app/model in localStorage
@@ -140,8 +140,8 @@ export function ListPage() {
 
   // Persist the applied list_filter selections per model (a UI
   // preference, like the column customizer) so a later bare visit can
-  // restore them. Keyed outside the `dar:v1:*` data cache.
-  const filtersStorageKey = `dar:filters:${appLabel}:${modelName}`;
+  // restore them.
+  const filtersStorageKey = filtersKey(appLabel, modelName);
   // Tracks the model whose saved filters have already been restored. Used
   // both to run restore once per model AND to gate the persist effect —
   // declared before persist because persist reads it.
@@ -160,14 +160,14 @@ export function ListPage() {
         Object.entries(activeFilters).filter(([k]) => !DATE_PARAMS.has(k)),
       );
       if (Object.keys(toPersist).length > 0) {
-        localStorage.setItem(filtersStorageKey, JSON.stringify(toPersist));
+        writeJSON(filtersStorageKey, toPersist);
       } else {
         // Clearing all filters clears the saved view — a later visit
         // shouldn't resurrect filters the user deliberately removed.
-        localStorage.removeItem(filtersStorageKey);
+        removeKey(filtersStorageKey);
       }
     } catch {
-      /* localStorage unavailable (private mode) — best effort. */
+      /* best effort */
     }
   }, [activeFilters, filtersStorageKey, appLabel, modelName]);
 
@@ -184,13 +184,7 @@ export function ListPage() {
     // any q / filter / ordering means the URL is intentional — honour it.
     const onlyPage = Array.from(searchParams.keys()).every((k) => k === 'page');
     if (!onlyPage) return;
-    let saved: Record<string, string> | null = null;
-    try {
-      const raw = localStorage.getItem(filtersStorageKey);
-      saved = raw ? (JSON.parse(raw) as Record<string, string>) : null;
-    } catch {
-      saved = null;
-    }
+    const saved = readJSON<Record<string, string> | null>(filtersStorageKey, null);
     if (!saved || Object.keys(saved).length === 0) return;
     const next = new URLSearchParams();
     for (const [key, value] of Object.entries(saved)) {
@@ -208,11 +202,6 @@ export function ListPage() {
         // Keep at least one column visible — never let the operator
         // hide the entire table out from under themselves.
         next.add(name);
-      }
-      try {
-        localStorage.setItem(colsStorageKey, JSON.stringify([...next]));
-      } catch {
-        /* localStorage unavailable (private mode) — preference is best-effort. */
       }
       return next;
     });

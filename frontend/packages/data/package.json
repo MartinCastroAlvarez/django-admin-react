@@ -15,7 +15,8 @@
     "test": "echo 'no tests yet'"
   },
   "dependencies": {
-    "@dar/api": "workspace:*"
+    "@dar/api": "workspace:*",
+    "@dar/customization": "workspace:*"
   },
   "peerDependencies": {
     "react": "^18.3.0"

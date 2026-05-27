@@ -8,6 +8,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ChevronDown, Download, Menu, Settings } from 'lucide-react';
 import { Link, NavLink } from 'react-router-dom';
 
+import { NAV_COLLAPSE_KEY, usePersistedSet } from '@dar/customization';
 import { useRegistry } from '@dar/data';
 import { SettingsModal } from '@dar/settings';
 
@@ -64,9 +65,6 @@ const BRAND_LOGO_URL = readMeta('dar-brand-logo');
 // eye; the filter input only appears at/above it. Matches the
 // `django.contrib.admin` sidebar Filter affordance (ACCEPTANCE N-9).
 const FILTER_THRESHOLD = 8;
-
-// localStorage key for the set of collapsed app-group labels (#227).
-const NAV_COLLAPSE_KEY = 'dar:nav-collapsed';
 
 type RegistryModel = {
   model_name: string;
@@ -127,26 +125,14 @@ export function Sidebar() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   // Settings dialog (cog) — appearance / dark-mode toggle (#84).
   const [settingsOpen, setSettingsOpen] = useState(false);
-  // Collapsed app-group sections (#227), persisted per device. A UI
-  // preference, like the column customizer — kept outside the data cache.
-  const [collapsed, setCollapsed] = useState<Set<string>>(() => {
-    try {
-      const raw = localStorage.getItem(NAV_COLLAPSE_KEY);
-      return raw ? new Set(JSON.parse(raw) as string[]) : new Set();
-    } catch {
-      return new Set();
-    }
-  });
+  // Collapsed app-group sections (#227), persisted per device via
+  // @dar/customization (the single home for localStorage-backed prefs).
+  const [collapsed, setCollapsed] = usePersistedSet(NAV_COLLAPSE_KEY);
   const toggleApp = (appLabel: string): void => {
     setCollapsed((prev) => {
       const next = new Set(prev);
       if (next.has(appLabel)) next.delete(appLabel);
       else next.add(appLabel);
-      try {
-        localStorage.setItem(NAV_COLLAPSE_KEY, JSON.stringify([...next]));
-      } catch {
-        /* localStorage unavailable (private mode) — best effort. */
-      }
       return next;
     });
   };
@@ -277,55 +263,57 @@ export function Sidebar() {
             // matches are never hidden behind a collapsed section.
             const isCollapsed = !query.trim() && collapsed.has(app.app_label);
             return (
-            <div key={app.app_label}>
-              <button
-                type="button"
-                onClick={() => toggleApp(app.app_label)}
-                aria-expanded={!isCollapsed}
-                className="mb-1 flex w-full items-center gap-1 text-xs uppercase tracking-wide text-gray-400 hover:text-gray-200"
-              >
-                <ChevronDown
-                  className={`h-3 w-3 shrink-0 transition-transform ${
-                    isCollapsed ? '-rotate-90' : ''
-                  }`}
-                  aria-hidden
-                />
-                <span className="truncate">{app.verbose_name}</span>
-              </button>
-              {!isCollapsed && (
-              <ul className="space-y-1">
-                {app.models.map((model) => {
-                  // Route by real_app_label — `app.app_label` may be a
-                  // consumer `get_app_list` grouping (e.g. "financial_
-                  // institutions") that does NOT round-trip through the
-                  // list/detail endpoints (`resolve_model` resolves by
-                  // the model's true `_meta.app_label`). Falls back to
-                  // `app.app_label` for the default (ungrouped) case.
-                  const routeApp = model.real_app_label || app.app_label;
-                  return (
-                    <li key={`${routeApp}.${model.model_name}`}>
-                      {/* NavLink highlights the current model — and stays
+              <div key={app.app_label}>
+                <button
+                  type="button"
+                  onClick={() => toggleApp(app.app_label)}
+                  aria-expanded={!isCollapsed}
+                  className="mb-1 flex w-full items-center gap-1 text-xs uppercase tracking-wide text-gray-400 hover:text-gray-200"
+                >
+                  <ChevronDown
+                    className={`h-3 w-3 shrink-0 transition-transform ${
+                      isCollapsed ? '-rotate-90' : ''
+                    }`}
+                    aria-hidden
+                  />
+                  <span className="truncate">{app.verbose_name}</span>
+                </button>
+                {!isCollapsed && (
+                  <ul className="space-y-1">
+                    {app.models.map((model) => {
+                      // Route by real_app_label — `app.app_label` may be a
+                      // consumer `get_app_list` grouping (e.g. "financial_
+                      // institutions") that does NOT round-trip through the
+                      // list/detail endpoints (`resolve_model` resolves by
+                      // the model's true `_meta.app_label`). Falls back to
+                      // `app.app_label` for the default (ungrouped) case.
+                      const routeApp = model.real_app_label || app.app_label;
+                      return (
+                        <li key={`${routeApp}.${model.model_name}`}>
+                          {/* NavLink highlights the current model — and stays
                           lit on its list, detail, edit, and add routes
                           (no `end`, so the path prefix matches). NavLink
                           sets aria-current="page" when active (#291). */}
-                      <NavLink
-                        to={`/${routeApp}/${model.model_name}`}
-                        onClick={closeDrawer}
-                        className={({ isActive }) =>
-                          [
-                            'block rounded px-2 py-1 text-sm',
-                            isActive ? 'bg-gray-800 font-medium text-white' : 'hover:bg-gray-800',
-                          ].join(' ')
-                        }
-                      >
-                        {modelLabel(model)}
-                      </NavLink>
-                    </li>
-                  );
-                })}
-              </ul>
-              )}
-            </div>
+                          <NavLink
+                            to={`/${routeApp}/${model.model_name}`}
+                            onClick={closeDrawer}
+                            className={({ isActive }) =>
+                              [
+                                'block rounded px-2 py-1 text-sm',
+                                isActive
+                                  ? 'bg-gray-800 font-medium text-white'
+                                  : 'hover:bg-gray-800',
+                              ].join(' ')
+                            }
+                          >
+                            {modelLabel(model)}
+                          </NavLink>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
             );
           })}
           {showFilter && visibleApps.length === 0 && (

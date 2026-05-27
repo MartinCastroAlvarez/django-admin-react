@@ -14,9 +14,15 @@
 // is good single-user UX (you don't lose dark mode every time you sign
 // out). Everything else — cached data AND per-model filter/column hints
 // that reveal what the previous user was looking at — is purged.
+//
+// The namespace + the preserved-key set are owned by @dar/customization
+// (the single source of truth for what's a UI preference), so adding a
+// new "survives logout" preference there is enough — no edit here.
 
-const PRESERVE = new Set<string>(['dar:theme']);
-const NAMESPACE = 'dar:';
+import { CUSTOMIZATION_NAMESPACE, PRESERVED_ON_LOGOUT } from '@dar/customization';
+
+const PRESERVE = new Set<string>(PRESERVED_ON_LOGOUT);
+const NAMESPACE = CUSTOMIZATION_NAMESPACE;
 
 /**
  * Remove every `dar:`-prefixed localStorage entry except the preserved
