@@ -100,6 +100,26 @@ def _get_inline_instances(
         return []
 
 
+def _show_change_link_allowed(
+    admin_site: Any, child_model: type[Model], request: HttpRequest
+) -> bool:
+    """Whether to advertise an inline row's link to the child's change page.
+
+    Mirrors ``serialize_fk_value``'s ``to`` gate (#301): only when the child
+    model is registered on this admin site **and** the requesting user has
+    ``has_view_permission`` for it. Registration alone isn't enough — without
+    the per-user check the SPA would render a link the detail endpoint 404s
+    on and leak the adjacency / identity of a model the user can't view
+    (extends the #89 registry guard to a per-user check).
+    """
+    if admin_site is None:
+        return False
+    target_admin = getattr(admin_site, "_registry", {}).get(child_model)
+    if target_admin is None:
+        return False
+    return bool(target_admin.has_view_permission(request))
+
+
 def _spec_for_inline(
     inline: InlineModelAdmin,
     parent: Model,
@@ -149,13 +169,13 @@ def _spec_for_inline(
         "can_change": can_change,
         "can_delete": can_delete,
         # InlineModelAdmin.show_change_link (#384) — when True, the SPA
-        # renders a per-row link to the child's own change page. Only
-        # honoured when the child model is actually registered with this
-        # admin site, so the link can never 404 (same closed-vocabulary
-        # posture as the FK filter descriptors, #89).
+        # renders a per-row link to the child's own change page. Gated on
+        # the child being registered **and** the user's per-model
+        # has_view_permission (#301 least-disclosure, same gate as
+        # serialize_fk_value's `to`): never advertise a link the detail
+        # endpoint would 404 on, never leak adjacency to an unviewable model.
         "show_change_link": bool(getattr(inline, "show_change_link", False))
-        and admin_site is not None
-        and child_model in admin_site._registry,
+        and _show_change_link_allowed(admin_site, child_model, request),
         "fields": fields_meta,
         "rows": rows,
     }

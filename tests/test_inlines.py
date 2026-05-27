@@ -192,9 +192,7 @@ def test_inline_row_fk_carries_navigation_target() -> None:
     else:
         added = False
     try:
-        rows = _rows_for_inline(
-            inline, ct, "content_type", ["content_type"], request, admin.site
-        )
+        rows = _rows_for_inline(inline, ct, "content_type", ["content_type"], request, admin.site)
     finally:
         if added:
             with suppress(Exception):
@@ -253,3 +251,54 @@ def test_inline_show_change_link_gated_on_child_registration() -> None:
     spec_unreg = _spec_for_inline(inline, ct, request, admin.site)
     assert spec_unreg is not None
     assert spec_unreg["show_change_link"] is False
+
+
+@pytest.mark.django_db
+def test_inline_show_change_link_gated_on_child_view_permission() -> None:
+    """`show_change_link` requires the user's ``has_view_permission`` on the
+    CHILD model, not just registration (#301 least-disclosure). A child that
+    is registered but unviewable by this user → no link, so the SPA can't
+    leak adjacency to a model the detail endpoint would 404/403 on."""
+    from contextlib import suppress
+
+    from django.contrib.auth import get_user_model
+    from django.contrib.auth.models import Permission
+    from django.contrib.contenttypes.models import ContentType
+    from django.test import RequestFactory
+
+    from django_admin_react.api.inlines import _spec_for_inline
+
+    ct = ContentType.objects.create(app_label="dar_test", model="thing2")
+
+    class _LinkedInline(TabularInline):
+        model = Permission
+        fk_name = "content_type"
+        show_change_link = True
+
+    inline = _LinkedInline(ContentType, admin.site)
+    request = RequestFactory().get("/")
+    request.user = get_user_model().objects.create_superuser(
+        username="inline-noview-su", email="noview@example.com", password="x"
+    )
+
+    added = Permission not in admin.site._registry
+    if added:
+        admin.site.register(Permission)
+    child_admin = admin.site._registry[Permission]
+    had_own = "has_view_permission" in child_admin.__dict__
+    original = child_admin.__dict__.get("has_view_permission")
+    try:
+        # Registered, but the user is denied view on the child → no link.
+        child_admin.has_view_permission = lambda request, obj=None: False
+        spec = _spec_for_inline(inline, ct, request, admin.site)
+    finally:
+        if had_own:
+            child_admin.has_view_permission = original
+        else:
+            with suppress(AttributeError):
+                del child_admin.has_view_permission
+        if added:
+            with suppress(Exception):
+                admin.site.unregister(Permission)
+    assert spec is not None
+    assert spec["show_change_link"] is False
