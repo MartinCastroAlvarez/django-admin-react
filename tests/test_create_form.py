@@ -7,10 +7,13 @@ staff with add perm → 200 + field descriptors, staff without add perm
 
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import pytest
 from django.contrib.auth.models import Group
 from django.test import Client
 
+from django_admin_react.api.views.create_form import _prepopulated_payload
 from tests.helpers import admin_override
 
 ADD_URL = "/admin-react/api/v1/auth/group/add/"
@@ -55,6 +58,53 @@ def test_staff_without_add_permission_forbidden(superuser_client: Client) -> Non
 @pytest.mark.django_db
 def test_unregistered_model_not_found(superuser_client: Client) -> None:
     assert superuser_client.get("/admin-react/api/v1/auth/nonexistent/add/").status_code == 404
+
+
+@pytest.mark.django_db
+def test_add_form_always_carries_prepopulated_fields_key(superuser_client: Client) -> None:
+    """The key is always present (empty `{}` when the admin declares none),
+    so the SPA can branch without a guard (#245)."""
+    body = superuser_client.get(ADD_URL).json()
+    assert body["prepopulated_fields"] == {}  # GroupAdmin declares none
+
+
+# --------------------------------------------------------------------------- #
+# _prepopulated_payload filtering (#245): restrict to rendered, non-readonly  #
+# targets and rendered sources                                                #
+# --------------------------------------------------------------------------- #
+def _admin_stub(mapping: dict[str, tuple[str, ...]]) -> SimpleNamespace:
+    return SimpleNamespace(get_prepopulated_fields=lambda request, obj: mapping)
+
+
+def test_prepopulated_keeps_rendered_target_and_sources() -> None:
+    out = _prepopulated_payload(
+        _admin_stub({"slug": ("title", "subtitle")}), None, ["slug", "title", "subtitle"], set()
+    )
+    assert out == {"slug": ["title", "subtitle"]}
+
+
+def test_prepopulated_drops_readonly_target() -> None:
+    out = _prepopulated_payload(
+        _admin_stub({"slug": ("title",)}), None, ["slug", "title"], {"slug"}
+    )
+    assert out == {}
+
+
+def test_prepopulated_filters_unrendered_sources() -> None:
+    out = _prepopulated_payload(
+        _admin_stub({"slug": ("title", "hidden")}), None, ["slug", "title"], set()
+    )
+    assert out == {"slug": ["title"]}
+
+
+def test_prepopulated_drops_target_with_no_usable_sources() -> None:
+    out = _prepopulated_payload(_admin_stub({"slug": ("hidden",)}), None, ["slug"], set())
+    assert out == {}
+
+
+def test_prepopulated_empty_when_admin_declares_none() -> None:
+    out = _prepopulated_payload(_admin_stub({}), None, ["name"], set())
+    assert out == {}
 
 
 @pytest.mark.django_db

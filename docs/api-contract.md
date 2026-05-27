@@ -493,6 +493,13 @@ Rules:
   `save_options` is a UI hint, not the gate. Inline-formset editability
   is not yet factored in (the inline write-half is tracked under `#54`);
   for models without editable inlines the flags are exact.
+- `prepopulated_fields` (`#245`, **add form only** — `GET .../add/`) is
+  `{target: [sources]}` from `ModelAdmin.prepopulated_fields`, restricted
+  to rendered, non-readonly targets and rendered sources. The SPA
+  slugifies the target field from its sources' values while the user
+  types, stopping once the target is edited by hand. Always present
+  (empty `{}` when the admin declares none); a pure UI affordance — the
+  backend does not auto-fill on write.
 - `password_change.supported` (`#252`) is `true` only when the model's
   admin declares a `change_password_form` (i.e. a `UserAdmin`) **and**
   the request holds change permission on the object — the SPA shows

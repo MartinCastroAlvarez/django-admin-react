@@ -96,7 +96,44 @@ class AddFormView(View):
             # Add-view save-flow buttons (#154): obj=None → add semantics
             # (Save / Save-and-add-another / Save-and-continue editing).
             "save_options": save_options(model_admin, request, None),
+            # prepopulated_fields (#245): {target: [sources]} so the SPA can
+            # slugify the target from its sources while typing — Django's
+            # add-form behaviour. Restrict to fields actually rendered, and
+            # never a readonly target (it can't be filled), mirroring how
+            # Django drops readonly targets from the change-form JS.
+            "prepopulated_fields": _prepopulated_payload(
+                model_admin, request, visible_names, readonly
+            ),
         }
         response = JsonResponse(payload, status=200)
         response["Cache-Control"] = "no-store"
         return response
+
+
+def _prepopulated_payload(
+    model_admin: Any,
+    request: HttpRequest,
+    visible_names: list[str],
+    readonly: set[str],
+) -> dict[str, list[str]]:
+    """Build the ``prepopulated_fields`` block (#245).
+
+    Returns ``{target: [sources]}`` from ``ModelAdmin.prepopulated_fields``,
+    restricted to fields actually rendered: a target that's readonly or not
+    in the form is dropped (it can't be filled), and source names the form
+    doesn't render are filtered out. A target left with no usable sources is
+    omitted. The SPA slugifies the target from its sources while typing.
+    """
+    try:
+        raw = model_admin.get_prepopulated_fields(request, None) or {}
+    except Exception:  # pragma: no cover — admin author error
+        return {}
+    visible = set(visible_names)
+    out: dict[str, list[str]] = {}
+    for target, sources in raw.items():
+        if target not in visible or target in readonly:
+            continue
+        kept = [s for s in sources if s in visible]
+        if kept:
+            out[target] = kept
+    return out

@@ -135,6 +135,30 @@ function CreateForm({ schema, onCreate, onCancel }: CreateFormProps) {
   const [nonFieldError, setNonFieldError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
+  // prepopulated_fields (#245): slugify a target field from its sources
+  // while typing (Django add-form parity). Once the operator edits a
+  // target by hand we stop auto-filling it — tracked here.
+  const prepopulated = schema.prepopulated_fields ?? {};
+  const prepopTargets = new Set(Object.keys(prepopulated));
+  const editedTargets = useRef<Set<string>>(new Set());
+
+  function handleFieldChange(name: string, v: WriteValue): void {
+    setValues((prev) => {
+      const next = { ...prev, [name]: v };
+      // A direct edit of a target field opts it out of further auto-fill.
+      if (prepopTargets.has(name)) editedTargets.current.add(name);
+      for (const [target, sources] of Object.entries(prepopulated)) {
+        if (editedTargets.current.has(target)) continue;
+        if (!sources.includes(name)) continue;
+        const joined = sources
+          .map((s) => (next[s] == null ? '' : String(next[s])))
+          .join(' ');
+        next[target] = slugify(joined);
+      }
+      return next;
+    });
+  }
+
   // Unsaved-changes guard (#290): warn on tab-close/reload once the
   // operator has typed into the new-object form.
   const initialJsonRef = useRef<string | null>(null);
@@ -191,7 +215,7 @@ function CreateForm({ schema, onCreate, onCancel }: CreateFormProps) {
                   field={field}
                   value={values[name] ?? null}
                   error={errors[name]}
-                  onChange={(v) => setValues((prev) => ({ ...prev, [name]: v }))}
+                  onChange={(v) => handleFieldChange(name, v)}
                 />
               );
             })}
@@ -232,4 +256,18 @@ function CreateForm({ schema, onCreate, onCancel }: CreateFormProps) {
       </div>
     </form>
   );
+}
+
+// Slugify for prepopulated_fields (#245) — approximates Django's
+// `slugify`: strip accents, lowercase, drop non-word characters, and
+// collapse runs of whitespace/hyphens into a single hyphen.
+function slugify(value: string): string {
+  return value
+    .normalize('NFKD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .replace(/[\s-]+/g, '-')
+    .replace(/^-+|-+$/g, '');
 }
