@@ -380,35 +380,41 @@ customisations.
 
 ---
 
-## Feature status (v0.1.0-alpha)
+## Feature status (alpha — currently `0.2.0a*` on PyPI)
 
-| Surface                                                | Status                                                          |
+The **backend** — the `ModelAdmin`-driven REST API — is the stable,
+complete surface and the table below tracks it. The **React SPA** that
+consumes it is in active development; to keep this README from drifting,
+per-feature *SPA* (UI) status is **not** duplicated here — it is tracked
+live in the [frontend implementation tracker (#160)](https://github.com/MartinCastroAlvarez/django-admin-react/issues/160)
+and the [project board](https://github.com/users/MartinCastroAlvarez/projects/3).
+
+| `ModelAdmin` surface                                   | Backend (REST API)                                              |
 | ------------------------------------------------------ | --------------------------------------------------------------- |
-| Registry / list / detail / create / update / delete    | ✅ Backend + SPA contract                                       |
-| `list_display`, `sortable_by`, `search_fields`         | ✅ Backend + SPA contract                                       |
-| `list_filter` (boolean / choice / FK / date / Simple)  | ✅ Backend; SPA implementation pending                          |
-| `date_hierarchy`                                       | ✅ Backend; SPA implementation pending                          |
-| `list_editable` + bulk PATCH                           | ✅ Backend; SPA implementation pending                          |
-| `actions` (custom + bulk runner)                       | ✅ Backend; SPA implementation pending                          |
-| `autocomplete_fields` / `raw_id_fields`                | ✅ Backend + SPA contract                                       |
-| `ManyToManyField` read + write                         | ✅ Backend; SPA implementation pending                          |
-| `inlines` (TabularInline / StackedInline) — read       | ✅ Backend; SPA implementation pending                          |
-| `inlines` — write (formsets)                           | 🟡 Tracked in [#54](https://github.com/MartinCastroAlvarez/django-admin-react/issues/54) |
-| `FileField` / `ImageField` — read                      | ✅ Backend + SPA contract                                       |
-| `FileField` / `ImageField` — multipart upload          | 🟡 Tracked in [#57](https://github.com/MartinCastroAlvarez/django-admin-react/issues/57) |
-| `JSONField` / `ArrayField` / range types               | ✅ Backend                                                      |
-| `register_field_type` + per-model SPA extension hook   | ✅ Backend + extension contract                                 |
-| Session-expiry re-login modal                          | ✅ Wire contract; SPA implementation pending                    |
-| OpenAPI 3.1 schema at `/api/v1/schema/`                | ✅ Backend                                                      |
-| Dark mode (no-flash server-side resolution)            | 🟡 UX contract; tracked in [#84](https://github.com/MartinCastroAlvarez/django-admin-react/issues/84) |
-| Mobile creative patterns (FAB / bottom-sheet / swipe)  | 🟡 UX contract; tracked in [#85](https://github.com/MartinCastroAlvarez/django-admin-react/issues/85) |
-| PWA (manifest + service worker + cache-on-logout)      | 🟡 UX contract; tracked in [#86](https://github.com/MartinCastroAlvarez/django-admin-react/issues/86) |
+| Registry / list / detail / create / update / delete    | ✅                                                              |
+| `list_display`, `sortable_by`, `search_fields`         | ✅                                                              |
+| `list_filter` (boolean / choice / FK / date / Simple)  | ✅                                                              |
+| `date_hierarchy`                                       | ✅                                                              |
+| `list_editable` + bulk PATCH                           | ✅                                                              |
+| `actions` (custom + bulk runner)                       | ✅                                                              |
+| `autocomplete_fields` / `raw_id_fields`                | ✅                                                              |
+| `ManyToManyField` read + write                         | ✅                                                              |
+| `inlines` (TabularInline / StackedInline) — read + write | ✅                                                            |
+| `FileField` / `ImageField` — read                      | ✅                                                              |
+| `FileField` / `ImageField` — multipart upload          | 🟡 [#241](https://github.com/MartinCastroAlvarez/django-admin-react/issues/241) |
+| `JSONField` / `ArrayField` / range — read              | ✅                                                              |
+| range fields — write coercion                          | 🟡 [#238](https://github.com/MartinCastroAlvarez/django-admin-react/issues/238) |
+| `register_field_type` + per-model extension hook       | ✅                                                              |
+| React login / logout (Django session + CSRF)           | ✅                                                              |
+| Password set / change (`UserAdmin` parity)             | ✅                                                              |
+| Session-expiry re-login contract                       | ✅                                                              |
+| OpenAPI 3.1 schema at `/api/v1/schema/`                | ✅                                                              |
+| PWA manifest + service worker (cache-purge on logout)  | ✅                                                              |
 
-Status meanings: ✅ ships in the current alpha; 🟡 contract or
-backend lands in the alpha, SPA implementation in flight. See
-[`ACCEPTANCE.md`](ACCEPTANCE.md) for the full criterion-by-criterion
-list and [the issue tracker](https://github.com/MartinCastroAlvarez/django-admin-react/issues)
-for live status.
+✅ = shipped in the current alpha. 🟡 = not yet built (tracked). This
+column is the **backend** capability only — for which surfaces the React
+UI renders today, see the [frontend tracker (#160)](https://github.com/MartinCastroAlvarez/django-admin-react/issues/160).
+[`ACCEPTANCE.md`](ACCEPTANCE.md) carries the full criterion-by-criterion list.
 
 ---
 
