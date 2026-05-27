@@ -180,6 +180,26 @@ def _apply_one(
             "error": {"code": "forbidden", "message": "You do not have permission."},
         }
 
+    # list_editable parity + scope guard (#401): this endpoint powers the
+    # changelist's inline-editable cells, so a write may only touch fields
+    # the admin put in ``list_editable`` — exactly like Django, which only
+    # accepts ``list_editable`` names on a changelist POST. A field that's
+    # writable on the *change form* but not list_editable (or ANY field
+    # when list_editable is empty) is rejected here, even though the user
+    # could edit it through the detail form. This keeps the bulk surface
+    # from silently widening the set of fields editable from the list.
+    list_editable = set(getattr(model_admin, "list_editable", ()) or ())
+    not_editable = sorted(k for k in fields if k not in list_editable)
+    if not_editable:
+        return {
+            "pk": pk,
+            "ok": False,
+            "error": {
+                "code": "bad_request",
+                "message": f"Field(s) not editable in the list view: {', '.join(not_editable)}.",
+            },
+        }
+
     writable = writable_field_names(model, model_admin, request, obj)
     forbidden = readonly_or_excluded_names(model_admin, request, obj)
     rejection = reject_forbidden_keys(fields, writable, forbidden)

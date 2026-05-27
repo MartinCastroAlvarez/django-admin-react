@@ -760,6 +760,13 @@ Request body:
 
 - `updates` — non-empty list, ≤ 200 entries (bulk cap).
 - Each entry: `pk` required, `fields` non-empty object.
+- `fields` may only name fields in `ModelAdmin.list_editable` — this
+  endpoint backs the changelist's inline-editable cells, so it mirrors
+  Django (a changelist POST only accepts `list_editable` names). A field
+  that's writable on the *change form* but not in `list_editable` (or any
+  field when `list_editable` is empty) is rejected `bad_request`, leaving
+  the row unchanged (`#401`). Read-only / excluded / sensitive-name keys
+  are rejected as before (§5.2).
 
 Response 200:
 
