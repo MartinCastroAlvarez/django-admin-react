@@ -210,6 +210,8 @@ Uploads go through your configured file storage
 (`STORAGES["default"]` / `DEFAULT_FILE_STORAGE`); in production serve
 `MEDIA_ROOT` from your web server or object storage as usual.
 
+> ⚠️ **Serving user-uploaded media has security implications** (access-gating, stored-file XSS). See [`SECURITY.md` §9](SECURITY.md) before exposing `MEDIA_URL` in production — `FileField`/`ImageField` are writable.
+
 ### Running side-by-side with the legacy admin
 
 A common rollout: keep `/admin/` on the legacy HTML admin, mount the
