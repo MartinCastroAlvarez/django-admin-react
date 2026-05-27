@@ -16,6 +16,8 @@ Implementation rules followed (`SECURITY.md` §3):
 
 from __future__ import annotations
 
+from typing import Any
+
 from django.http import HttpRequest
 from django.http import HttpResponse
 from django.http import JsonResponse
@@ -32,7 +34,7 @@ class RegistryView(View):
 
     http_method_names = ["get"]
 
-    def get(self, request: HttpRequest, *args, **kwargs) -> HttpResponse:  # noqa: ARG002
+    def get(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:  # noqa: ARG002
         """Return the registry payload (contract §2).
 
         Hard gate: ``is_admin_user(request)`` (rule 1) → 403 envelope

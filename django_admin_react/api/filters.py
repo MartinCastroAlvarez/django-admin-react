@@ -43,6 +43,7 @@ from django.contrib.admin.sites import AdminSite
 from django.db.models import BooleanField
 from django.db.models import DateField
 from django.db.models import DateTimeField
+from django.db.models import Field
 from django.db.models import ForeignKey
 from django.db.models import Model
 from django.db.models import QuerySet
@@ -78,12 +79,17 @@ def _entry_spec(entry: Any) -> tuple[str | None, type | None]:
     return None, None
 
 
-def _safe_get_field(model: type[Model], name: str):
-    """Return ``model._meta.get_field(name)`` or ``None``."""
+def _safe_get_field(model: type[Model], name: str) -> Field | None:
+    """Return ``model._meta.get_field(name)`` or ``None``.
+
+    Reverse relations / generic FKs (not concrete ``Field``s) collapse to
+    ``None`` — consistent with ``serializers.safe_get_field``.
+    """
     try:
-        return model._meta.get_field(name)
+        field = model._meta.get_field(name)
     except Exception:
         return None
+    return field if isinstance(field, Field) else None
 
 
 def _spec_for_boolean(field_name: str, field: Any) -> dict[str, Any]:
