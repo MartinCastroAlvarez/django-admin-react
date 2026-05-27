@@ -113,17 +113,41 @@ body,
   color: #86efac !important;
 }
 
-/* Table cells whose value is rendered *markup* — a <span> emitted by a
-   list_display display method (badge, relative time, status pill, etc.)
-   — should read as a computed/markup value, visually distinct from
-   cells whose value is plain text directly in the cell div. Render any
-   such span in a slightly-muted monospace ("pre"-like) treatment.
-   Generic: matches any span that is the content of a table cell's div,
-   regardless of the span's own classes. Plain-text cells are untouched. */
-table td > div > span {
+/* Values rendered as *markup* — a <span> emitted by a list_display /
+   readonly display method (badge, relative time, status pill, etc.) —
+   should read as a computed/markup value, visually distinct from values
+   that are plain text. Render any such span in a slightly-muted monospace
+   ("pre"-like) treatment. Applied in BOTH places a markup value appears:
+   - the list table cell:   td > div > span
+   - the detail / inline dl: dd > span
+   Generic — matches any span that is the value's container, regardless of
+   the span's own classes. Plain-text values (a bare text node, not a span)
+   are untouched. */
+table td > div > span,
+dl dd > span {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   color: #6b7280;
 }
-.dark table td > div > span {
+.dark table td > div > span,
+.dark dl dd > span {
   color: #9ca3af;
+}
+
+/* …but an anchor INSIDE such a markup value must still look like a link
+   (#286) — a display method can emit `format_html('<a href=…>')`, and
+   that link should match the FK-cell link affordance (indigo, hover
+   underline, normal sans font), not inherit the muted monospace of its
+   container. Generic: any <a> inside a markup span in the list or detail. */
+table td > div > span a,
+dl dd > span a {
+  font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: #4f46e5; /* indigo-600 — matches the FK link color */
+}
+table td > div > span a:hover,
+dl dd > span a:hover {
+  text-decoration: underline;
+}
+.dark table td > div > span a,
+.dark dl dd > span a {
+  color: #818cf8; /* indigo-400 — legible on the dark surface */
 }
