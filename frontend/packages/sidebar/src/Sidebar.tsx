@@ -5,7 +5,7 @@
 // <Sidebar/> next to its own <main> content region.
 
 import { useEffect, useMemo, useState } from 'react';
-import { Download, Menu, Settings } from 'lucide-react';
+import { ChevronDown, Download, Menu, Settings } from 'lucide-react';
 import { Link, NavLink } from 'react-router-dom';
 
 import { useRegistry } from '@dar/data';
@@ -64,6 +64,9 @@ const BRAND_LOGO_URL = readMeta('dar-brand-logo');
 // eye; the filter input only appears at/above it. Matches the
 // `django.contrib.admin` sidebar Filter affordance (ACCEPTANCE N-9).
 const FILTER_THRESHOLD = 8;
+
+// localStorage key for the set of collapsed app-group labels (#227).
+const NAV_COLLAPSE_KEY = 'dar:nav-collapsed';
 
 type RegistryModel = {
   model_name: string;
@@ -124,6 +127,29 @@ export function Sidebar() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   // Settings dialog (cog) — appearance / dark-mode toggle (#84).
   const [settingsOpen, setSettingsOpen] = useState(false);
+  // Collapsed app-group sections (#227), persisted per device. A UI
+  // preference, like the column customizer — kept outside the data cache.
+  const [collapsed, setCollapsed] = useState<Set<string>>(() => {
+    try {
+      const raw = localStorage.getItem(NAV_COLLAPSE_KEY);
+      return raw ? new Set(JSON.parse(raw) as string[]) : new Set();
+    } catch {
+      return new Set();
+    }
+  });
+  const toggleApp = (appLabel: string): void => {
+    setCollapsed((prev) => {
+      const next = new Set(prev);
+      if (next.has(appLabel)) next.delete(appLabel);
+      else next.add(appLabel);
+      try {
+        localStorage.setItem(NAV_COLLAPSE_KEY, JSON.stringify([...next]));
+      } catch {
+        /* localStorage unavailable (private mode) — best effort. */
+      }
+      return next;
+    });
+  };
 
   // Memoised so the array identity is stable across renders — otherwise
   // the dependent `useMemo`s below recompute on every render
@@ -246,11 +272,27 @@ export function Sidebar() {
         )}
 
         <nav className="space-y-4">
-          {visibleApps.map((app) => (
+          {visibleApps.map((app) => {
+            // While a filter query is active, force every group open so
+            // matches are never hidden behind a collapsed section.
+            const isCollapsed = !query.trim() && collapsed.has(app.app_label);
+            return (
             <div key={app.app_label}>
-              <div className="mb-1 text-xs uppercase tracking-wide text-gray-400">
-                {app.verbose_name}
-              </div>
+              <button
+                type="button"
+                onClick={() => toggleApp(app.app_label)}
+                aria-expanded={!isCollapsed}
+                className="mb-1 flex w-full items-center gap-1 text-xs uppercase tracking-wide text-gray-400 hover:text-gray-200"
+              >
+                <ChevronDown
+                  className={`h-3 w-3 shrink-0 transition-transform ${
+                    isCollapsed ? '-rotate-90' : ''
+                  }`}
+                  aria-hidden
+                />
+                <span className="truncate">{app.verbose_name}</span>
+              </button>
+              {!isCollapsed && (
               <ul className="space-y-1">
                 {app.models.map((model) => {
                   // Route by real_app_label — `app.app_label` may be a
@@ -282,8 +324,10 @@ export function Sidebar() {
                   );
                 })}
               </ul>
+              )}
             </div>
-          ))}
+            );
+          })}
           {showFilter && visibleApps.length === 0 && (
             <div className="px-2 text-sm text-gray-500">No models match “{query}”.</div>
           )}
