@@ -26,6 +26,7 @@ from typing import Any
 
 from django.contrib.admin.options import InlineModelAdmin
 from django.contrib.admin.options import ModelAdmin
+from django.contrib.admin.options import TabularInline
 from django.contrib.admin.utils import label_for_field
 from django.contrib.admin.utils import lookup_field
 from django.db.models import ForeignKey
@@ -120,6 +121,21 @@ def _show_change_link_allowed(
     return bool(target_admin.has_view_permission(request))
 
 
+def _inline_kind(inline: InlineModelAdmin) -> str:
+    """Tabular vs stacked layout hint for the SPA.
+
+    Classified by the inline's **base class** (``admin.TabularInline``),
+    not its subclass *name*. The previous ``"Tabular" in
+    type(inline).__name__`` check mis-classified the common real-world
+    ``class BookInline(admin.TabularInline)`` (no "Tabular" in the name)
+    as stacked, so a tabular inline rendered as a card list (#417).
+    ``StackedInline`` — and a bare ``InlineModelAdmin`` — fall through to
+    the stacked layout, matching Django's own template selection
+    (``TabularInline`` is the only base that renders a table).
+    """
+    return "tabular" if isinstance(inline, TabularInline) else "stacked"
+
+
 def _spec_for_inline(
     inline: InlineModelAdmin,
     parent: Model,
@@ -146,7 +162,7 @@ def _spec_for_inline(
     can_change = bool(inline.has_change_permission(request, parent))
     can_delete = bool(inline.has_delete_permission(request, parent))
 
-    kind = "tabular" if "Tabular" in type(inline).__name__ else "stacked"
+    kind = _inline_kind(inline)
 
     visible_fields = _visible_inline_fields(inline, parent, request)
     fields_meta = _fields_meta(inline, child_model, visible_fields, request)
