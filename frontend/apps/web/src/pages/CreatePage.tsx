@@ -209,18 +209,31 @@ function CreateForm({ schema, onCreate, onCancel }: CreateFormProps) {
       {schema.fieldsets.map((fieldset, idx) => (
         <Card key={`cfs-${idx}-${fieldset.title ?? 'default'}`} title={fieldset.title ?? undefined}>
           <div className="divide-y divide-gray-100">
-            {fieldset.fields.map((name) => {
-              const field = schema.fields[name];
-              if (!field) return null;
+            {(fieldset.field_rows ?? fieldset.fields.map((f) => [f])).map((row, ri) => {
+              const renderInput = (name: string) => {
+                const field = schema.fields[name];
+                if (!field) return null;
+                return (
+                  <FieldInput
+                    key={name}
+                    name={name}
+                    field={field}
+                    value={values[name] ?? null}
+                    error={errors[name]}
+                    onChange={(v) => handleFieldChange(name, v)}
+                  />
+                );
+              };
+              if (row.length === 1) return renderInput(row[0] as string);
+              // Multi-field row (#382): inputs side by side.
               return (
-                <FieldInput
-                  key={name}
-                  name={name}
-                  field={field}
-                  value={values[name] ?? null}
-                  error={errors[name]}
-                  onChange={(v) => handleFieldChange(name, v)}
-                />
+                <div
+                  key={ri}
+                  className="grid gap-4 py-1"
+                  style={{ gridTemplateColumns: `repeat(${row.length}, minmax(0, 1fr))` }}
+                >
+                  {row.map((name) => renderInput(name))}
+                </div>
               );
             })}
           </div>

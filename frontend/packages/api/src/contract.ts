@@ -311,7 +311,15 @@ export interface FieldDescriptor {
 
 export interface FieldsetDescriptor {
   title: string | null;
+  /** Row-flattened field list (back-compat). Prefer `field_rows`. */
   fields: string[];
+  /**
+   * Field grouping by display row (#382): each inner array is one row,
+   * preserving Django's `fields=(("first","last"),"email")` tuple
+   * grouping. Optional for back-compat — when absent, render one field
+   * per row from `fields`.
+   */
+  field_rows?: string[][];
   /**
    * Django fieldset `classes` (e.g. `"collapse"`, `"wide"`). When it
    * includes `"collapse"`, the SPA renders the section collapsed by
