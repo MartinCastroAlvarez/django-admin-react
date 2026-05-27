@@ -4,6 +4,8 @@
 
 import type { ReactNode } from 'react';
 
+import { Skeleton } from './Skeleton';
+
 export interface TableColumn<Row> {
   key: string;
   header: ReactNode;
@@ -31,6 +33,19 @@ export interface TableProps<Row> {
   selectedKeys?: Set<string | number>;
   onToggleRow?: (key: string | number) => void;
   onToggleAll?: (checked: boolean) => void;
+  /**
+   * When true, render shimmer placeholder rows instead of `rows` (e.g.
+   * during a foreground refetch when stale rows are still in hand). The
+   * header — derived from `columns` — stays put so the layout doesn't
+   * jump between loading and loaded.
+   */
+  loading?: boolean;
+  /**
+   * How many skeleton rows to show while `loading`. Defaults to a
+   * layout-stable count derived from the current `rows` length so the
+   * table keeps roughly its prior height.
+   */
+  skeletonRows?: number;
 }
 
 const ALIGN_CLASSES = {
@@ -52,14 +67,19 @@ export function Table<Row>({
   selectedKeys,
   onToggleRow,
   onToggleAll,
+  loading = false,
+  skeletonRows,
 }: TableProps<Row>) {
-  if (rows.length === 0) {
+  // Only fall back to the empty-state when we're genuinely empty — not
+  // while a fetch is in flight, where we'd rather show skeleton rows.
+  if (!loading && rows.length === 0) {
     return <div className="py-8 text-center text-sm text-gray-500">{emptyLabel}</div>;
   }
   const selected = selectedKeys ?? new Set<string | number>();
-  const allSelected = rows.length > 0 && rows.every((r) => selected.has(rowKey(r)));
+  const allSelected = !loading && rows.length > 0 && rows.every((r) => selected.has(rowKey(r)));
+  const skeletonCount = skeletonRows ?? Math.min(Math.max(rows.length || 8, 3), 12);
   return (
-    <div className="overflow-x-auto">
+    <div className="overflow-x-auto" aria-busy={loading || undefined}>
       <table className="min-w-full text-sm">
         <thead className="bg-gray-50 text-gray-700">
           <tr>
@@ -95,37 +115,55 @@ export function Table<Row>({
           </tr>
         </thead>
         <tbody className="divide-y divide-gray-100 bg-white">
-          {rows.map((row) => {
-            const key = rowKey(row);
-            return (
-              <tr
-                key={key}
-                onClick={onRowClick ? () => onRowClick(row) : undefined}
-                className={onRowClick ? 'cursor-pointer hover:bg-gray-50' : ''}
-              >
-                {selectable && (
-                  <td className="w-10 px-4 py-2" onClick={(e) => e.stopPropagation()}>
-                    <input
-                      type="checkbox"
-                      aria-label="Select row"
-                      checked={selected.has(key)}
-                      onChange={() => onToggleRow?.(key)}
-                    />
-                  </td>
-                )}
-                {columns.map((col) => (
-                  <td key={col.key} className={`px-4 py-2 ${ALIGN_CLASSES[col.align ?? 'left']}`}>
-                    {/* Cap very wide cells (e.g. UUID `id` columns) and
+          {loading
+            ? Array.from({ length: skeletonCount }).map((_, i) => (
+                <tr key={`dar-skeleton-${i}`}>
+                  {selectable && (
+                    <td className="w-10 px-4 py-2">
+                      <Skeleton className="h-4 w-4" />
+                    </td>
+                  )}
+                  {columns.map((col) => (
+                    <td key={col.key} className={`px-4 py-2 ${ALIGN_CLASSES[col.align ?? 'left']}`}>
+                      <Skeleton className="h-4 w-full max-w-[12rem]" />
+                    </td>
+                  ))}
+                </tr>
+              ))
+            : rows.map((row) => {
+                const key = rowKey(row);
+                return (
+                  <tr
+                    key={key}
+                    onClick={onRowClick ? () => onRowClick(row) : undefined}
+                    className={onRowClick ? 'cursor-pointer hover:bg-gray-50' : ''}
+                  >
+                    {selectable && (
+                      <td className="w-10 px-4 py-2" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          aria-label="Select row"
+                          checked={selected.has(key)}
+                          onChange={() => onToggleRow?.(key)}
+                        />
+                      </td>
+                    )}
+                    {columns.map((col) => (
+                      <td
+                        key={col.key}
+                        className={`px-4 py-2 ${ALIGN_CLASSES[col.align ?? 'left']}`}
+                      >
+                        {/* Cap very wide cells (e.g. UUID `id` columns) and
                         truncate with an ellipsis so one long column
                         doesn't dominate the table; full value is on the
                         detail page. `truncate` carries whitespace-nowrap
                         so values still never split mid-word. */}
-                    <div className="max-w-[16rem] truncate">{col.render(row)}</div>
-                  </td>
-                ))}
-              </tr>
-            );
-          })}
+                        <div className="max-w-[16rem] truncate">{col.render(row)}</div>
+                      </td>
+                    ))}
+                  </tr>
+                );
+              })}
         </tbody>
       </table>
     </div>
