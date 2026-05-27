@@ -20,9 +20,12 @@ from typing import Any
 
 from django.db import IntegrityError
 from django.db import transaction
+from django.db.models import FileField
 from django.http import HttpRequest
 from django.http import HttpResponse
 from django.http import JsonResponse
+from django.http.multipartparser import MultiPartParser
+from django.http.multipartparser import MultiPartParserError
 from django.views.generic import View
 
 from django_admin_react.api.inlines_write import InlinePermissionDenied
@@ -110,19 +113,64 @@ class UpdateView(View):
         if not model_admin.has_change_permission(request, obj):
             return forbidden_response(request)
 
-        parsed = parse_json_body(request)
-        if isinstance(parsed, HttpResponse):
-            return parsed
-        payload: dict[str, Any] = parsed
-
-        # The optional ``inlines`` block is handled by the formset write
-        # path after the parent form saves; strip it from the parent
-        # payload so it isn't treated as an unknown parent field key.
-        inlines_payload = payload.pop("inlines", None)
-
         writable = writable_field_names(model, model_admin, request, obj)
         forbidden = readonly_or_excluded_names(model_admin, request, obj)
-        rejection = reject_forbidden_keys(payload, writable, forbidden)
+
+        # File uploads (#241) arrive as multipart/form-data. Branch on the
+        # content type: multipart feeds the ModelForm request.POST +
+        # request.FILES bound to the instance; JSON keeps the PATCH-merge.
+        # CSRF is enforced either way (no @csrf_exempt).
+        is_multipart = (request.content_type or "").startswith("multipart/form-data")
+        if is_multipart:
+            # The SPA submits the full form as multipart, so no PATCH-merge:
+            # a file field with no new upload and no clear flag keeps its
+            # existing file via ClearableFileInput bound to ``instance``.
+            inlines_payload = None
+            # Django only auto-populates request.POST / request.FILES for
+            # POST requests — a PATCH multipart body is left unparsed, so we
+            # parse it ourselves. The body hasn't been read yet on this path.
+            form_data: Any
+            files: Any
+            try:
+                # ``request`` is the input stream — exactly what Django's own
+                # ``_load_post_and_files`` passes to MultiPartParser; the stub
+                # types arg 2 as ``IO[bytes]`` (too narrow), hence the ignore.
+                form_data, files = MultiPartParser(
+                    request.META,
+                    request,  # type: ignore[arg-type]
+                    request.upload_handlers,
+                    request.encoding,
+                ).parse()
+            except MultiPartParserError:
+                return bad_request("Malformed multipart/form-data body.")
+            # ``<field>-clear`` is Django's ClearableFileInput convention for
+            # removing an existing file. Allow it through the forbidden-key
+            # gate for writable file fields (it isn't a model field name), so
+            # an explicit clear isn't rejected as an unknown field. Clearing a
+            # field the user can't write still fails — its base name isn't in
+            # ``writable``, so the form ignores the stray ``-clear``.
+            clear_keys = {
+                f"{f.name}-clear"
+                for f in model._meta.get_fields()
+                if isinstance(f, FileField) and f.name in writable
+            }
+            submitted_keys: dict[str, Any] = dict.fromkeys(
+                k for k in (*form_data, *files) if k not in clear_keys
+            )
+        else:
+            parsed = parse_json_body(request)
+            if isinstance(parsed, HttpResponse):
+                return parsed
+            payload: dict[str, Any] = parsed
+            # The optional ``inlines`` block is handled by the formset write
+            # path after the parent form saves; strip it from the parent
+            # payload so it isn't treated as an unknown parent field key.
+            inlines_payload = payload.pop("inlines", None)
+            submitted_keys = payload
+            form_data = merged_initial_for_update(obj, writable, payload, model)
+            files = None
+
+        rejection = reject_forbidden_keys(submitted_keys, writable, forbidden)
         if rejection is not None:
             return rejection
 
@@ -131,8 +179,8 @@ class UpdateView(View):
         # consumer get_form override that branches on `change` must hit
         # its change-form path, not the default factory).
         form = model_admin.get_form(request, obj=obj, change=True)(
-            data=merged_initial_for_update(obj, writable, payload, model),
-            files=None,
+            data=form_data,
+            files=files,
             instance=obj,
         )
         if not form.is_valid():
