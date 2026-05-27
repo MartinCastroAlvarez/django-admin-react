@@ -20,6 +20,7 @@ import { Breadcrumb, Button, Card, EmptyState } from '@dar/ui';
 import { FieldInput } from '@dar/form';
 
 import { RecordSkeleton } from '../components/RecordSkeleton';
+import { slugify } from '../slugify';
 import { useModelMeta } from '../useModelMeta';
 import { useToast } from '../toast';
 import { useUnsavedGuard } from '../useUnsavedGuard';
@@ -150,9 +151,7 @@ function CreateForm({ schema, onCreate, onCancel }: CreateFormProps) {
       for (const [target, sources] of Object.entries(prepopulated)) {
         if (editedTargets.current.has(target)) continue;
         if (!sources.includes(name)) continue;
-        const joined = sources
-          .map((s) => (next[s] == null ? '' : String(next[s])))
-          .join(' ');
+        const joined = sources.map((s) => (next[s] == null ? '' : String(next[s]))).join(' ');
         next[target] = slugify(joined);
       }
       return next;
@@ -261,18 +260,4 @@ function CreateForm({ schema, onCreate, onCancel }: CreateFormProps) {
       </div>
     </form>
   );
-}
-
-// Slugify for prepopulated_fields (#245) — approximates Django's
-// `slugify`: strip accents, lowercase, drop non-word characters, and
-// collapse runs of whitespace/hyphens into a single hyphen.
-function slugify(value: string): string {
-  return value
-    .normalize('NFKD')
-    .replace(/[̀-ͯ]/g, '')
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s-]/g, '')
-    .replace(/[\s-]+/g, '-')
-    .replace(/^-+|-+$/g, '');
 }
