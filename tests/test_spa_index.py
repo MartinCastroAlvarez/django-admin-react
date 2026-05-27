@@ -164,22 +164,47 @@ def _reload_conf() -> None:
 
 
 @pytest.mark.django_db
-def test_brand_title_falls_back_to_admin_site_header(superuser_client: Client) -> None:
-    """When `BRAND_TITLE` is unset, the SPA shell uses the configured
-    AdminSite's `site_header`. Consumers who already customised their
-    AdminSite for the legacy admin don't need a second setting.
+def test_brand_derives_header_and_title_from_admin_site(superuser_client: Client) -> None:
+    """When `BRAND_TITLE` is unset, the SPA shell derives both brand
+    strings from the AdminSite, mirroring Django admin: `site_header` is
+    the sidebar header (the `dar-brand-title` meta) and `site_title` is
+    the browser-tab `<title>` (#281). Consumers who already customised
+    their AdminSite for the legacy admin need no extra setting.
     """
     with override_settings(DJANGO_ADMIN_REACT={}):
         _reload_conf()
         original_header = default_admin_site.site_header
+        original_title = default_admin_site.site_title
         default_admin_site.site_header = "Operations Console"
+        default_admin_site.site_title = "Ops"
         try:
             response = superuser_client.get(ROOT_URL)
             html = response.content.decode("utf-8")
+            # Sidebar header ← site_header.
             assert 'name="dar-brand-title" content="Operations Console"' in html
+            # Browser-tab <title> ← site_title (Django's tab-title source).
+            assert "<title>Ops</title>" in html
+        finally:
+            default_admin_site.site_header = original_header
+            default_admin_site.site_title = original_title
+
+
+@pytest.mark.django_db
+def test_tab_title_falls_back_to_site_header_when_no_site_title(superuser_client: Client) -> None:
+    """If the AdminSite has no `site_title`, the tab `<title>` falls back
+    to `site_header` (then the package name) — never blank (#281)."""
+    with override_settings(DJANGO_ADMIN_REACT={}):
+        _reload_conf()
+        original_header = default_admin_site.site_header
+        original_title = default_admin_site.site_title
+        default_admin_site.site_header = "Operations Console"
+        default_admin_site.site_title = ""  # falsy → fall through to header
+        try:
+            html = superuser_client.get(ROOT_URL).content.decode("utf-8")
             assert "<title>Operations Console</title>" in html
         finally:
             default_admin_site.site_header = original_header
+            default_admin_site.site_title = original_title
 
 
 @pytest.mark.django_db
@@ -253,6 +278,22 @@ def test_brand_logo_url_unset_falls_back_to_data_uri(superuser_client: Client) -
         html = response.content.decode("utf-8")
         assert 'rel="icon" href="data:,"' in html
         assert 'name="dar-brand-logo"' not in html
+
+
+@pytest.mark.django_db
+def test_brand_logo_falls_back_to_admin_site_logo(superuser_client: Client) -> None:
+    """When `BRAND_LOGO_URL` is unset, a `site_logo` attribute on the
+    AdminSite is used — so a consumer can set the logo as a constant on
+    their admin site, no separate setting (#281)."""
+    with override_settings(DJANGO_ADMIN_REACT={}):
+        _reload_conf()
+        default_admin_site.site_logo = "/static/acme/site-logo.svg"
+        try:
+            html = superuser_client.get(ROOT_URL).content.decode("utf-8")
+            assert 'name="dar-brand-logo" content="/static/acme/site-logo.svg"' in html
+            assert 'rel="icon" href="/static/acme/site-logo.svg"' in html
+        finally:
+            del default_admin_site.site_logo
 
 
 # --------------------------------------------------------------------------- #

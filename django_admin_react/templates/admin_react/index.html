@@ -12,7 +12,12 @@
     <meta name="dar-mount" content="{{ mount_point }}" />
     <meta name="dar-brand-title" content="{{ brand_title }}" />
     {% if brand_logo_url %}<meta name="dar-brand-logo" content="{{ brand_logo_url }}" />{% endif %}
-    <title>{{ brand_title }}</title>
+    {% comment %}
+      The tab <title> uses the AdminSite's site_title (Django's tab-title
+      source); the sidebar header reads dar-brand-title (site_header). Both
+      collapse to BRAND_TITLE when the consumer set that override (#281).
+    {% endcomment %}
+    <title>{{ tab_title }}</title>
     {% if brand_logo_url %}
       <link rel="icon" href="{{ brand_logo_url }}" />
     {% else %}
@@ -36,7 +41,7 @@
     {% endcomment %}
     <style>:root { --dar-primary: {{ primary_color }}; }</style>
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-title" content="{{ brand_title }}" />
+    <meta name="apple-mobile-web-app-title" content="{{ tab_title }}" />
     {% csrf_token %}
     {% if bundle %}
       {% for css_path in bundle.css %}

@@ -95,7 +95,8 @@ class SpaIndexView(View):
                 "mount_point": _mount_from_request(request),
                 "bundle": _load_manifest_entry(),
                 "brand_title": _resolve_brand_title(admin_site),
-                "brand_logo_url": dar_conf.BRAND_LOGO_URL,
+                "tab_title": _resolve_tab_title(admin_site),
+                "brand_logo_url": _resolve_brand_logo(admin_site),
                 "primary_color": _resolve_primary_color(),
                 "initial_theme": _resolve_initial_theme(request),
             },
@@ -175,8 +176,9 @@ class DarLoginView(LoginView):
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
         """Add the brand title so the login page matches the SPA shell."""
         context = super().get_context_data(**kwargs)
-        context["brand_title"] = _resolve_brand_title(get_admin_site())
-        context["brand_logo_url"] = dar_conf.BRAND_LOGO_URL
+        admin_site = get_admin_site()
+        context["brand_title"] = _resolve_brand_title(admin_site)
+        context["brand_logo_url"] = _resolve_brand_logo(admin_site)
         return context
 
 
@@ -238,6 +240,55 @@ def _resolve_brand_title(admin_site: Any) -> str:
     if site_header:
         return str(site_header)
     return "Django Admin"
+
+
+def _resolve_tab_title(admin_site: Any) -> str:
+    """Compute the browser-tab ``<title>``.
+
+    Mirrors Django admin, which uses ``AdminSite.site_title`` for the
+    document title and ``site_header`` for the on-page header (#281). So
+    a consumer who already set ``site_title`` on their ``AdminSite`` needs
+    no extra setting. Resolution order:
+
+    1. ``DJANGO_ADMIN_REACT["BRAND_TITLE"]`` — explicit override (kept in
+       lockstep with the sidebar header).
+    2. ``admin_site.site_title`` — Django's tab-title source.
+    3. ``admin_site.site_header`` — fall back to the header text.
+    4. Literal ``"Django Admin"``.
+    """
+    configured = dar_conf.BRAND_TITLE
+    if isinstance(configured, str) and configured.strip():
+        return configured
+    for attr in ("site_title", "site_header"):
+        value = getattr(admin_site, attr, None)
+        if value:
+            return str(value)
+    return "Django Admin"
+
+
+def _resolve_brand_logo(admin_site: Any) -> str | None:
+    """Compute the SPA logo / favicon URL.
+
+    Resolution order:
+
+    1. ``DJANGO_ADMIN_REACT["BRAND_LOGO_URL"]`` — explicit override.
+    2. ``admin_site.site_logo`` — Django's ``AdminSite`` has no logo
+       attribute by default, so a consumer can add one as a constant on
+       their custom site and have it picked up with no separate setting
+       (#281). Either an absolute URL or a path under ``STATIC_URL``.
+    3. ``None`` — the template keeps the no-op ``data:,`` placeholder.
+
+    The value lands in an HTML ``href`` attribute (auto-escaped by the
+    template), so it carries no CSS-injection surface like
+    ``PRIMARY_COLOR``; it is the consumer's own setting / site attribute.
+    """
+    configured = dar_conf.BRAND_LOGO_URL
+    if isinstance(configured, str) and configured.strip():
+        return configured
+    site_logo = getattr(admin_site, "site_logo", None)
+    if isinstance(site_logo, str) and site_logo.strip():
+        return site_logo
+    return None
 
 
 # A strict hex color: #rgb, #rgba, #rrggbb, or #rrggbbaa. Anything else is
