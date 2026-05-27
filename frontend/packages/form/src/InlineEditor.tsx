@@ -17,7 +17,7 @@
 import { useEffect, useMemo, useState } from 'react';
 
 import type { InlineDescriptor, InlineWriteItem, WriteValue } from '@dar/data';
-import { Button } from '@dar/ui';
+import { Button, Checkbox } from '@dar/ui';
 
 interface EditRow {
   key: string;
@@ -152,8 +152,7 @@ export function InlineEditor({ inline, onItems }: InlineEditorProps) {
     row.pk !== null ? (
       inline.can_delete ? (
         <label className="flex items-center gap-1 text-xs text-gray-500">
-          <input
-            type="checkbox"
+          <Checkbox
             checked={row.deleted}
             // Block removing below min_num: a not-yet-deleted row can't be
             // checked once at the floor (an already-checked one can still
@@ -276,8 +275,7 @@ function InlineCellInput({ type, value, disabled, onChange }: InlineCellInputPro
 
   if (type === 'boolean') {
     return (
-      <input
-        type="checkbox"
+      <Checkbox
         checked={value === true}
         disabled={disabled}
         onChange={(e) => onChange(e.target.checked)}

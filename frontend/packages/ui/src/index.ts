@@ -26,6 +26,9 @@ export type { TableColumn, TableProps } from './Table';
 export { Input } from './Input';
 export type { InputProps } from './Input';
 
+export { Checkbox } from './Checkbox';
+export type { CheckboxProps } from './Checkbox';
+
 export { Modal } from './Modal';
 export type { ModalProps } from './Modal';
 
