@@ -4,6 +4,10 @@
 // a highlighted button. Single-select per filter, matching Django's
 // list_filter. Presentational + callback-driven — the page owns the URL
 // state and passes the current values + change handlers in.
+//
+// Layout: leading + search + filters + trailing all live on one row. The
+// trailing slot is pinned right (the page composes it so the row ends in
+// "Clear all" then "Customize").
 
 import { useState, type ReactNode } from 'react';
 import { Check, ChevronDown } from 'lucide-react';
@@ -27,12 +31,11 @@ export interface FilterBarProps {
   active: Record<string, string>;
   /** Set/clear one filter — pass '' to clear it. */
   onFilterChange: (name: string, value: string) => void;
-  onClearAll: () => void;
   /** Controls rendered to the **left** of the search input (e.g. the
    *  bulk-actions menu, which sits before search when rows are selected). */
   leading?: ReactNode;
-  /** Extra toolbar controls rendered to the right of the search input
-   *  (e.g. the column customizer). */
+  /** Right-aligned controls on the same row (the page composes these:
+   *  "Clear all" then the column customizer). */
   trailing?: ReactNode;
 }
 
@@ -56,64 +59,47 @@ export function FilterBar({
   filters,
   active,
   onFilterChange,
-  onClearAll,
   leading,
   trailing,
 }: FilterBarProps) {
-  const anyActive = filters.some((f) => active[f.name]);
   return (
-    <div className="space-y-2">
-      <div className="flex flex-wrap items-center gap-2">
-        {leading}
-        {showSearch && (
-          <form
-            className="w-full max-w-sm"
-            onSubmit={(e) => {
-              e.preventDefault();
-              onSearchCommit?.();
-            }}
-          >
-            <Input
-              value={searchValue}
-              placeholder={searchPlaceholder}
-              aria-label="Search"
-              aria-describedby={searchHelpText ? 'dar-search-help' : undefined}
-              onChange={(e) => onSearchChange(e.target.value)}
-              onBlur={() => onSearchCommit?.()}
-            />
-            {searchHelpText ? (
-              <p id="dar-search-help" className="mt-1 text-xs text-gray-500">
-                {searchHelpText}
-              </p>
-            ) : null}
-          </form>
-        )}
-        {trailing}
-      </div>
-      {filters.length > 0 && (
-        <div className="flex flex-wrap items-center gap-2">
-          {filters.map((f) => (
-            <FilterDropdown
-              key={f.name}
-              filter={f}
-              // Fall back to the descriptor's server-applied `selected` (a
-              // SimpleListFilter default) when the URL carries no value, so
-              // the control reflects the rows actually returned (#283).
-              value={active[f.name] ?? (f.selected != null ? String(f.selected) : '')}
-              onChange={(v) => onFilterChange(f.name, v)}
-            />
-          ))}
-          {anyActive && (
-            <button
-              type="button"
-              onClick={onClearAll}
-              className="text-sm text-gray-500 underline hover:text-gray-700"
-            >
-              Clear all
-            </button>
-          )}
-        </div>
+    <div className="flex flex-wrap items-center gap-2">
+      {leading}
+      {showSearch && (
+        <form
+          className="min-w-[12rem] flex-1 sm:max-w-xs"
+          onSubmit={(e) => {
+            e.preventDefault();
+            onSearchCommit?.();
+          }}
+        >
+          <Input
+            value={searchValue}
+            placeholder={searchPlaceholder}
+            aria-label="Search"
+            aria-describedby={searchHelpText ? 'dar-search-help' : undefined}
+            onChange={(e) => onSearchChange(e.target.value)}
+            onBlur={() => onSearchCommit?.()}
+          />
+          {searchHelpText ? (
+            <p id="dar-search-help" className="mt-1 text-xs text-gray-500">
+              {searchHelpText}
+            </p>
+          ) : null}
+        </form>
       )}
+      {filters.map((f) => (
+        <FilterDropdown
+          key={f.name}
+          filter={f}
+          // Fall back to the descriptor's server-applied `selected` (a
+          // SimpleListFilter default) when the URL carries no value, so
+          // the control reflects the rows actually returned (#283).
+          value={active[f.name] ?? (f.selected != null ? String(f.selected) : '')}
+          onChange={(v) => onFilterChange(f.name, v)}
+        />
+      ))}
+      {trailing ? <div className="ml-auto flex flex-wrap items-center gap-2">{trailing}</div> : null}
     </div>
   );
 }
