@@ -6,7 +6,7 @@
 // the data layer's job.
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Settings2 } from 'lucide-react';
+import { GripVertical, Settings2 } from 'lucide-react';
 import { Link, useHref, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import { useApiClient, useList, type ActionDescriptor, type ListRow } from '@dar/data';
@@ -106,6 +106,14 @@ export function ListPage() {
   );
   const resizeColumn = (key: string, width: number): void =>
     setColWidths((prev) => ({ ...prev, [key]: width }));
+
+  // Column order (#218): persisted list of non-pk column names. The pk
+  // stays pinned first (#360); new/unknown columns append in natural order.
+  const [colOrder, setColOrder] = usePersistedState<string[]>(
+    `dar:colorder:v1:${appLabel}:${modelName}`,
+    [],
+  );
+  const [dragCol, setDragCol] = useState<string | null>(null);
 
   // Persist the applied list_filter selections per model (a UI
   // preference, like the column customizer) so a later bare visit can
@@ -353,9 +361,29 @@ export function ListPage() {
   const pkField = data.pk_field;
   const isPkCol = (name: string): boolean => name === pkField;
   const pkCol = data.columns.find((c) => isPkCol(c.name));
-  const orderedDescriptors = pkCol
-    ? [pkCol, ...data.columns.filter((c) => !isPkCol(c.name))]
-    : data.columns;
+  const nonPkDescriptors = data.columns.filter((c) => !isPkCol(c.name));
+  // Apply the saved column order (#218): known names in saved order, then
+  // any new/unsaved columns in their natural order.
+  const byColName = new Map(nonPkDescriptors.map((c) => [c.name, c]));
+  const orderedNonPk = [
+    ...colOrder
+      .map((n) => byColName.get(n))
+      .filter((c): c is (typeof nonPkDescriptors)[number] => Boolean(c)),
+    ...nonPkDescriptors.filter((c) => !colOrder.includes(c.name)),
+  ];
+  const orderedDescriptors = pkCol ? [pkCol, ...orderedNonPk] : orderedNonPk;
+
+  // Reorder a non-pk column before `target`, persisting the full order.
+  const moveColumn = (dragged: string, target: string): void => {
+    const names = orderedNonPk.map((c) => c.name);
+    const from = names.indexOf(dragged);
+    const to = names.indexOf(target);
+    if (from === -1 || to === -1 || from === to) return;
+    const next = [...names];
+    next.splice(from, 1);
+    next.splice(to, 0, dragged);
+    setColOrder(next);
+  };
 
   const columns = orderedDescriptors
     // The pk column is never hidden, even if a stale preference lists it.
@@ -601,7 +629,8 @@ export function ListPage() {
 
       {colsOpen && (
         <Modal title="Columns" onClose={() => setColsOpen(false)}>
-          <ul className="space-y-2">
+          <p className="mb-2 text-xs text-gray-500">Drag to reorder; toggle to show or hide.</p>
+          <ul className="space-y-1">
             {orderedDescriptors.map((c) => {
               const pk = isPkCol(c.name);
               const visible = pk || !hiddenCols.has(c.name);
@@ -609,9 +638,32 @@ export function ListPage() {
               // last remaining visible column also can't be hidden.
               const locked = pk || (visible && visibleColumnCount <= 1);
               return (
-                <li key={c.name}>
+                <li
+                  key={c.name}
+                  draggable={!pk}
+                  onDragStart={pk ? undefined : () => setDragCol(c.name)}
+                  onDragEnd={() => setDragCol(null)}
+                  onDragOver={pk ? undefined : (e) => e.preventDefault()}
+                  onDrop={
+                    pk
+                      ? undefined
+                      : (e) => {
+                          e.preventDefault();
+                          if (dragCol) moveColumn(dragCol, c.name);
+                          setDragCol(null);
+                        }
+                  }
+                  className={`flex items-center gap-2 rounded border border-transparent px-1 py-1 ${
+                    pk ? '' : 'cursor-grab hover:border-gray-200'
+                  } ${dragCol === c.name ? 'opacity-50' : ''}`}
+                >
+                  {pk ? (
+                    <span className="w-4 shrink-0" aria-hidden />
+                  ) : (
+                    <GripVertical className="h-4 w-4 shrink-0 text-gray-400" aria-hidden />
+                  )}
                   <label
-                    className={`flex items-center gap-2 text-sm ${
+                    className={`flex flex-1 items-center gap-2 text-sm ${
                       locked && !pk ? 'text-gray-400' : 'text-gray-800'
                     }`}
                   >
