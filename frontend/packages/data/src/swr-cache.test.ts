@@ -66,4 +66,60 @@ describe('useSwrCache', () => {
     expect(raw).not.toBeNull();
     expect(JSON.parse(raw as string)).toEqual({ v: 'persisted' });
   });
+
+  it('blanks to a loading state on a key change by default (#416)', async () => {
+    // Detail-style: a new key with no cache must not keep the previous
+    // record's data on screen — it would flash the wrong record.
+    const fetcher = vi.fn().mockResolvedValue({ v: 'a' });
+    const { result, rerender } = renderHook(
+      ({ k }: { k: string }) => useSwrCache({ cacheKey: k, fetcher, ...opts }),
+      { initialProps: { k: 'kc-a' } },
+    );
+    await waitFor(() => expect(result.current.data).toEqual({ v: 'a' }));
+
+    fetcher.mockResolvedValueOnce({ v: 'b' });
+    rerender({ k: 'kc-b' });
+    // New uncached key → blanked + loading until the fetch lands.
+    expect(result.current.data).toBeNull();
+    expect(result.current.loading).toBe(true);
+    await waitFor(() => expect(result.current.data).toEqual({ v: 'b' }));
+  });
+
+  it('keeps the previous data on a key change when keepPreviousData is set (#368)', async () => {
+    // List-style: a filter change (new key, no cache) keeps the prior
+    // rows on screen and shows a foreground load, so the page chrome
+    // stays put and only the table skeletons.
+    const fetcher = vi.fn().mockResolvedValue({ v: 'page1' });
+    const { result, rerender } = renderHook(
+      ({ k }: { k: string }) =>
+        useSwrCache({ cacheKey: k, fetcher, keepPreviousData: true, ...opts }),
+      { initialProps: { k: 'kp-1' } },
+    );
+    await waitFor(() => expect(result.current.data).toEqual({ v: 'page1' }));
+
+    fetcher.mockResolvedValueOnce({ v: 'page2' });
+    rerender({ k: 'kp-2' });
+    // Previous data retained (not blanked) while loading the new key.
+    expect(result.current.data).toEqual({ v: 'page1' });
+    expect(result.current.loading).toBe(true);
+    await waitFor(() => expect(result.current.data).toEqual({ v: 'page2' }));
+  });
+
+  it('adopts the new key cached value immediately even with keepPreviousData', async () => {
+    window.localStorage.setItem('kp-b', JSON.stringify({ v: 'cached-b' }));
+    const fetcher = vi.fn().mockResolvedValue({ v: 'fresh-a' });
+    const { result, rerender } = renderHook(
+      ({ k }: { k: string }) =>
+        useSwrCache({ cacheKey: k, fetcher, keepPreviousData: true, ...opts }),
+      { initialProps: { k: 'kp-a' } },
+    );
+    await waitFor(() => expect(result.current.data).toEqual({ v: 'fresh-a' }));
+
+    fetcher.mockResolvedValueOnce({ v: 'fresh-b' });
+    rerender({ k: 'kp-b' });
+    // The new key has a cache → show it at once (no stale-a, no blank),
+    // then revalidate to the canonical value.
+    expect(result.current.data).toEqual({ v: 'cached-b' });
+    await waitFor(() => expect(result.current.data).toEqual({ v: 'fresh-b' }));
+  });
 });

@@ -53,6 +53,21 @@ export interface UseSwrCacheArgs<T> {
    * current data, not whatever was cached when you left.
    */
   refetchOnFocus?: boolean;
+  /**
+   * What to show on screen while the *next* key's value loads after the
+   * cache key changes.
+   *
+   * - `false` (default): adopt the new key's cached value immediately,
+   *   blanking to a loading state when it has none. Right for a detail
+   *   view, where keeping the previous object's fields on screen would
+   *   flash the *wrong* record (#416).
+   * - `true`: keep the previous value on screen and show a foreground
+   *   load instead of blanking. Right for a list, where the chrome
+   *   (columns/header) is key-independent and only the table rows change
+   *   — so a filter/page change skeletons just the table, not the whole
+   *   page (#368).
+   */
+  keepPreviousData?: boolean;
 }
 
 function readCache<T>(key: string): T | null {
@@ -81,6 +96,7 @@ export function useSwrCache<T>({
   deps = [],
   refetchInterval = 0,
   refetchOnFocus = true,
+  keepPreviousData = false,
 }: UseSwrCacheArgs<T>): SwrState<T> {
   const cached = useMemo<T | null>(() => readCache<T>(cacheKey), [cacheKey]);
   const [data, setData] = useState<T | null>(cached);
@@ -88,16 +104,22 @@ export function useSwrCache<T>({
   const [error, setError] = useState<Error | null>(null);
 
   // When the cache key changes (e.g. navigating from one object's detail
-  // to a different object's), reset to the NEW key's cached value during
-  // render. Otherwise `data` keeps the previous key's value — `useState`
-  // initializers only run on mount — and the view shows stale content
-  // until the background fetch lands (#416: detail→detail nav flashed the
-  // prior record). Setting state during render is a supported React
+  // to a different object's, or changing a list filter), reconcile state
+  // during render. `useState` initializers only run on mount, so without
+  // this `data` would keep the previous key's value until the background
+  // fetch lands. Setting state during render is a supported React
   // pattern: it re-renders immediately, before paint, so no flicker.
+  //
+  // `keepPreviousData` chooses the behaviour: the default blanks to the
+  // new key's cache (so a detail view never flashes the wrong record,
+  // #416); `true` keeps the previous value on screen and just shows a
+  // foreground load (so a list filter change skeletons only the table,
+  // not the whole page, #368). The new key's cached value is still
+  // adopted immediately when it exists.
   const keyRef = useRef(cacheKey);
   if (keyRef.current !== cacheKey) {
     keyRef.current = cacheKey;
-    setData(cached);
+    if (!keepPreviousData || cached !== null) setData(cached);
     setLoading(cached === null);
     setError(null);
   }
