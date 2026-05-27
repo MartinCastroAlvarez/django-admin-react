@@ -684,6 +684,10 @@ function DeleteButton({ label, loadPreview, onConfirm }: DeleteButtonProps) {
 
 function InlineSection({ inline }: { inline: InlineDescriptor }) {
   if (inline.rows.length === 0) {
+    // An empty inline the user can't add to is pure noise on the detail
+    // page (#411) — hide the whole section. An empty but *addable* inline
+    // stays, so the first child can still be added.
+    if (!inline.can_add) return null;
     return (
       <Card title={inline.label}>
         <p className="py-4 text-sm text-gray-500">No {inline.label.toLowerCase()} yet.</p>
