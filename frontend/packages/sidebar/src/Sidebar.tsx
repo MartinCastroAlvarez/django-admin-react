@@ -6,7 +6,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { Download, Menu, Settings } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, NavLink } from 'react-router-dom';
 
 import { useRegistry } from '@dar/data';
 import { SettingsModal } from '@dar/settings';
@@ -262,13 +262,22 @@ export function Sidebar() {
                   const routeApp = model.real_app_label || app.app_label;
                   return (
                     <li key={`${routeApp}.${model.model_name}`}>
-                      <Link
+                      {/* NavLink highlights the current model — and stays
+                          lit on its list, detail, edit, and add routes
+                          (no `end`, so the path prefix matches). NavLink
+                          sets aria-current="page" when active (#291). */}
+                      <NavLink
                         to={`/${routeApp}/${model.model_name}`}
                         onClick={closeDrawer}
-                        className="block rounded px-2 py-1 text-sm hover:bg-gray-800"
+                        className={({ isActive }) =>
+                          [
+                            'block rounded px-2 py-1 text-sm',
+                            isActive ? 'bg-gray-800 font-medium text-white' : 'hover:bg-gray-800',
+                          ].join(' ')
+                        }
                       >
                         {modelLabel(model)}
-                      </Link>
+                      </NavLink>
                     </li>
                   );
                 })}
