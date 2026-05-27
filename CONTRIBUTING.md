@@ -29,11 +29,12 @@ a [Discussion](https://github.com/MartinCastroAlvarez/django-admin-react/discuss
 poetry install
 poetry run pytest
 
-# JS side (when the frontend lands in PR #6)
+# JS side — the frontend is a pnpm workspace under `frontend/`
+cd frontend
 pnpm install
 pnpm -r lint
 pnpm -r typecheck
-pnpm -r test
+pnpm test          # vitest (run from the frontend/ root)
 ```
 
 We use **Poetry** for Python and **pnpm** for JavaScript. Do not mix in
@@ -110,7 +111,10 @@ at or above the threshold blocks the release per `ACCEPTANCE.md`
 - Python tests live in `tests/`. We use `pytest` with `pytest-django`.
 - The minimum test matrix for every endpoint is in
   [`SECURITY.md`](SECURITY.md) §4.
-- The frontend test setup will land in PR #6; details will be added then.
+- Frontend tests use **vitest** + Testing Library, discovered as
+  `*.test.{ts,tsx}` beside the source across `frontend/packages/**` and
+  `frontend/apps/**`. Run them with `pnpm test` from `frontend/`. Target
+  coverage is in [`ACCEPTANCE.md`](ACCEPTANCE.md) §3.5 T-8.
 
 ## 6. Documentation
 
