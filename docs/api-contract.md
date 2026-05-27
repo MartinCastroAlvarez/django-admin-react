@@ -189,6 +189,8 @@ Response 200:
   "page_size": 25,
   "total": 137,
   "full_count": 412,
+  "list_max_show_all": 200,
+  "can_show_all": true,
   "results": [
     {
       "pk": 1,
@@ -212,6 +214,13 @@ Rules:
   list-display values are resolved using the admin's standard helpers.
 - `search_fields` is the literal list from the `ModelAdmin` (so the SPA
   can label the search box). Empty list means no search.
+- `list_max_show_all` is `ModelAdmin.list_max_show_all` (default 200) — the
+  cap on a single "Show all" page. `can_show_all` is `true` when the whole
+  filtered set fits within it, so the SPA can offer a "Show all N" link
+  (`#385`). A `?page_size` up to `list_max_show_all` is honoured even past
+  the global `MAX_PAGE_SIZE` DoS guard (it's a deliberate admin setting);
+  an arbitrary client value is still clamped to
+  `max(MAX_PAGE_SIZE, list_max_show_all)`.
 - `total` is the count *after* search / `list_filter` / `date_hierarchy`
   narrowing. `full_count` is the unfiltered base count
   (`ModelAdmin.get_queryset(request)`), so the SPA can show "<total> of

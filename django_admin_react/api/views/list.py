@@ -134,7 +134,18 @@ class ListView(View):
         else:
             full_count = total
 
-        page_size = _clamp_page_size(request.GET.get("page_size"))
+        # "Show all" parity (#385): ``ModelAdmin.list_max_show_all`` (default
+        # 200) caps how many rows the SPA may request on a single page. A
+        # ``?page_size`` up to that cap is honoured (it's a deliberate admin
+        # setting), even when it exceeds the global ``MAX_PAGE_SIZE`` DoS
+        # guard — but never beyond it, so an arbitrary client value is still
+        # bounded. ``can_show_all`` tells the SPA whether one page can hold
+        # the whole (filtered) result set.
+        list_max_show_all = int(getattr(model_admin, "list_max_show_all", 200) or 200)
+        page_size = _clamp_page_size(
+            request.GET.get("page_size"),
+            maximum=max(int(conf.MAX_PAGE_SIZE), list_max_show_all),
+        )
         page = _clamp_page(request.GET.get("page"))
         start = (page - 1) * page_size
         end = start + page_size
@@ -175,6 +186,10 @@ class ListView(View):
             "page": page,
             "page_size": page_size,
             "total": total,
+            # "Show all" affordance (#385): the cap, and whether the whole
+            # (filtered) result set fits on one page within it.
+            "list_max_show_all": list_max_show_all,
+            "can_show_all": total <= list_max_show_all,
             # Unfiltered base count when the list is narrowed (else == total);
             # ``null`` when ``show_full_result_count`` is False. The SPA shows
             # "<total> of <full_count>" when they differ (#311).
@@ -208,22 +223,25 @@ def _clamp_page(raw: str | None) -> int:
     return max(1, n)
 
 
-def _clamp_page_size(raw: str | None) -> int:
-    """Parse ``?page_size=`` and clamp to ``[1, conf.MAX_PAGE_SIZE]``.
+def _clamp_page_size(raw: str | None, maximum: int | None = None) -> int:
+    """Parse ``?page_size=`` and clamp to ``[1, maximum]``.
 
     The clamp is a denial-of-service guard: without an upper bound a
-    client could pass ``?page_size=10_000_000`` and force the
-    database to materialise ten million rows.
+    client could pass ``?page_size=10_000_000`` and force the database to
+    materialise ten million rows. ``maximum`` defaults to
+    ``conf.MAX_PAGE_SIZE``; the list view raises it to the model's
+    ``list_max_show_all`` so a deliberate "Show all" request is honoured
+    (#385).
     """
     default = int(conf.DEFAULT_PAGE_SIZE)
-    maximum = int(conf.MAX_PAGE_SIZE)
+    cap = int(conf.MAX_PAGE_SIZE) if maximum is None else int(maximum)
     try:
         n = int(raw) if raw is not None else default
     except (TypeError, ValueError):
         n = default
     if n < 1:
         return default
-    return min(n, maximum)
+    return min(n, cap)
 
 
 def _apply_ordering(

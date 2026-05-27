@@ -176,6 +176,48 @@ def test_pagination_clamps_page_size(superuser_client: Client) -> None:
     assert body["total"] >= 5
 
 
+# --------------------------------------------------------------------------- #
+# "Show all" pagination (#385): list_max_show_all + can_show_all              #
+# --------------------------------------------------------------------------- #
+@pytest.mark.django_db
+def test_list_reports_show_all_fields(superuser_client: Client) -> None:
+    """The response carries list_max_show_all + can_show_all (#385)."""
+    Group.objects.create(name="a")
+    body = superuser_client.get(LIST_URL).json()
+    assert body["list_max_show_all"] == 200  # Django default
+    assert body["can_show_all"] is True  # 1 row ≤ 200
+
+
+@pytest.mark.django_db
+def test_can_show_all_false_when_total_exceeds_cap(superuser_client: Client) -> None:
+    """can_show_all is False when the result set is larger than the cap."""
+    for i in range(3):
+        Group.objects.create(name=f"g{i}")
+    with _admin_attrs(Group, list_max_show_all=2):
+        body = superuser_client.get(LIST_URL).json()
+    assert body["list_max_show_all"] == 2
+    assert body["can_show_all"] is False  # 3 rows > 2
+
+
+@pytest.mark.django_db
+def test_show_all_page_size_honored_beyond_max_page_size(superuser_client: Client) -> None:
+    """A 'Show all' request (page_size == list_max_show_all) is honoured even
+    when it exceeds the global MAX_PAGE_SIZE DoS guard — it's a deliberate
+    admin setting (#385)."""
+    with _admin_attrs(Group, list_max_show_all=500):  # > MAX_PAGE_SIZE (200)
+        body = superuser_client.get(LIST_URL, {"page_size": "500"}).json()
+    assert body["page_size"] == 500
+    assert body["list_max_show_all"] == 500
+
+
+@pytest.mark.django_db
+def test_arbitrary_page_size_still_clamped(superuser_client: Client) -> None:
+    """An arbitrary oversized page_size is still clamped (DoS guard intact):
+    capped at max(MAX_PAGE_SIZE, list_max_show_all) = 200 by default."""
+    body = superuser_client.get(LIST_URL, {"page_size": "100000"}).json()
+    assert body["page_size"] == 200
+
+
 @pytest.mark.django_db
 def test_ordering_with_unknown_token_is_silently_dropped(superuser_client: Client) -> None:
     Group.objects.create(name="zebra")

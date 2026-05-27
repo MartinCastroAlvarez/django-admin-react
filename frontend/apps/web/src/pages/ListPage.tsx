@@ -25,7 +25,7 @@ import { useToast } from '../toast';
 
 // Query params the page manages itself; everything else is a
 // `list_filter` key.
-const RESERVED_PARAMS = new Set(['q', 'page']);
+const RESERVED_PARAMS = new Set(['q', 'page', 'page_size']);
 
 // `date_hierarchy` drill-down params (Django's standard year/month/day).
 // They DO flow to the backend (as non-reserved params), but they're not
@@ -62,6 +62,9 @@ export function ListPage() {
   // query param, keyed by the descriptor `name`.
   const q = searchParams.get('q') ?? '';
   const page = Number(searchParams.get('page') ?? '1') || 1;
+  // `?page_size` is only set by the "Show all" affordance (#385); absent
+  // means the backend's per-model default. `0`/garbage → undefined.
+  const pageSize = Number(searchParams.get('page_size') ?? '') || undefined;
 
   const activeFilters = useMemo(() => {
     const out: Record<string, string> = {};
@@ -77,6 +80,7 @@ export function ListPage() {
     modelName,
     q,
     page,
+    ...(pageSize !== undefined ? { pageSize } : {}),
     filters: activeFilters,
   });
 
@@ -248,6 +252,22 @@ export function ListPage() {
     const next = new URLSearchParams(searchParams);
     if (nextPage <= 1) next.delete('page');
     else next.set('page', String(nextPage));
+    setSearchParams(next);
+  }
+
+  // "Show all" (#385): request the whole result set on one page (capped at
+  // the model's list_max_show_all), and the inverse — back to the
+  // server's default page size.
+  function showAll(maxShowAll: number): void {
+    const next = new URLSearchParams(searchParams);
+    next.set('page_size', String(maxShowAll));
+    next.delete('page');
+    setSearchParams(next);
+  }
+  function showPaginated(): void {
+    const next = new URLSearchParams(searchParams);
+    next.delete('page_size');
+    next.delete('page');
     setSearchParams(next);
   }
 
@@ -614,7 +634,17 @@ export function ListPage() {
           />
         )}
       </Card>
-      <Pagination page={data.page} totalPages={totalPages} onChange={setPage} />
+      <Pagination
+        page={data.page}
+        totalPages={totalPages}
+        onChange={setPage}
+        total={data.total}
+        pageSize={data.page_size}
+        canShowAll={data.can_show_all}
+        showingAll={data.page_size >= data.total && data.total > 0}
+        onShowAll={() => showAll(data.list_max_show_all)}
+        onShowPaginated={showPaginated}
+      />
 
       {filterOpen && (
         <FilterModal
@@ -959,11 +989,34 @@ interface PaginationProps {
   page: number;
   totalPages: number;
   onChange: (next: number) => void;
+  total: number;
+  pageSize: number;
+  /** Whole filtered set fits within `list_max_show_all` (#385). */
+  canShowAll: boolean;
+  /** Currently rendering every row on one page. */
+  showingAll: boolean;
+  onShowAll: () => void;
+  onShowPaginated: () => void;
 }
 
-function Pagination({ page, totalPages, onChange }: PaginationProps) {
+function Pagination({
+  page,
+  totalPages,
+  onChange,
+  total,
+  pageSize,
+  canShowAll,
+  showingAll,
+  onShowAll,
+  onShowPaginated,
+}: PaginationProps) {
   const prevDisabled = page <= 1;
   const nextDisabled = page >= totalPages;
+  // "Show all" parity (#385): offer it only when the whole result set fits
+  // on one page (within list_max_show_all) AND there's currently more than
+  // one page to collapse. Once showing all, offer the way back.
+  const showAllLink = !showingAll && canShowAll && total > pageSize;
+  const linkClass = 'text-blue-600 hover:underline';
   const buttonClass = (disabled: boolean): string =>
     // Give the enabled button an explicit border-gray-300 (matching the
     // Filter/Customize buttons): a bare `border` falls back to Tailwind's
@@ -976,27 +1029,39 @@ function Pagination({ page, totalPages, onChange }: PaginationProps) {
     }`;
   return (
     <nav className="flex items-center justify-between text-sm text-gray-600">
-      <span>
-        Page {page} of {totalPages}
-      </span>
-      <div className="flex gap-2">
-        <button
-          type="button"
-          className={buttonClass(prevDisabled)}
-          disabled={prevDisabled}
-          onClick={() => onChange(page - 1)}
-        >
-          ← Prev
-        </button>
-        <button
-          type="button"
-          className={buttonClass(nextDisabled)}
-          disabled={nextDisabled}
-          onClick={() => onChange(page + 1)}
-        >
-          Next →
-        </button>
+      <div className="flex items-center gap-3">
+        <span>{showingAll ? `Showing all ${total}` : `Page ${page} of ${totalPages}`}</span>
+        {showAllLink && (
+          <button type="button" className={linkClass} onClick={onShowAll}>
+            Show all {total}
+          </button>
+        )}
+        {showingAll && total > 0 && (
+          <button type="button" className={linkClass} onClick={onShowPaginated}>
+            Show paginated
+          </button>
+        )}
       </div>
+      {!showingAll && (
+        <div className="flex gap-2">
+          <button
+            type="button"
+            className={buttonClass(prevDisabled)}
+            disabled={prevDisabled}
+            onClick={() => onChange(page - 1)}
+          >
+            ← Prev
+          </button>
+          <button
+            type="button"
+            className={buttonClass(nextDisabled)}
+            disabled={nextDisabled}
+            onClick={() => onChange(page + 1)}
+          >
+            Next →
+          </button>
+        </div>
+      )}
     </nav>
   );
 }

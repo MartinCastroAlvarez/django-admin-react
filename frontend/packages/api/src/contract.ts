@@ -281,6 +281,13 @@ export interface ListResponse {
    * <full_count>" when they differ (`show_full_result_count` parity).
    */
   full_count: number | null;
+  /**
+   * `ModelAdmin.list_max_show_all` (default 200) — the cap on a single
+   * "Show all" page. `can_show_all` is true when the whole filtered result
+   * set fits within it, so the SPA can offer a "Show all N" link (#385).
+   */
+  list_max_show_all: number;
+  can_show_all: boolean;
   results: ListRow[];
 }
 
