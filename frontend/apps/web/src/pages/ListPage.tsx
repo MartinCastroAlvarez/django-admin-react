@@ -31,11 +31,12 @@ import { FieldValueView } from '@dar/details';
 import { FilterBar } from '@dar/search';
 
 import { useToast } from '../toast';
+import { CHANGELIST_FILTERS_PARAM, withPreservedFilters } from '../changelistFilters';
 
 // Query params the page manages itself; everything else is a
 // `list_filter` key. `all` is Django's "Show all" flag (#385), not a
 // filter, so it never becomes a chip or a persisted saved-view entry.
-const RESERVED_PARAMS = new Set(['q', 'page', 'all']);
+const RESERVED_PARAMS = new Set(['q', 'page', 'all', CHANGELIST_FILTERS_PARAM]);
 
 // `date_hierarchy` drill-down params (Django's standard year/month/day).
 // They DO flow to the backend (as non-reserved params), but they're not
@@ -443,7 +444,7 @@ export function ListPage() {
         </div>
         {data.permissions.add && (
           <Link
-            to={`/${appLabel}/${modelName}/add`}
+            to={withPreservedFilters(`/${appLabel}/${modelName}/add`, searchParams.toString())}
             className="shrink-0 rounded-md border border-primary bg-primary px-3 py-2 text-sm font-medium text-white hover:opacity-90"
           >
             + Add {data.verbose_name ? capitalize(data.verbose_name) : modelName}
@@ -557,7 +558,7 @@ export function ListPage() {
             action={
               data.permissions.add ? (
                 <Link
-                  to={`/${appLabel}/${modelName}/add`}
+                  to={withPreservedFilters(`/${appLabel}/${modelName}/add`, searchParams.toString())}
                   className="inline-flex shrink-0 rounded-md border border-blue-600 bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
                 >
                   + Add {data.verbose_name ? capitalize(data.verbose_name) : modelName}
@@ -570,8 +571,17 @@ export function ListPage() {
             columns={columns}
             rows={data.results}
             rowKey={(r) => r.pk}
-            onRowClick={(row) => navigate(`/${appLabel}/${modelName}/${row.pk}`)}
-            rowHref={(row) => `${hrefBase}/${appLabel}/${modelName}/${row.pk}`}
+            onRowClick={(row) =>
+              navigate(
+                withPreservedFilters(`/${appLabel}/${modelName}/${row.pk}`, searchParams.toString()),
+              )
+            }
+            rowHref={(row) =>
+              withPreservedFilters(
+                `${hrefBase}/${appLabel}/${modelName}/${row.pk}`,
+                searchParams.toString(),
+              )
+            }
             onSort={toggleSort}
             sortKey={sortKey}
             sortDirection={sortDirection}
