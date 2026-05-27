@@ -655,12 +655,35 @@ function InlineSection({ inline }: { inline: InlineDescriptor }) {
     );
   }
 
+  // Per-row link to the child's own change page (#384 — Django's
+  // InlineModelAdmin.show_change_link). The backend only sets the flag
+  // when the child is registered, so the target always resolves.
+  const changeLinkTo = (pk: string | number): string =>
+    `/${inline.child.app_label}/${inline.child.model_name}/${pk}`;
+
   if (inline.kind === 'tabular') {
-    const columns = inline.fields.map((f) => ({
-      key: f.name,
-      header: f.label,
-      render: (row: (typeof inline.rows)[number]) => <FieldValueView value={row.fields[f.name]} />,
-    }));
+    const columns = [
+      ...inline.fields.map((f) => ({
+        key: f.name,
+        header: f.label,
+        render: (row: (typeof inline.rows)[number]) => (
+          <FieldValueView value={row.fields[f.name]} />
+        ),
+      })),
+      ...(inline.show_change_link
+        ? [
+            {
+              key: '__change_link',
+              header: '',
+              render: (row: (typeof inline.rows)[number]) => (
+                <Link to={changeLinkTo(row.pk)} className="text-blue-600 hover:underline">
+                  Edit
+                </Link>
+              ),
+            },
+          ]
+        : []),
+    ];
     return (
       <Card title={inline.label}>
         <Table columns={columns} rows={inline.rows} rowKey={(r) => r.pk} />
@@ -673,16 +696,25 @@ function InlineSection({ inline }: { inline: InlineDescriptor }) {
     <Card title={inline.label}>
       <div className="divide-y divide-gray-200">
         {inline.rows.map((row) => (
-          <dl key={row.pk} className="grid grid-cols-3 gap-4 py-3 text-sm">
-            {inline.fields.map((f) => (
-              <div key={f.name} className="contents">
-                <dt className="text-gray-500">{f.label}</dt>
-                <dd className="col-span-2 whitespace-pre-wrap text-gray-900">
-                  <FieldValueView value={row.fields[f.name]} />
-                </dd>
+          <div key={row.pk} className="py-3">
+            <dl className="grid grid-cols-3 gap-4 text-sm">
+              {inline.fields.map((f) => (
+                <div key={f.name} className="contents">
+                  <dt className="text-gray-500">{f.label}</dt>
+                  <dd className="col-span-2 whitespace-pre-wrap text-gray-900">
+                    <FieldValueView value={row.fields[f.name]} />
+                  </dd>
+                </div>
+              ))}
+            </dl>
+            {inline.show_change_link && (
+              <div className="mt-2">
+                <Link to={changeLinkTo(row.pk)} className="text-sm text-blue-600 hover:underline">
+                  Edit
+                </Link>
               </div>
-            ))}
-          </dl>
+            )}
+          </div>
         ))}
       </div>
     </Card>

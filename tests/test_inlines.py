@@ -203,3 +203,53 @@ def test_inline_row_fk_carries_navigation_target() -> None:
     assert len(rows) == 1
     fk = rows[0]["fields"]["content_type"]
     assert fk["to"] == {"app_label": "contenttypes", "model_name": "contenttype"}
+
+
+@pytest.mark.django_db
+def test_inline_show_change_link_gated_on_child_registration() -> None:
+    """`show_change_link` is True only when the inline opts in AND the
+    child model is admin-registered, so the per-row change link can never
+    404 (same closed-vocabulary posture as inline FK targets, #384)."""
+    from contextlib import suppress
+
+    from django.contrib.auth import get_user_model
+    from django.contrib.auth.models import Permission
+    from django.contrib.contenttypes.models import ContentType
+    from django.test import RequestFactory
+
+    from django_admin_react.api.inlines import _spec_for_inline
+
+    ct = ContentType.objects.create(app_label="dar_test", model="thing")
+
+    class _LinkedInline(TabularInline):
+        model = Permission
+        fk_name = "content_type"
+        show_change_link = True
+
+    # Inline's parent model is ContentType (Permission.content_type → CT).
+    inline = _LinkedInline(ContentType, admin.site)
+    request = RequestFactory().get("/")
+    request.user = get_user_model().objects.create_superuser(
+        username="inline-link-su", email="link@example.com", password="x"
+    )
+
+    # Child registered → the opt-in is honoured.
+    added = Permission not in admin.site._registry
+    if added:
+        admin.site.register(Permission)
+    try:
+        spec = _spec_for_inline(inline, ct, request, admin.site)
+    finally:
+        if added:
+            with suppress(Exception):
+                admin.site.unregister(Permission)
+    assert spec is not None
+    assert spec["show_change_link"] is True
+
+    # Child NOT registered → forced False (a link would 404).
+    if Permission in admin.site._registry:
+        with suppress(Exception):
+            admin.site.unregister(Permission)
+    spec_unreg = _spec_for_inline(inline, ct, request, admin.site)
+    assert spec_unreg is not None
+    assert spec_unreg["show_change_link"] is False

@@ -148,6 +148,14 @@ def _spec_for_inline(
         "can_add": can_add,
         "can_change": can_change,
         "can_delete": can_delete,
+        # InlineModelAdmin.show_change_link (#384) — when True, the SPA
+        # renders a per-row link to the child's own change page. Only
+        # honoured when the child model is actually registered with this
+        # admin site, so the link can never 404 (same closed-vocabulary
+        # posture as the FK filter descriptors, #89).
+        "show_change_link": bool(getattr(inline, "show_change_link", False))
+        and admin_site is not None
+        and child_model in admin_site._registry,
         "fields": fields_meta,
         "rows": rows,
     }
