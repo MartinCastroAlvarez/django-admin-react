@@ -110,7 +110,6 @@ function setupBig() {
       filters={bigFilters}
       active={{}}
       onFilterChange={onFilterChange}
-      onClearAll={() => {}}
     />,
   );
   fireEvent.click(screen.getByRole('button', { name: /Kind/ }));
