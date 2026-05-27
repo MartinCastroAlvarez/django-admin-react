@@ -127,6 +127,12 @@ at or above the threshold blocks the release per `ACCEPTANCE.md`
   [Project board](https://github.com/users/MartinCastroAlvarez/projects/3).
 - Significant decisions get a one-line entry in
   [`docs/agents/decisions.md`](docs/agents/decisions.md).
+- **User-visible changes** get an entry under `[Unreleased]` in
+  [`CHANGELOG.md`](CHANGELOG.md) (Added / Changed / Fixed / Security). At
+  release the section is rolled into a version, tagged, and cut as a
+  matching [GitHub Release](https://github.com/MartinCastroAlvarez/django-admin-react/releases)
+  + PyPI artifact — so the changelog, the tag, the release, and PyPI stay
+  in lockstep for transparency.
 
 ## 7. Security
 
