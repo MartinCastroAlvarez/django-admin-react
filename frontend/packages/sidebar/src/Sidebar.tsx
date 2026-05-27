@@ -252,7 +252,7 @@ export function Sidebar() {
               }}
               placeholder="Filter models…"
               aria-label="Filter models"
-              className="w-full rounded bg-gray-800 px-2 py-1 text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-gray-500"
+              className="w-full rounded bg-gray-800 px-2 py-1 text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus-visible:ring-1 focus-visible:ring-gray-500"
             />
           </div>
         )}

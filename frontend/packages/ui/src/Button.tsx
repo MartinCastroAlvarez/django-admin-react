@@ -21,7 +21,11 @@ const VARIANT_CLASSES: Record<ButtonVariant, string> = {
 const BASE_CLASSES =
   'inline-flex items-center justify-center gap-2 px-3 py-2 rounded-md ' +
   'text-sm font-medium transition-colors disabled:opacity-50 ' +
-  'disabled:cursor-not-allowed';
+  'disabled:cursor-not-allowed ' +
+  // Keyboard-only focus ring (#434). focus-visible (not focus) so the
+  // ring shows on Tab but not on mouse click; offset keeps it clear of
+  // the button's own border in both themes.
+  'focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1';
 
 export function Button({
   variant = 'primary',
