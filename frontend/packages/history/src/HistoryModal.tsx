@@ -13,7 +13,7 @@ const ACTION_DOT: Record<string, string> = {
   deletion: 'bg-red-500',
 };
 
-interface HistoryModalProps {
+export interface HistoryModalProps {
   appLabel: string;
   modelName: string;
   pk: string | number;

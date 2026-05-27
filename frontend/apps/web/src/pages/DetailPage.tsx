@@ -33,8 +33,8 @@ import {
 import { Button, Card, EmptyState, Modal, Spinner, Table } from '@dar/ui';
 import { FieldValueView } from '@dar/details';
 import { FieldInput, InlineEditor } from '@dar/form';
+import { HistoryModal } from '@dar/history';
 
-import { HistoryModal } from '../components/HistoryModal';
 import { useToast } from '../toast';
 import { useUnsavedGuard } from '../useUnsavedGuard';
 
