@@ -256,6 +256,47 @@ def test_brand_logo_url_unset_falls_back_to_data_uri(superuser_client: Client) -
 
 
 # --------------------------------------------------------------------------- #
+# Dark-mode no-flash: server-side `.dark` from the `dar-theme` cookie (#84)    #
+# --------------------------------------------------------------------------- #
+@pytest.mark.django_db
+def test_dark_theme_cookie_paints_dark_class_on_html(superuser_client: Client) -> None:
+    """A `dar-theme=dark` cookie makes the shell render `<html class="dark">`
+    so the page is dark at first paint — no flash, no inline script."""
+    superuser_client.cookies["dar-theme"] = "dark"
+    html = superuser_client.get(ROOT_URL).content.decode("utf-8")
+    assert '<html lang="en" class="dark">' in html
+
+
+@pytest.mark.django_db
+def test_no_theme_cookie_paints_no_dark_class(superuser_client: Client) -> None:
+    """Without the cookie the shell paints its default (light) — the JS
+    reconciles the effective theme on load."""
+    html = superuser_client.get(ROOT_URL).content.decode("utf-8")
+    assert '<html lang="en">' in html
+    assert 'class="dark"' not in html
+
+
+@pytest.mark.django_db
+def test_light_theme_cookie_paints_no_dark_class(superuser_client: Client) -> None:
+    """`dar-theme=light` keeps the default light shell (the class is only
+    added for dark)."""
+    superuser_client.cookies["dar-theme"] = "light"
+    html = superuser_client.get(ROOT_URL).content.decode("utf-8")
+    assert 'class="dark"' not in html
+
+
+@pytest.mark.django_db
+def test_invalid_theme_cookie_is_ignored(superuser_client: Client) -> None:
+    """A cookie value outside {light,dark} is ignored: `_resolve_initial_theme`
+    returns None, so no dark class — and since the value is only ever
+    *compared* in the template (never output), it can't reach the HTML."""
+    superuser_client.cookies["dar-theme"] = "totally-bogus-value"
+    html = superuser_client.get(ROOT_URL).content.decode("utf-8")
+    assert 'class="dark"' not in html
+    assert "totally-bogus-value" not in html
+
+
+# --------------------------------------------------------------------------- #
 # REACT_LOGIN — serve the shell to anonymous users (Issue #167)               #
 # --------------------------------------------------------------------------- #
 def test_react_login_off_anon_still_redirected(anon_client: Client) -> None:
