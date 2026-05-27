@@ -13,6 +13,8 @@
   },
   "dependencies": {
     "@dar/data": "workspace:*",
+    "@dar/details": "workspace:*",
+    "@dar/form": "workspace:*",
     "@dar/settings": "workspace:*",
     "@dar/sidebar": "workspace:*",
     "@dar/ui": "workspace:*",

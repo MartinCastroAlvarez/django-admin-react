@@ -9,9 +9,9 @@
 // pk, per the wire contract §5.1.
 
 import type { FieldDescriptor, FieldValue, WriteValue } from '@dar/data';
+import { FieldValueView } from '@dar/details';
 
 import { AutocompleteInput } from './AutocompleteInput';
-import { FieldValueView } from './FieldValueView';
 
 interface FieldInputProps {
   name: string;

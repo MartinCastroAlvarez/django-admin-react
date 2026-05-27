@@ -1,18 +1,31 @@
-# @dar/details — generic detail / create / update / delete forms
+# @dar/details
 
-Reads the field metadata from `GET /api/v1/{app}/{model}/{pk}/` (or the
-"new object" equivalent for create) and renders a form. Submits via
-**`@dar/data`** mutations (which debounce and reconcile before calling
-`@dar/api`).
+The read / display surface for a single object.
 
-## Rules
+## What lives here
 
-- **`@dar/data` is the only data source.** Never import `@dar/api`
-  directly. See [`ARCHITECTURE.md`](../../../ARCHITECTURE.md) §5.2a.
-- The form layout follows the API's `fieldsets`.
-- Field widgets are picked by `type` from the closed v1 vocabulary
-  (`string`, `integer`, `boolean`, `foreignkey`, ...). See
-  `docs/api-contract.md` §4.
-- Readonly fields render as static text.
-- `unsupported` fields render as static labels (M2M in v1).
-- Submit button is hidden if `permissions.change`/`add` is false.
+- **`FieldValueView`** — renders one wire-shape field/cell *value* for
+  display (not an editable control): booleans as Django's check/X icons,
+  foreign keys as navigable links, files as download links, the backend's
+  safe-HTML envelope as markup, everything else as escaped text. Shared by
+  the list (`@dar/web` `ListPage`), the detail page, and `@dar/form` (for
+  readonly fields).
+
+The detail-page *orchestration* (layout from `fieldsets`, history,
+delete) still lives in `@dar/web` and is slated to move here — see issue
+[#303](https://github.com/MartinCastroAlvarez/django-admin-react/issues/303).
+
+## What does NOT belong here
+
+- **Editable controls.** Rendering an *input* is `@dar/form`'s job
+  (`FieldInput`, `AutocompleteInput`, `InlineEditor`). `@dar/details` is
+  the read side; `@dar/form` depends on it, never the reverse.
+- **Direct network access.** Per CLAUDE.md §7 / `ARCHITECTURE.md` §5.2a,
+  never import `@dar/api`. All data access goes through `@dar/data`.
+
+## Pointers
+
+- Field-value shapes + type guards (`isHtmlValue`, `isForeignKeyValue`,
+  `isFileValue`, `renderValue`): `@dar/data`.
+- The write surface: [`@dar/form`](../form/README.md).
+- The safe-HTML trust boundary: `SECURITY.md` + #172.

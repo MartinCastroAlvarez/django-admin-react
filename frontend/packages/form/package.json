@@ -1,5 +1,5 @@
 {
-  "name": "@dar/details",
+  "name": "@dar/form",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -15,17 +15,15 @@
     "test": "echo 'no tests yet'"
   },
   "dependencies": {
-    "@dar/data": "workspace:*"
+    "@dar/data": "workspace:*",
+    "@dar/details": "workspace:*",
+    "@dar/ui": "workspace:*"
   },
   "peerDependencies": {
-    "lucide-react": "^1.16.0",
-    "react": "^18.3.0",
-    "react-router-dom": "^6.26.0"
+    "react": "^18.3.0"
   },
   "devDependencies": {
     "@types/react": "^18.3.0",
-    "lucide-react": "^1.16.0",
-    "react": "^18.3.0",
-    "react-router-dom": "^6.26.0"
+    "react": "^18.3.0"
   }
 }
