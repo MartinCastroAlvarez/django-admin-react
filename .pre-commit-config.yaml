@@ -55,7 +55,10 @@ repos:
     rev: 1.7.10
     hooks:
       - id: bandit
-        args: ["-q", "-r", "django_admin_react"]
+        # Read scope from pyproject [tool.bandit]; the `toml` extra lets
+        # the isolated hook env parse it.
+        args: ["-c", "pyproject.toml", "-q", "-r", "django_admin_react"]
+        additional_dependencies: ["bandit[toml]"]
         pass_filenames: false
 
   # -------------------------------------------------------------------

@@ -70,8 +70,8 @@ if [[ "$FE_ONLY" != "1" ]]; then
   step "mypy (best-effort, non-blocking)"
   poetry run mypy "${PY_TARGETS[@]}" || echo "mypy reported issues — non-blocking for v1"
 
-  step "bandit (security lint, package only)"
-  poetry run bandit -q -r django_admin_react
+  step "bandit (security lint, package only — config in pyproject [tool.bandit])"
+  poetry run bandit -c pyproject.toml -q -r django_admin_react
 
   step "pytest"
   poetry run pytest -q
