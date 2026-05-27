@@ -14,6 +14,56 @@ version section at release.
 
 ## [Unreleased]
 
+### Security
+- Route M2M / related saves through `ModelAdmin.save_related()` instead of a
+  bare `form.save_m2m()`, so a consumer's override is honoured on every write
+  (create / update / bulk) — Rule 1 (#402).
+- DB `IntegrityError` the form didn't catch now returns a clean **409**
+  (generic message — no driver/schema detail leaked), not an uncaught 500
+  (#404).
+- Over-limit multipart uploads return the canonical **400** JSON envelope
+  rather than Django's default 400 page (#448).
+- Restrict bulk-PATCH writes to `list_editable` fields — the bulk surface
+  can't widen the editable set beyond the changelist (#401).
+- Gate the inline change-link on the child's per-user `has_view_permission`,
+  not just registration — least disclosure (#301).
+- File uploads (#241) are validated server-side: filenames sanitised by
+  storage (no path traversal), a file posted to a readonly/excluded/unknown
+  field is rejected, and `PRIMARY_COLOR` (#437) is strict-hex-validated before
+  it reaches the SPA `<style>` block (no CSS injection).
+
+### Added
+- **FileField / ImageField multipart upload** — create + update write path
+  with `ClearableFileInput` clear-semantics (empty input keeps the file;
+  `<field>-clear` removes it) (#241).
+- Save inline children **atomically with the parent** on create (#403).
+- `date_hierarchy`-independent **"Show all N"** pagination
+  (`list_max_show_all`) (#394).
+- `show_full_result_count` parity — `full_count` on the list response (#311).
+- Inline `show_change_link` — per-row link to the child's change page (#384).
+- Object-level change-page actions surfaced on detail (#236, backend).
+- Themable accent color via `DJANGO_ADMIN_REACT["PRIMARY_COLOR"]` (#437).
+- `prepopulated_fields` — slugify a field from sources while typing (#245).
+- SimpleListFilter applied-default reflected as `selected` (#283).
+- Collapsible detail sections (#359) and sidebar app-group sections (#227),
+  persisted per model; reusable Breadcrumb (#355); drag-to-resize table
+  columns (#425); pinned pk column (#360); `@dar/customization` surface (#423).
+
+### Changed
+- Enforce `mypy` on the package in the lint sweep so it can't silently
+  regress (#312).
+- Edit mode shows only editable fields and hides empty sections (#426);
+  preserve fieldset multi-field (tuple) rows (#382); skeletons on
+  detail / create / home loads (#375).
+
+### Fixed
+- Surface non-field (`clean()` / `__all__`) validation errors (#381).
+- Edit stacked inlines as vertical blocks, not a table (#387).
+- Keyboard `focus-visible` rings on Button + standardised focus (#434);
+  dark-mode coverage for amber banners + static backgrounds (#433);
+  unify border color + sort-caret on header hover (#429).
+- Drop redundant, self-evident UI chrome (#410).
+
 ## [0.2.0a5] — 2026-05-27
 [GitHub Release](https://github.com/MartinCastroAlvarez/django-admin-react/releases/tag/v0.2.0a5)
 
