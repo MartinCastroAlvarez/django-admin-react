@@ -191,7 +191,7 @@ export function DetailPage() {
 
   return (
     <div className="space-y-4">
-      <header className="flex items-start justify-between gap-4">
+      <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <div className="space-y-1">
           <Breadcrumb
             items={[
@@ -206,12 +206,9 @@ export function DetailPage() {
             )}
           />
           <h1 className="text-2xl font-semibold">{data.label}</h1>
-          <p className="text-sm text-gray-500">
-            {appLabel} · {modelName} · #{data.pk}
-          </p>
         </div>
         {!editing && (
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <button
               type="button"
               onClick={() => setHistoryOpen(true)}
