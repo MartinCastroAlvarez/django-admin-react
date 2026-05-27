@@ -46,6 +46,13 @@ from django_admin_react.api.serializers import serialize_value
 from django_admin_react.api.views.actions import actions_payload
 from django_admin_react.api.writes import not_found_response
 
+# Query params the list view manages itself (pagination / sort / search);
+# any *other* key is a list_filter or date_hierarchy lookup, i.e. the list
+# is narrowed. Used to decide whether the unfiltered ``full_count`` could
+# differ from ``total`` (#311) — and so whether the extra COUNT(*) is worth
+# running at all.
+_COUNT_RESERVED_PARAMS = frozenset({"page", "page_size", "ordering", "q"})
+
 
 class ListView(View):
     """``GET /api/v1/<app_label>/<model_name>/`` — paginated list."""
@@ -90,6 +97,9 @@ class ListView(View):
         # Apply ``list_select_related`` up front so FK columns don't issue
         # one query per row (Django changelist parity / N+1 fix).
         queryset = _apply_select_related(queryset, model_admin, list_display)
+        # The admin's unfiltered base — captured before search / list_filter
+        # / date narrowing — for the ``show_full_result_count`` parity below.
+        base_queryset = queryset
 
         q = request.GET.get("q", "") or ""
         if q and model_admin.search_fields:
@@ -107,6 +117,22 @@ class ListView(View):
         queryset = _apply_ordering(queryset, model_admin, request)
 
         total = queryset.count()
+
+        # ``show_full_result_count`` parity (#311): when the list is
+        # narrowed (search / list_filter / date_hierarchy), surface the
+        # unfiltered base count so the SPA can show "X of Y". Honour
+        # ``ModelAdmin.show_full_result_count`` (default True) — Django's
+        # opt-out for tables where the extra COUNT(*) is too expensive,
+        # in which case we send ``null``. When the view isn't narrowed the
+        # full count equals ``total``, so skip the redundant query.
+        show_full = getattr(model_admin, "show_full_result_count", True)
+        narrowed = bool(q) or any(k not in _COUNT_RESERVED_PARAMS for k in request.GET)
+        if not show_full:
+            full_count: int | None = None
+        elif narrowed:
+            full_count = base_queryset.count()
+        else:
+            full_count = total
 
         page_size = _clamp_page_size(request.GET.get("page_size"))
         page = _clamp_page(request.GET.get("page"))
@@ -149,6 +175,10 @@ class ListView(View):
             "page": page,
             "page_size": page_size,
             "total": total,
+            # Unfiltered base count when the list is narrowed (else == total);
+            # ``null`` when ``show_full_result_count`` is False. The SPA shows
+            # "<total> of <full_count>" when they differ (#311).
+            "full_count": full_count,
             "results": results,
         }
         date_hierarchy = date_hierarchy_payload(
