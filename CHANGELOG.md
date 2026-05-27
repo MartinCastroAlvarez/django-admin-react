@@ -14,6 +14,9 @@ version section at release.
 
 ## [Unreleased]
 
+## [0.2.0a6] — 2026-05-27
+[GitHub Release](https://github.com/MartinCastroAlvarez/django-admin-react/releases/tag/v0.2.0a6)
+
 ### Security
 - Route M2M / related saves through `ModelAdmin.save_related()` instead of a
   bare `form.save_m2m()`, so a consumer's override is honoured on every write
@@ -186,7 +189,8 @@ version section at release.
   `ModelAdmin.get_queryset`; writes through `ModelAdmin.get_form`; conservative
   serializer + sensitive-name denylist. Ships the pre-built React bundle.
 
-[Unreleased]: https://github.com/MartinCastroAlvarez/django-admin-react/compare/v0.2.0a5...HEAD
+[Unreleased]: https://github.com/MartinCastroAlvarez/django-admin-react/compare/v0.2.0a6...HEAD
+[0.2.0a6]: https://github.com/MartinCastroAlvarez/django-admin-react/compare/v0.2.0a5...v0.2.0a6
 [0.2.0a5]: https://github.com/MartinCastroAlvarez/django-admin-react/compare/v0.2.0a4...v0.2.0a5
 [0.2.0a4]: https://github.com/MartinCastroAlvarez/django-admin-react/compare/v0.2.0a3...v0.2.0a4
 [0.2.0a3]: https://github.com/MartinCastroAlvarez/django-admin-react/compare/v0.2.0a2...v0.2.0a3
