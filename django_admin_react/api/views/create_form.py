@@ -104,6 +104,12 @@ class AddFormView(View):
             "prepopulated_fields": _prepopulated_payload(
                 model_admin, request, visible_names, readonly
             ),
+            # Add-form initial values (#444): ModelAdmin.get_changeform_initial_data
+            # (GET-param prefill — "add another, prefilled from a link"),
+            # filtered to the visible, non-readonly fields. The SPA seeds the
+            # form; the write still re-validates through the form +
+            # reject_forbidden_keys, so prefill is a hint, never a gate bypass.
+            "initial": _initial_payload(model_admin, request, visible_names, readonly),
         }
         response = JsonResponse(payload, status=200)
         response["Cache-Control"] = "no-store"
@@ -137,3 +143,42 @@ def _prepopulated_payload(
         if kept:
             out[target] = kept
     return out
+
+
+def _initial_payload(
+    model_admin: Any,
+    request: HttpRequest,
+    visible_names: list[str],
+    readonly: set[str],
+) -> dict[str, Any]:
+    """Build the add-form ``initial`` block (#444).
+
+    Values come from ``ModelAdmin.get_changeform_initial_data(request)`` —
+    Django's GET-param prefill ("add another, prefilled from a link").
+    Filtered to the visible, non-readonly fields so an arbitrary GET key, a
+    readonly field, or a sensitive-name field (already dropped from
+    ``visible_names``) is never echoed back. Values are JSON-coerced
+    defensively (a consumer override could return a non-serialisable value).
+    Always a hint: the actual write re-validates through the form.
+    """
+    try:
+        raw = model_admin.get_changeform_initial_data(request) or {}
+    except Exception:  # pragma: no cover — admin author error
+        return {}
+    allowed = set(visible_names) - set(readonly)
+    out: dict[str, Any] = {}
+    for key, value in raw.items():
+        if key in allowed:
+            out[key] = _json_safe(value)
+    return out
+
+
+def _json_safe(value: Any) -> Any:
+    """Coerce a prefill value to a JSON-serialisable form (#444)."""
+    if value is None or isinstance(value, str | int | float | bool):
+        return value
+    if isinstance(value, list | tuple):
+        return [
+            v if v is None or isinstance(v, str | int | float | bool) else str(v) for v in value
+        ]
+    return str(value)

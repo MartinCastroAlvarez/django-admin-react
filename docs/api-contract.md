@@ -532,6 +532,14 @@ Rules:
   types, stopping once the target is edited by hand. Always present
   (empty `{}` when the admin declares none); a pure UI affordance — the
   backend does not auto-fill on write.
+- `initial` (`#444`, **add form only** — `GET .../add/`) is
+  `{field: value}` from `ModelAdmin.get_changeform_initial_data(request)`
+  (Django's GET-param prefill — "add another, prefilled from a link"),
+  **filtered to the rendered, non-readonly fields** so an arbitrary GET key
+  / readonly / sensitive-named field is never echoed back, and JSON-coerced.
+  Always present (empty `{}`). A seed hint only — the actual write
+  re-validates through the form + `reject_forbidden_keys`, so prefill can't
+  bypass any gate.
 - `password_change.supported` (`#252`) is `true` only when the model's
   admin declares a `change_password_form` (i.e. a `UserAdmin`) **and**
   the request holds change permission on the object — the SPA shows

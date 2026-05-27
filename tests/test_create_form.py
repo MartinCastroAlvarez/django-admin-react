@@ -144,3 +144,18 @@ def test_add_form_includes_save_options_block(superuser_client: Client) -> None:
     assert so["show_save_and_add_another"] is True
     # "Save as new" is a change-view-only affordance — never on add.
     assert so["show_save_as_new"] is False
+
+
+@pytest.mark.django_db
+def test_add_form_initial_from_get_params(superuser_client: Client) -> None:
+    """``get_changeform_initial_data`` (GET-param prefill) is surfaced as
+    ``initial``, filtered to visible writable fields — an arbitrary GET key
+    that isn't a field is dropped, never echoed back (#444)."""
+    body = superuser_client.get(ADD_URL + "?name=preset&bogus=x").json()
+    assert body["initial"] == {"name": "preset"}  # ``name`` kept, ``bogus`` dropped
+
+
+@pytest.mark.django_db
+def test_add_form_initial_empty_without_get_params(superuser_client: Client) -> None:
+    """No prefill params → ``initial`` is an empty object (always present) (#444)."""
+    assert superuser_client.get(ADD_URL).json()["initial"] == {}
