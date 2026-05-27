@@ -18,6 +18,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from django.core.exceptions import RequestDataTooBig
+from django.core.exceptions import TooManyFieldsSent
 from django.db import IntegrityError
 from django.db import transaction
 from django.db.models import FileField
@@ -143,6 +145,10 @@ class UpdateView(View):
                 ).parse()
             except MultiPartParserError:
                 return bad_request("Malformed multipart/form-data body.")
+            except (RequestDataTooBig, TooManyFieldsSent):
+                # Over-limit upload → canonical JSON envelope, not Django's
+                # default 400 page (#448).
+                return bad_request("Upload exceeds the configured size or field limits.")
             # ``<field>-clear`` is Django's ClearableFileInput convention for
             # removing an existing file. Allow it through the forbidden-key
             # gate for writable file fields (it isn't a model field name), so
