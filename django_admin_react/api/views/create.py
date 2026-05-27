@@ -17,6 +17,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from django.core.exceptions import RequestDataTooBig
+from django.core.exceptions import TooManyFieldsSent
 from django.db import IntegrityError
 from django.db import transaction
 from django.http import HttpRequest
@@ -29,6 +31,7 @@ from django_admin_react.api.permissions import is_admin_user
 from django_admin_react.api.registry import get_admin_site
 from django_admin_react.api.registry import resolve_model
 from django_admin_react.api.serializers import label_for
+from django_admin_react.api.writes import bad_request
 from django_admin_react.api.writes import coerce_fk_values
 from django_admin_react.api.writes import conflict_response
 from django_admin_react.api.writes import form_errors_to_envelope
@@ -93,14 +96,24 @@ class CreateView(View):
         # and there is no ``@csrf_exempt``.
         is_multipart = (request.content_type or "").startswith("multipart/form-data")
         if is_multipart:
-            form_data: Any = request.POST
-            files: Any = request.FILES
+            form_data: Any
+            files: Any
+            # Accessing request.POST/FILES triggers the multipart parse, which
+            # enforces Django's body limits. Surface an over-limit upload as
+            # the canonical JSON envelope instead of Django's default 400
+            # page (#448) — RequestDataTooBig / TooManyFieldsSent are
+            # SuspiciousOperation subclasses, not MultiPartParserError.
+            try:
+                form_data = request.POST
+                files = request.FILES
+            except (RequestDataTooBig, TooManyFieldsSent):
+                return bad_request("Upload exceeds the configured size or field limits.")
             # Validate the union of POST + FILES keys: a file posted to a
             # readonly / excluded / unknown field is rejected just like a
             # scalar would be. Bare multipart values are not {id,label}
             # envelopes, so ``coerce_fk_values`` is skipped.
-            submitted_keys: dict[str, Any] = dict.fromkeys(request.POST)
-            submitted_keys.update(dict.fromkeys(request.FILES))
+            submitted_keys: dict[str, Any] = dict.fromkeys(form_data)
+            submitted_keys.update(dict.fromkeys(files))
         else:
             parsed = parse_json_body(request)
             if isinstance(parsed, HttpResponse):

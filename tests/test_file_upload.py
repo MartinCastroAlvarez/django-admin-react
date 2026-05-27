@@ -11,6 +11,7 @@ from __future__ import annotations
 import pytest
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client
+from django.test import override_settings
 from django.test.client import BOUNDARY
 from django.test.client import MULTIPART_CONTENT
 from django.test.client import encode_multipart
@@ -128,3 +129,34 @@ def test_multipart_update_clear_removes_file(superuser_client: Client) -> None:
     assert response.status_code == 200
     doc.refresh_from_db()
     assert doc.attachment.name in ("", None)  # file removed
+
+
+# --------------------------------------------------------------------------- #
+# Over-limit uploads return the JSON envelope, not Django's default 400 (#448) #
+# --------------------------------------------------------------------------- #
+@pytest.mark.django_db
+@override_settings(DATA_UPLOAD_MAX_MEMORY_SIZE=10)
+def test_oversize_multipart_create_returns_json_envelope(superuser_client: Client) -> None:
+    """An over-limit multipart create returns the canonical 400 envelope —
+    the DoS guard fires (RequestDataTooBig) but the SPA still gets parseable
+    JSON, not Django's default 400 page (#448)."""
+    upload = SimpleUploadedFile("x.txt", b"data", content_type="text/plain")
+    response = superuser_client.post(CREATE_URL, data={"title": "x" * 1000, "attachment": upload})
+    assert response.status_code == 400
+    body = response.json()
+    assert body["error"]["code"] == "bad_request"
+    assert "exceeds" in body["error"]["message"].lower()
+
+
+@pytest.mark.django_db
+@override_settings(DATA_UPLOAD_MAX_MEMORY_SIZE=10)
+def test_oversize_multipart_update_returns_json_envelope(superuser_client: Client) -> None:
+    """Same as above for PATCH — the manually-parsed multipart body's
+    over-limit error surfaces as the JSON envelope (#448)."""
+    doc = Document.objects.create(title="d")
+    body = encode_multipart(BOUNDARY, {"title": "x" * 1000})
+    response = superuser_client.patch(
+        DETAIL_URL.format(doc.pk), data=body, content_type=MULTIPART_CONTENT
+    )
+    assert response.status_code == 400
+    assert response.json()["error"]["code"] == "bad_request"
