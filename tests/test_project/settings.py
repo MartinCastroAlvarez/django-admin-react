@@ -24,7 +24,18 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "django_admin_react",
+    # Test-only app with a FileField model for the upload write path (#241).
+    "tests.test_project.uploads",
 ]
+
+# Uploaded files land in a throwaway temp dir during tests — never the repo
+# tree. ``FileField`` storage sanitises filenames (``get_valid_name`` /
+# ``get_available_name``), which the upload tests rely on for path-traversal
+# safety (#241).
+import tempfile  # noqa: E402
+
+MEDIA_ROOT = tempfile.mkdtemp(prefix="dar-test-media-")
+MEDIA_URL = "/media/"
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",

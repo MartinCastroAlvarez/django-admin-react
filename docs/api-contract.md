@@ -673,8 +673,18 @@ Request body:
 - For `foreignkey` fields, the value is the related object's primary key.
 - The backend constructs `ModelAdmin.get_form(request)(data=payload)`,
   calls `form.is_valid()`, and on success calls
-  `ModelAdmin.save_model(request, instance, form, change=False)`.
+  `ModelAdmin.save_model(request, instance, form, change=False)` then
+  `ModelAdmin.save_related(...)`.
 - Validation errors are returned as in §6.
+- **File uploads (`FileField` / `ImageField`, #241):** send the create as
+  **`multipart/form-data`** instead of JSON. Scalars go in the form body,
+  files in the file parts; the backend feeds `request.POST` + `request.FILES`
+  to the same `ModelForm`, so the file is stored through the field's
+  configured `Storage` (which sanitises the filename — no path traversal).
+  A file part addressed to a readonly / excluded / unknown field is rejected
+  `400`, exactly like a scalar key. CSRF still applies (the `X-CSRFToken`
+  header travels with the multipart request). Creating inline children in
+  the same request remains a follow-up (#403).
 
 Response 201:
 
