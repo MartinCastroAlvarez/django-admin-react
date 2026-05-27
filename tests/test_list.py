@@ -394,6 +394,38 @@ def test_page_size_below_one_defaults(superuser_client: Client) -> None:
 
 
 @pytest.mark.django_db
+def test_default_page_size_derives_from_list_per_page(superuser_client: Client) -> None:
+    """With no ``?page_size=``, the default comes from
+    ``ModelAdmin.list_per_page`` (Rule #1 / Django parity, #281)."""
+    for i in range(6):
+        Group.objects.create(name=f"g{i}")
+    with _admin_attrs(Group, list_per_page=5):
+        body = superuser_client.get(LIST_URL).json()
+    assert body["page_size"] == 5
+    assert len(body["results"]) == 5
+
+
+@pytest.mark.django_db
+def test_explicit_page_size_overrides_list_per_page(superuser_client: Client) -> None:
+    """An explicit ``?page_size=`` still wins over ``list_per_page`` (#281)."""
+    for i in range(6):
+        Group.objects.create(name=f"g{i}")
+    with _admin_attrs(Group, list_per_page=5):
+        body = superuser_client.get(LIST_URL + "?page_size=2").json()
+    assert body["page_size"] == 2
+
+
+@pytest.mark.django_db
+def test_list_per_page_default_capped_at_max_page_size(superuser_client: Client) -> None:
+    """A ``list_per_page`` above ``MAX_PAGE_SIZE`` is capped — the derived
+    default never exceeds the per-request DoS ceiling (#281)."""
+    Group.objects.create(name="g")
+    with _admin_attrs(Group, list_per_page=10_000):
+        body = superuser_client.get(LIST_URL).json()
+    assert body["page_size"] == 200  # conf.MAX_PAGE_SIZE
+
+
+@pytest.mark.django_db
 def test_ordering_valid_token_applied(superuser_client: Client) -> None:
     """A ``?ordering=`` token in the admin's sortable set is honoured
     (list.py _apply_ordering valid-token path)."""

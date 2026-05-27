@@ -165,7 +165,7 @@ Query parameters:
 | ----------- | ------- | ------- | ---------------------------------------------------------------- |
 | `q`         | string  | `""`    | Forwarded to `ModelAdmin.get_search_results(request, qs, q)`.    |
 | `page`      | int     | `1`     | 1-indexed.                                                       |
-| `page_size` | int     | `DEFAULT_PAGE_SIZE` | Clamped to `MAX_PAGE_SIZE`.                          |
+| `page_size` | int     | `ModelAdmin.list_per_page` | Default derives from the admin's `list_per_page` (Rule #1), falling back to `DEFAULT_PAGE_SIZE`. Clamped to `MAX_PAGE_SIZE`. |
 | `ordering`  | string  | `""`    | Comma-separated list. Each entry must appear in `get_ordering(request)` or `ModelAdmin.ordering`. Unknown values are ignored. |
 | `year`      | int     | (none)  | Date-hierarchy drill-down. Active only when the `ModelAdmin` declares `date_hierarchy`. Garbage / out-of-range silently ignored. |
 | `month`     | int     | (none)  | Requires `year` to be set; ignored otherwise.                    |
