@@ -264,6 +264,9 @@ export interface ListResponse {
   permissions: Permissions;
   columns: ColumnDescriptor[];
   search_fields: string[];
+  /** `ModelAdmin.search_help_text` — shown under the search box (#445).
+   *  Empty string when unset. */
+  search_help_text: string;
   /** `list_filter` descriptors; always present (empty array when none). */
   filters: FilterDescriptor[];
   /** Bulk actions from `ModelAdmin.actions`; always present. */

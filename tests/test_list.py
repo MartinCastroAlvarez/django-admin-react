@@ -207,6 +207,16 @@ def test_csrf_irrelevant_on_get(superuser_client: Client) -> None:
 # Feature-specific                                                            #
 # --------------------------------------------------------------------------- #
 @pytest.mark.django_db
+def test_list_surfaces_search_help_text(superuser_client: Client) -> None:
+    """ModelAdmin.search_help_text is surfaced for the SPA to show under the
+    search box (#445); empty string when unset."""
+    assert superuser_client.get(LIST_URL).json()["search_help_text"] == ""
+    with _admin_attrs(Group, search_help_text="Search by group name."):
+        body = superuser_client.get(LIST_URL).json()
+    assert body["search_help_text"] == "Search by group name."
+
+
+@pytest.mark.django_db
 def test_search_delegates_to_admin_get_search_results(superuser_client: Client) -> None:
     Group.objects.create(name="alpha")
     Group.objects.create(name="beta")

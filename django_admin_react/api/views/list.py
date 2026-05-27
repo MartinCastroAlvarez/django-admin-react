@@ -192,6 +192,9 @@ class ListView(View):
             "permissions": model_permissions(model_admin, request),
             "columns": columns,
             "search_fields": list(model_admin.search_fields or ()),
+            # ModelAdmin.search_help_text (#445): shown under the search box,
+            # matching Django's changelist. Empty string when unset.
+            "search_help_text": str(getattr(model_admin, "search_help_text", "") or ""),
             "filters": filters_payload(model_admin, request, admin_site=admin_site),
             "actions": actions_payload(model_admin, request),
             "page": page,
