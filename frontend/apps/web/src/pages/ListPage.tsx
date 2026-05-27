@@ -476,58 +476,61 @@ export function ListPage() {
         active={activeFilters}
         onFilterChange={setFilter}
         onClearAll={() => patchParams((next) => filters.forEach((f) => next.delete(f.name)))}
-        trailing={
-          <>
-            {canRunActions && selected.size > 0 && (
-              <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setActionsOpen((o) => !o)}
-                  aria-haspopup="menu"
-                  aria-expanded={actionsOpen}
-                  disabled={runningAction}
-                  className="shrink-0 rounded-md border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-100 disabled:opacity-50"
+        // Bulk-actions menu sits to the LEFT of the search input, and
+        // only once at least one row is selected (Django changelist
+        // parity — the actions selector leads the toolbar).
+        leading={
+          canRunActions && selected.size > 0 ? (
+            <div className="relative">
+              <button
+                type="button"
+                onClick={() => setActionsOpen((o) => !o)}
+                aria-haspopup="menu"
+                aria-expanded={actionsOpen}
+                disabled={runningAction}
+                className="shrink-0 rounded-md border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-100 disabled:opacity-50"
+              >
+                Actions · {selected.size} ▾
+              </button>
+              {actionsOpen && (
+                <div
+                  role="menu"
+                  className="absolute left-0 z-20 mt-1 min-w-48 rounded border border-gray-200 bg-white py-1 shadow-lg"
                 >
-                  Actions · {selected.size} ▾
-                </button>
-                {actionsOpen && (
-                  <div
-                    role="menu"
-                    className="absolute left-0 z-20 mt-1 min-w-48 rounded border border-gray-200 bg-white py-1 shadow-lg"
-                  >
-                    {actions.map((a) => (
-                      <button
-                        key={a.name}
-                        type="button"
-                        role="menuitem"
-                        onClick={() => requestAction(a)}
-                        className="block w-full px-3 py-2 text-left text-sm hover:bg-gray-100"
-                        title={a.description}
-                      >
-                        {a.label}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-            <button
-              type="button"
-              onClick={() => setColsOpen(true)}
-              aria-haspopup="dialog"
-              aria-label="Customize columns"
-              title="Customize columns"
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-100"
-            >
-              <Settings2 className="h-4 w-4" aria-hidden />
-              Customize
-              {hiddenCols.size > 0 && (
-                <span className="ml-0.5 rounded-full bg-gray-500 px-1.5 py-0.5 text-xs text-white">
-                  {hiddenCols.size} hidden
-                </span>
+                  {actions.map((a) => (
+                    <button
+                      key={a.name}
+                      type="button"
+                      role="menuitem"
+                      onClick={() => requestAction(a)}
+                      className="block w-full px-3 py-2 text-left text-sm hover:bg-gray-100"
+                      title={a.description}
+                    >
+                      {a.label}
+                    </button>
+                  ))}
+                </div>
               )}
-            </button>
-          </>
+            </div>
+          ) : null
+        }
+        trailing={
+          <button
+            type="button"
+            onClick={() => setColsOpen(true)}
+            aria-haspopup="dialog"
+            aria-label="Customize columns"
+            title="Customize columns"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-100"
+          >
+            <Settings2 className="h-4 w-4" aria-hidden />
+            Customize
+            {hiddenCols.size > 0 && (
+              <span className="ml-0.5 rounded-full bg-gray-500 px-1.5 py-0.5 text-xs text-white">
+                {hiddenCols.size} hidden
+              </span>
+            )}
+          </button>
         }
       />
 

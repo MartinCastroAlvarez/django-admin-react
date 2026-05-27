@@ -78,4 +78,26 @@ describe('FilterBar', () => {
     fireEvent.change(screen.getByLabelText('Search'), { target: { value: 'abc' } });
     expect(onSearchChange).toHaveBeenCalledWith('abc');
   });
+
+  it('renders `leading` content before the search input (to its left)', () => {
+    render(
+      <FilterBar
+        searchValue=""
+        onSearchChange={() => {}}
+        filters={[]}
+        active={{}}
+        onFilterChange={() => {}}
+        onClearAll={() => {}}
+        leading={<button type="button">Actions · 2 ▾</button>}
+        trailing={<button type="button">Customize</button>}
+      />,
+    );
+    const actions = screen.getByRole('button', { name: /Actions/ });
+    const search = screen.getByLabelText('Search');
+    // `leading` precedes the search input in the DOM, so the actions
+    // menu sits to its left in the toolbar row.
+    expect(
+      actions.compareDocumentPosition(search) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
 });
