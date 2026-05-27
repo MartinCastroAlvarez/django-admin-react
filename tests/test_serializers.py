@@ -297,3 +297,54 @@ class TestFieldChoicesAndMetadata:
             fk, label="Parent", required=False, readonly=False, help_text="", value=None
         )
         assert "to" not in md
+
+
+# --------------------------------------------------------------------------- #
+# serialize_fk_value — `to` link gated on per-user view permission (#301)     #
+# --------------------------------------------------------------------------- #
+class TestFkToPermissionGate:
+    """The navigable `to` block must only advertise a target the current
+    user can actually view (#301) — least disclosure, defense-in-depth on
+    top of #89's registry-membership gate."""
+
+    def _site(self, *, can_view: bool):
+        from django.contrib.auth.models import Group  # pylint: disable=imported-auth-user
+
+        class _Admin:
+            def has_view_permission(self, request, obj=None):  # noqa: ANN001, ANN202
+                return can_view
+
+        class _Site:
+            _registry = {Group: _Admin()}
+
+        return Group, _Site()
+
+    def test_to_omitted_when_target_not_viewable(self) -> None:
+        Group, site = self._site(can_view=False)
+        out = serialize_fk_value(Group(name="x"), admin_site=site, request=object())
+        assert out is not None
+        assert "to" not in out  # the link is hidden...
+        assert out["label"] == "x"  # ...but the label is still shown
+
+    def test_to_present_when_target_viewable(self) -> None:
+        Group, site = self._site(can_view=True)
+        out = serialize_fk_value(Group(name="x"), admin_site=site, request=object())
+        assert out is not None
+        assert out["to"] == {"app_label": "auth", "model_name": "group"}
+
+    def test_request_none_preserves_registry_only_behaviour(self) -> None:
+        """Backwards-compat: with no request we can't check perms, so the
+        #89 registry-membership behaviour is preserved (has_view_permission
+        is never consulted)."""
+        from django.contrib.auth.models import Group  # pylint: disable=imported-auth-user
+
+        class _RaisingAdmin:
+            def has_view_permission(self, request, obj=None):  # noqa: ANN001, ANN202
+                raise AssertionError("has_view_permission must not be called without a request")
+
+        class _Site:
+            _registry = {Group: _RaisingAdmin()}
+
+        out = serialize_fk_value(Group(name="x"), admin_site=_Site(), request=None)
+        assert out is not None
+        assert out["to"] == {"app_label": "auth", "model_name": "group"}

@@ -210,15 +210,19 @@ Rules:
 - `results[*].fields` only contains values for `columns[*].name`.
 - `results[*].label` is `str(obj)` (the admin's display fallback).
 - **ForeignKey cells (`#184`):** a FK cell value is
-  `{ "id": <pk>, "label": "<str(related)>" }`. When the related model
-  is **registered on the configured admin site**, it also carries
-  `"to": { "app_label": "<real>", "model_name": "..." }` so the SPA
-  renders the cell as a link to `<mount>/<app_label>/<model_name>/<id>`.
-  `to` is **omitted** when the related model isn't registered — the SPA
-  shows plain text rather than a link the detail endpoint would `404`
-  on, and the response never leaks adjacency to an unregistered model
-  (same posture as the `#89` filter-descriptor guard). `app_label` is
-  the real `_meta.app_label` the detail URL resolves against.
+  `{ "id": <pk>, "label": "<str(related)>" }`. The envelope also carries
+  `"to": { "app_label": "<real>", "model_name": "..." }` — so the SPA
+  renders the cell as a link to `<mount>/<app_label>/<model_name>/<id>`
+  — **only when** the related model is registered on the configured
+  admin site **and** the requesting user has `has_view_permission` on
+  that target model (`#301`). `to` is **omitted** otherwise: the SPA
+  shows plain text rather than a link the detail endpoint would `403`/`404`
+  on, and the response never leaks the adjacency / identity of a model
+  the user can't reach (extends the `#89` filter-descriptor guard to a
+  per-user check). The `label` is always present — the related *object*
+  is visible in the cell by design, matching Django's changelist.
+  `app_label` is the real `_meta.app_label` the detail URL resolves
+  against.
 - `total` reflects the filtered queryset count **after** search **and
   date-hierarchy drill-down** are applied.
 

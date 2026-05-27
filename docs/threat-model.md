@@ -123,6 +123,15 @@ Same matrix as list with these additions:
   of whether it exists in the database. S-17.
 - **Information disclosure via field set** → serialise only the
   fields the admin form declares; intersected with `get_fields`. S-23.
+- **Adjacency disclosure via FK `to` link** → the navigable
+  `to: {app_label, model_name}` on an FK/M2M value is emitted only when
+  the related model is registered **and** the user has
+  `has_view_permission` on that target (`serialize_fk_value(..., request=)`,
+  #301). Otherwise it's omitted — no link the user can't follow, no leak
+  of a target model's identity. The label is still shown (the related
+  object is visible by design, like Django). Extends the #89
+  registry-only guard to a per-user check. Applies to list, detail, and
+  inline rows.
 - **Information disclosure under DEBUG=True** → serializer must not
   expose `_state`, `Meta.private_fields`, or repr() of unhandled
   types. S-35 / S-36.

@@ -221,6 +221,7 @@ def _fields_payload(
             form=form,
             is_readonly=name in readonly,
             admin_site=admin_site,
+            request=request,
         )
     return out
 
@@ -234,6 +235,7 @@ def _descriptor_for(
     form: Any,
     is_readonly: bool,
     admin_site: Any,
+    request: HttpRequest,
 ) -> dict[str, Any]:
     """Per-field descriptor for one ``visible_names`` entry."""
     model_field = safe_get_field(model, name)
@@ -241,7 +243,9 @@ def _descriptor_for(
         return _readonly_callable_descriptor(model_admin, model, obj, name)
 
     if isinstance(model_field, ForeignKey):
-        value: Any = serialize_fk_value(getattr(obj, name, None), admin_site=admin_site)
+        value: Any = serialize_fk_value(
+            getattr(obj, name, None), admin_site=admin_site, request=request
+        )
     elif isinstance(model_field, ManyToManyField):
         # M2M (Issue #55): serialise as a list of ``{id, label}``
         # envelopes. The related manager is iterable on a saved row;
@@ -251,7 +255,7 @@ def _descriptor_for(
             related = list(getattr(obj, name).all())
         except (ValueError, AttributeError):
             related = []
-        value = [serialize_fk_value(r, admin_site=admin_site) for r in related]
+        value = [serialize_fk_value(r, admin_site=admin_site, request=request) for r in related]
     elif isinstance(model_field, FileField):
         # FileField / ImageField (Issue #57): serialise as a
         # ``{name, url, size}`` envelope. ``None`` when the field is
