@@ -497,3 +497,18 @@ def test_apply_select_related_true_follows_all_fks() -> None:
     ma = _MA(Permission, admin.site)
     out = list_view._apply_select_related(Permission.objects.all(), ma, ["codename"])
     assert out.query.select_related is True
+
+
+@pytest.mark.django_db
+def test_list_surfaces_empty_value_display(superuser_client: Client) -> None:
+    """The list response carries ``empty_value_display`` (#251) — the site
+    default ``"-"`` or the ``ModelAdmin`` override — so the SPA renders it
+    for empty cells instead of a hardcoded em-dash."""
+    assert superuser_client.get(LIST_URL).json()["empty_value_display"] == "-"
+    model_admin = admin.site._registry[Group]
+    model_admin.empty_value_display = "(none)"
+    try:
+        body = superuser_client.get(LIST_URL).json()
+    finally:
+        del model_admin.empty_value_display  # restore the class/site default
+    assert body["empty_value_display"] == "(none)"
