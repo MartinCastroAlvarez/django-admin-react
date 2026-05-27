@@ -3,9 +3,9 @@ import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router-dom';
 
 import { ApiClient, ApiProvider, RegistryProvider } from '@dar/data';
+import { initTheme } from '@dar/settings';
 
 import { App } from './App';
-import { initTheme } from './theme';
 import './index.css';
 
 // Apply the saved (or system-default) light/dark theme before React

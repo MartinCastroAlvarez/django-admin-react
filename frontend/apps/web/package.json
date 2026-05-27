@@ -14,6 +14,8 @@
   "dependencies": {
     "@dar/api": "workspace:*",
     "@dar/data": "workspace:*",
+    "@dar/settings": "workspace:*",
+    "@dar/sidebar": "workspace:*",
     "@dar/ui": "workspace:*",
     "lucide-react": "^1.16.0",
     "react": "^18.3.0",

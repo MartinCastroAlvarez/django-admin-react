@@ -8,7 +8,7 @@ import { Moon, Sun } from 'lucide-react';
 
 import { Button, Modal } from '@dar/ui';
 
-import { resolveTheme, setTheme, type Theme } from '../theme';
+import { resolveTheme, setTheme, type Theme } from './theme';
 
 export function SettingsModal({ onClose }: { onClose: () => void }) {
   const [theme, setThemeState] = useState<Theme>(() => resolveTheme());

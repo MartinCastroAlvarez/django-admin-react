@@ -23,6 +23,12 @@ importers:
       '@dar/data':
         specifier: workspace:*
         version: link:../../packages/data
+      '@dar/settings':
+        specifier: workspace:*
+        version: link:../../packages/settings
+      '@dar/sidebar':
+        specifier: workspace:*
+        version: link:../../packages/sidebar
       '@dar/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -111,6 +117,44 @@ importers:
       '@dar/ui':
         specifier: workspace:*
         version: link:../ui
+
+  packages/settings:
+    dependencies:
+      '@dar/ui':
+        specifier: workspace:*
+        version: link:../ui
+    devDependencies:
+      '@types/react':
+        specifier: ^18.3.0
+        version: 18.3.29
+      lucide-react:
+        specifier: ^1.16.0
+        version: 1.16.0(react@18.3.1)
+      react:
+        specifier: ^18.3.0
+        version: 18.3.1
+
+  packages/sidebar:
+    dependencies:
+      '@dar/data':
+        specifier: workspace:*
+        version: link:../data
+      '@dar/settings':
+        specifier: workspace:*
+        version: link:../settings
+    devDependencies:
+      '@types/react':
+        specifier: ^18.3.0
+        version: 18.3.29
+      lucide-react:
+        specifier: ^1.16.0
+        version: 1.16.0(react@18.3.1)
+      react:
+        specifier: ^18.3.0
+        version: 18.3.1
+      react-router-dom:
+        specifier: ^6.26.0
+        version: 6.30.3(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
 
   packages/ui:
     dependencies:
