@@ -14,6 +14,9 @@ version section at release.
 
 ## [Unreleased]
 
+## [0.2.0a5] — 2026-05-27
+[GitHub Release](https://github.com/MartinCastroAlvarez/django-admin-react/releases/tag/v0.2.0a5)
+
 ### Security
 - Gate the ForeignKey/M2M `to` navigation link on the **target** model's
   per-user `has_view_permission`, not just registry membership — least
@@ -21,7 +24,14 @@ version section at release.
 - Ship a concrete recommended **Content-Security-Policy** for the SPA shell in
   `SECURITY.md` §9 (`script-src 'self'`; Report-Only rollout guidance) (QSEC-03).
 - Enforce the `@dar/api` import boundary + re-clean `mypy` across the API (#312, #319).
-- Codify the `bandit` security-lint scope in `pyproject [tool.bandit]`.
+- Codify the `bandit` security-lint scope in `pyproject [tool.bandit]` (#343).
+- Purge the client cache (localStorage + service-worker) on logout, so cached
+  records can't survive sign-out on a shared machine (#363).
+- Drop source maps from the published wheel — no `.js.map` ships to PyPI,
+  shrinking the artifact and removing source-reconstruction exposure (#362).
+- Lock per-action `allowed_permissions` enforcement with a regression test:
+  a delete-gated action is unreachable (404) for a user without delete
+  permission (#361, #302).
 
 ### Added
 - React **password set/change** endpoint — `UserAdmin` parity, delegates to the
@@ -30,6 +40,8 @@ version section at release.
 - Collapsible fieldsets + fieldset `description` (Django change-form parity) (#325).
 - "View on site" link on detail (`ModelAdmin.view_on_site` parity) (#334).
 - Django **save-flow buttons** — Save / continue / add another / save as new (#154).
+- **`date_hierarchy`** drill-down strip on the list view (#349).
+- **Logout** from the Settings modal (#363).
 - Read-mode display parity: choice labels, file download links, boolean icons (#314).
 - Toast notifications for save / create / delete / bulk actions (#289).
 - Home page grouped by app (matches Django's index) (#321).
@@ -38,13 +50,19 @@ version section at release.
   restore + `aria-labelledby` (#292); list empty-state with an "Add" CTA (#293).
 - **Frontend test runner** (vitest + Testing Library) and starter suites for
   `@dar/data` (`format`, `useSwrCache`), `FieldValueView`, and mutations (#310).
+- **Frontend lint gate** — ESLint v9 flat config + typescript-eslint +
+  react-hooks + Stylelint (#346).
 
 ### Changed
 - Apply `ModelAdmin.list_select_related` to avoid an N+1 on FK list columns (#320).
+- Loading skeletons on list refetch — filter / search / sort / page (#357).
+- Generic search placeholder + plain empty-state copy (#358).
 - Reconciled stale docs: `ARCHITECTURE.md` §8, `README`/`CONTRIBUTING`, and the
   `docs/` index now match shipped reality (#257, #326).
 - Raised test coverage to the `ACCEPTANCE.md` §3.5 T-2 gate: `permissions.py` +
   `serializers.py` at 100%, all `views/*.py` ≥ 95% (#271, #274, #288).
+- Run the frontend eslint + stylelint gate inside `scripts/lint.sh` so the
+  pre-merge sweep actually enforces it (#351).
 
 ### Fixed
 - Several dark-mode contrast/border issues across banners, forms, and the
@@ -118,7 +136,8 @@ version section at release.
   `ModelAdmin.get_queryset`; writes through `ModelAdmin.get_form`; conservative
   serializer + sensitive-name denylist. Ships the pre-built React bundle.
 
-[Unreleased]: https://github.com/MartinCastroAlvarez/django-admin-react/compare/v0.2.0a4...HEAD
+[Unreleased]: https://github.com/MartinCastroAlvarez/django-admin-react/compare/v0.2.0a5...HEAD
+[0.2.0a5]: https://github.com/MartinCastroAlvarez/django-admin-react/compare/v0.2.0a4...v0.2.0a5
 [0.2.0a4]: https://github.com/MartinCastroAlvarez/django-admin-react/compare/v0.2.0a3...v0.2.0a4
 [0.2.0a3]: https://github.com/MartinCastroAlvarez/django-admin-react/compare/v0.2.0a2...v0.2.0a3
 [0.2.0a2]: https://github.com/MartinCastroAlvarez/django-admin-react/compare/v0.2.0a1...v0.2.0a2
