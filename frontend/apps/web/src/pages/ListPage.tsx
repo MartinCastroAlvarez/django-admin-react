@@ -20,11 +20,13 @@ import {
 } from '@dar/data';
 import {
   columnsKey,
+  columnWidthsKey,
   filtersKey,
   readJSON,
-  usePersistedSet,
-  writeJSON,
   removeKey,
+  usePersistedSet,
+  usePersistedState,
+  writeJSON,
 } from '@dar/customization';
 import { Breadcrumb, Button, Card, EmptyState, Input, Modal, Skeleton, Table } from '@dar/ui';
 import { FieldValueView } from '@dar/details';
@@ -115,28 +117,15 @@ export function ListPage() {
   const [hiddenCols, setHiddenCols] = usePersistedSet(columnsKey(appLabel, modelName));
   const [colsOpen, setColsOpen] = useState(false);
 
-  // Drag-to-resize column widths, persisted per app/model in localStorage
-  // (a UI preference, like hidden columns). The Table owns the drag
-  // interaction; we just hold + persist the px widths.
-  const colWidthsKey = `dar:colwidths:${appLabel}:${modelName}`;
-  const [colWidths, setColWidths] = useState<Record<string, number>>(() => {
-    try {
-      const raw = localStorage.getItem(`dar:colwidths:${appLabel}:${modelName}`);
-      return raw ? (JSON.parse(raw) as Record<string, number>) : {};
-    } catch {
-      return {};
-    }
-  });
+  // Drag-to-resize column widths, persisted per app/model (a UI
+  // preference, like hidden columns) via @dar/customization. The Table
+  // owns the drag interaction; we just hold + persist the px widths.
+  const [colWidths, setColWidths] = usePersistedState<Record<string, number>>(
+    columnWidthsKey(appLabel, modelName),
+    {},
+  );
   const resizeColumn = (key: string, width: number): void =>
-    setColWidths((prev) => {
-      const next = { ...prev, [key]: width };
-      try {
-        localStorage.setItem(colWidthsKey, JSON.stringify(next));
-      } catch {
-        /* localStorage unavailable (private mode) — best effort. */
-      }
-      return next;
-    });
+    setColWidths((prev) => ({ ...prev, [key]: width }));
 
   // Persist the applied list_filter selections per model (a UI
   // preference, like the column customizer) so a later bare visit can
@@ -668,10 +657,7 @@ export function ListPage() {
       )}
 
       {colsOpen && (
-        <Modal
-          title="Columns"
-          onClose={() => setColsOpen(false)}
-        >
+        <Modal title="Columns" onClose={() => setColsOpen(false)}>
           <ul className="space-y-2">
             {orderedDescriptors.map((c) => {
               const pk = isPkCol(c.name);

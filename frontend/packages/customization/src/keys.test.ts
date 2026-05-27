@@ -6,6 +6,7 @@ import {
   PRESERVED_ON_LOGOUT,
   THEME_KEY,
   columnsKey,
+  columnWidthsKey,
   detailCollapseKey,
   filtersKey,
 } from './keys';
@@ -24,6 +25,7 @@ describe('customization keys', () => {
 
   it('builds stable, model-scoped keys', () => {
     expect(columnsKey('auth', 'user')).toBe('dar:cols:auth:user');
+    expect(columnWidthsKey('auth', 'user')).toBe('dar:colwidths:auth:user');
     expect(filtersKey('auth', 'user')).toBe('dar:filters:auth:user');
     expect(detailCollapseKey('auth', 'user', 2, 'Perms')).toBe(
       'dar:detail-collapsed:auth:user:2-Perms',
