@@ -32,6 +32,7 @@ from django_admin_react.api.views.destroy import DestroyView
 from django_admin_react.api.views.detail import DetailView
 from django_admin_react.api.views.history import HistoryView
 from django_admin_react.api.views.list import ListView
+from django_admin_react.api.views.object_action import ObjectActionView
 from django_admin_react.api.views.password import SetPasswordView
 from django_admin_react.api.views.recent_actions import RecentActionsView
 from django_admin_react.api.views.registry import RegistryView
@@ -161,6 +162,17 @@ urlpatterns: list = [
         "<str:app_label>/<str:model_name>/<str:pk>/password/",
         SetPasswordView.as_view(),
         name="set_password",
+    ),
+    # Object-level change-page action runner (#236) — opt-in via the
+    # django-object-actions ``change_actions`` / ``get_change_actions``
+    # contract, duck-typed (no hard dependency). Literal ``action``
+    # segment must precede the ``<pk>`` instance route below so it isn't
+    # swallowed as part of the pk. 404s for any model whose admin exposes
+    # no object actions.
+    path(
+        "<str:app_label>/<str:model_name>/<str:pk>/action/<str:name>/",
+        ObjectActionView.as_view(),
+        name="object_action",
     ),
     path(
         "<str:app_label>/<str:model_name>/<str:pk>/",

@@ -36,6 +36,7 @@ from django.views.generic import View
 
 from django_admin_react.api.custom_views import custom_views_for
 from django_admin_react.api.inlines import inlines_payload
+from django_admin_react.api.object_actions import object_actions_payload
 from django_admin_react.api.permissions import forbidden_response
 from django_admin_react.api.permissions import is_admin_user
 from django_admin_react.api.registry import get_admin_site
@@ -150,6 +151,14 @@ def _build_payload(
     extra_views = custom_views_for(model_admin, admin_site, obj=obj)
     if extra_views:
         payload["custom_views"] = extra_views
+    # Object-level change-page actions (Issue #236) — opt-in via the
+    # django-object-actions ``get_change_actions`` / ``change_actions``
+    # contract, duck-typed (no hard dependency). ``None`` means a plain
+    # Django admin without that affordance: omit the key entirely so the
+    # SPA renders no action buttons (graceful no-op).
+    object_actions = object_actions_payload(model_admin, request, obj)
+    if object_actions is not None:
+        payload["object_actions"] = object_actions
     return payload
 
 

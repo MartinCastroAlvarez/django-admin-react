@@ -18,6 +18,7 @@ import {
   createObject,
   deleteObject,
   fetchDeletePreview,
+  runObjectAction,
   updateObject,
   useApiClient,
   useDetail,
@@ -29,6 +30,7 @@ import {
   type InlineDescriptor,
   type InlineWriteItem,
   type InlineWritePayload,
+  type ObjectActionDescriptor,
   type WriteValue,
 } from '@dar/data';
 import { detailCollapseKey, usePersistedState } from '@dar/customization';
@@ -235,6 +237,30 @@ export function DetailPage() {
             {data.custom_views && data.custom_views.length > 0 && (
               <CustomViewsMenu views={data.custom_views} />
             )}
+            {/* Object-level change-page actions (#236) — django-object-actions
+                `change_actions` parity. The backend re-validates the action
+                name against its permitted set, so a button can never run an
+                action the user isn't allowed to. On success we re-fetch the
+                detail payload (computed/readonly fields may have changed) and
+                navigate if the action returned a redirect. No full reload. */}
+            {(data.object_actions ?? []).map((action) => (
+              <ObjectActionButton
+                key={action.name}
+                action={action}
+                onRun={() =>
+                  runObjectAction({ client, appLabel, modelName, pk, name: action.name })
+                }
+                onSuccess={async (message, redirect) => {
+                  if (redirect) {
+                    navigate(redirect);
+                    return;
+                  }
+                  await refresh();
+                  toast.success(message || 'Done');
+                }}
+                onError={(message) => toast.error(message)}
+              />
+            ))}
             {canChange && (
               <Button variant="primary" onClick={() => setEditing(true)}>
                 Edit
@@ -333,6 +359,60 @@ export function DetailPage() {
         />
       )}
     </div>
+  );
+}
+
+// One object-level change-page action button (#236). Disables + shows a
+// spinner while the POST is in flight; on success the parent re-fetches
+// the detail payload (so computed/readonly fields reflect the action) and
+// toasts, or navigates when the action returned a redirect. No full reload.
+function ObjectActionButton({
+  action,
+  onRun,
+  onSuccess,
+  onError,
+}: {
+  action: ObjectActionDescriptor;
+  onRun: () => Promise<{ ok: boolean; message?: string; redirect?: string }>;
+  onSuccess: (message: string | undefined, redirect: string | undefined) => Promise<void> | void;
+  onError: (message: string) => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  return (
+    <Button
+      variant="secondary"
+      loading={busy}
+      disabled={busy}
+      title={action.description}
+      onClick={async () => {
+        setBusy(true);
+        try {
+          const result = await onRun();
+          if (result.ok) {
+            await onSuccess(result.message, result.redirect);
+          } else {
+            onError(result.message || 'The action could not be completed.');
+          }
+        } catch (err) {
+          // A raising action callable comes back as a 400 (never a 500);
+          // the client throws an ApiError. The 400 body is `{ok, error}`,
+          // and the backend keeps that message generic on purpose, so we
+          // surface a friendly fallback rather than the raw "HTTP 400".
+          if (err instanceof ApiError) {
+            const raw = err.envelope as unknown as { error?: unknown } | null;
+            const detail =
+              typeof raw?.error === 'string' ? raw.error : err.envelope?.error?.message;
+            onError(detail || 'The action could not be completed.');
+          } else {
+            onError(err instanceof Error ? err.message : 'The action could not be completed.');
+          }
+        } finally {
+          setBusy(false);
+        }
+      }}
+    >
+      {action.label}
+    </Button>
   );
 }
 
