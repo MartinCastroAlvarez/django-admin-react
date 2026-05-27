@@ -86,3 +86,24 @@ body,
 .dark .text-blue-700 {
   color: #93c5fd !important;
 }
+/* Status banners (#295). The light red error banner (bg-red-50 +
+   red-300 border + red-700 text) and the green success tint read as
+   near-white blocks on a dark surface. Recolour to dark-tinted fills
+   with light text that stays legible. */
+.dark .bg-red-50 {
+  background-color: #3f1d1d !important;
+}
+.dark .border-red-300,
+.dark .border-red-400 {
+  border-color: #7f1d1d !important;
+}
+.dark .text-red-700,
+.dark .text-red-600 {
+  color: #fca5a5 !important;
+}
+.dark .bg-green-50 {
+  background-color: #14321f !important;
+}
+.dark .text-green-700 {
+  color: #86efac !important;
+}
