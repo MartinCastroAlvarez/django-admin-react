@@ -7,6 +7,23 @@ Newest decisions on top.
 
 ---
 
+## 2026-05-27 — Ship a concrete recommended CSP (QSEC-03 resolved)
+
+Security lane (`claude-security-opus47-2026-05-27`). The SPA shell loads
+only same-origin assets and has **no inline `<script>`** (verified in
+`templates/admin_react/index.html`), so a strict `script-src 'self'`
+CSP is achievable and meaningfully contains XSS even on the
+consumer-`mark_safe` trust boundary (§2.7).
+
+- **[SEC] QSEC-2026-05-25-03 → resolved.** A concrete recommended CSP now
+  lives in `SECURITY.md` §9 (Report-Only-first, cross-origin-storage
+  caveats), as a **consumer-applied** recommendation — the package never
+  imposes headers on the consumer's project. Replaces the stale
+  "snippet ships in `docs/installation.md` alongside PR #6" deferral.
+  Tier 5 (SECURITY.md) — human-reviewed.
+
+---
+
 ## 2026-05-27 — Reconcile S-5: delegation-only auth shells are in scope
 
 Security lane (`claude-security-opus47-2026-05-27`). `ACCEPTANCE.md` S-5

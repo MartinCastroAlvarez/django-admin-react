@@ -224,10 +224,49 @@ SECURE_REFERRER_POLICY       = "same-origin"
 SESSION_COOKIE_AGE = 60 * 60 * 8   # 8h staff session (QSEC-05)
 ```
 
-A `Content-Security-Policy` middleware (via `django-csp` or
-equivalent) is recommended once the SPA is live; sample snippet will
-ship in `docs/installation.md` alongside PR #6
-(see `docs/agents/open-questions.md` QSEC-2026-05-25-03).
+### Content-Security-Policy (recommended — QSEC-03)
+
+The SPA shell (`templates/admin_react/index.html`) loads **only**
+same-origin assets: one external ES-module bundle and its stylesheet
+under your `STATIC_URL`, a `data:` favicon, the PWA manifest, and the
+service worker — **no inline `<script>`**. That means a fairly strict
+CSP is achievable, and `script-src 'self'` (no `'unsafe-inline'`) is the
+load-bearing directive: it contains an XSS even if a consumer's
+`ModelAdmin` accidentally `mark_safe()`s attacker-controlled data into an
+HTML field value (the one consumer-trust boundary — see §2.7).
+
+Apply it with [`django-csp`](https://django-csp.readthedocs.io/) or any
+header middleware. A starting policy for the admin mount:
+
+```
+Content-Security-Policy:
+  default-src 'self';
+  script-src 'self';
+  style-src 'self' 'unsafe-inline';   # React/runtime inline style attrs
+  img-src 'self' data:;               # data: favicon
+  font-src 'self';
+  connect-src 'self';                 # the API is same-origin
+  manifest-src 'self';
+  worker-src 'self';                  # the PWA service worker
+  frame-ancestors 'none';             # clickjacking (with X_FRAME_OPTIONS)
+  base-uri 'self';
+  form-action 'self';
+```
+
+Caveats — **validate before enforcing**:
+
+- Roll it out in **`Content-Security-Policy-Report-Only`** first and
+  watch for violations; only switch to the enforcing header once clean.
+- If you serve `FileField`/`ImageField` media or signed download URLs
+  from a **different origin** (S3, GCS, a CDN), add that origin to
+  `img-src` and `connect-src`.
+- `style-src 'unsafe-inline'` is included because React sets inline
+  `style` attributes at runtime; it is far lower-risk than allowing
+  inline scripts. Drop it if you verify your build needs no inline
+  styles.
+- This policy assumes the package is mounted on its own path under your
+  domain. If you already ship a project-wide CSP, **merge** these
+  directives rather than replacing your policy.
 
 ### File / image field storage
 
