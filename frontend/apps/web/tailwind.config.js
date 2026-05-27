@@ -9,8 +9,13 @@ export default {
   content: [
     './index.html',
     './src/**/*.{ts,tsx}',
-    '../../packages/ui/src/**/*.{ts,tsx}',
-    '../../packages/data/src/**/*.{ts,tsx}',
+    // Scan EVERY workspace package, not a hand-maintained list. When a
+    // component is extracted into a new package (e.g. @dar/sidebar,
+    // @dar/settings), its Tailwind classes must still be generated — a
+    // missing glob silently purges them and the component renders
+    // unstyled (the sidebar-overlap regression). A wildcard prevents
+    // that class of bug from recurring.
+    '../../packages/*/src/**/*.{ts,tsx}',
   ],
   theme: {
     extend: {
