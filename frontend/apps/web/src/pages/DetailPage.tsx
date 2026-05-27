@@ -717,6 +717,9 @@ function InlineSection({ inline }: { inline: InlineDescriptor }) {
       ...inline.fields.map((f) => ({
         key: f.name,
         header: f.label,
+        // The pk column never truncates (#418) — a UUID/explicit pk is the
+        // row's identity and link target and must stay fully readable.
+        noTruncate: f.name === inline.pk_field,
         render: (row: (typeof inline.rows)[number]) => (
           <FieldValueView value={row.fields[f.name]} type={f.type} />
         ),

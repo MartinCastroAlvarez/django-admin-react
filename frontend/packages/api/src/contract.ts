@@ -380,6 +380,13 @@ export interface InlineDescriptor {
   label: string;
   kind: 'tabular' | 'stacked';
   fk_name: string;
+  /**
+   * The child model's pk field name. When the pk is an explicit field
+   * (e.g. a UUIDField) it appears as an inline column; the SPA renders
+   * that column without truncation so the identity stays readable
+   * (mirrors the list `pk_field`, #418 / #360).
+   */
+  pk_field: string;
   child: { app_label: string; model_name: string };
   extra: number;
   min_num: number | null;

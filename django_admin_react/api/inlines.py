@@ -160,6 +160,12 @@ def _spec_for_inline(
         "label": str(meta.verbose_name_plural),
         "kind": kind,
         "fk_name": fk_name,
+        # The child's pk field name (#418): when the pk is an explicit,
+        # non-auto field (e.g. a UUIDField) it shows up as an inline
+        # column, and the SPA must render it without ellipsis — the row's
+        # identity must stay fully readable/copyable (mirrors the list
+        # ``pk_field`` / #360).
+        "pk_field": meta.pk.name,
         "child": {"app_label": meta.app_label, "model_name": meta.model_name},
         "extra": int(getattr(inline, "extra", 0)),
         "min_num": getattr(inline, "min_num", None),
