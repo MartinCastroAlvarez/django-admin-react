@@ -30,12 +30,13 @@ import {
   type InlineWritePayload,
   type WriteValue,
 } from '@dar/data';
-import { Button, Card, EmptyState, Modal, Table } from '@dar/ui';
+import { Breadcrumb, Button, Card, EmptyState, Modal, Table } from '@dar/ui';
 import { FieldValueView } from '@dar/details';
 import { FieldInput, InlineEditor } from '@dar/form';
 import { HistoryModal } from '@dar/history';
 
 import { RecordSkeleton } from '../components/RecordSkeleton';
+import { useModelMeta } from '../useModelMeta';
 import { useToast } from '../toast';
 import { useUnsavedGuard } from '../useUnsavedGuard';
 
@@ -149,6 +150,7 @@ export function DetailPage() {
   // editing" from the add form (`?edit=1`); otherwise start read-only.
   const [editing, setEditing] = useState(() => searchParams.get('edit') === '1');
   const [historyOpen, setHistoryOpen] = useState(false);
+  const { plural: modelPlural } = useModelMeta(appLabel, modelName);
 
   if (loading && !data) return <RecordSkeleton />;
   if (error && !data) {
@@ -162,11 +164,20 @@ export function DetailPage() {
   return (
     <div className="space-y-4">
       <header className="flex items-start justify-between gap-4">
-        <div>
-          <Link to={`/${appLabel}/${modelName}`} className="text-sm text-blue-600 hover:underline">
-            ← Back to list
-          </Link>
-          <h1 className="mt-1 text-2xl font-semibold">{data.label}</h1>
+        <div className="space-y-1">
+          <Breadcrumb
+            items={[
+              { label: 'Home', to: '/' },
+              { label: modelPlural, to: `/${appLabel}/${modelName}` },
+              { label: data.label },
+            ]}
+            renderLink={(to, className, label) => (
+              <Link to={to} className={className}>
+                {label}
+              </Link>
+            )}
+          />
+          <h1 className="text-2xl font-semibold">{data.label}</h1>
           <p className="text-sm text-gray-500">
             {appLabel} · {modelName} · #{data.pk}
           </p>

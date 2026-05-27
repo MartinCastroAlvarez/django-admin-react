@@ -6,21 +6,21 @@
 // validation errors come back in the envelope and render next to each
 // input. On success, navigates to the new object's detail page.
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import {
   ApiError,
   createObject,
   useApiClient,
-  useRegistry,
   type AddFormResponse,
   type WriteValue,
 } from '@dar/data';
-import { Button, Card, EmptyState } from '@dar/ui';
+import { Breadcrumb, Button, Card, EmptyState } from '@dar/ui';
 import { FieldInput } from '@dar/form';
 
 import { RecordSkeleton } from '../components/RecordSkeleton';
+import { useModelMeta } from '../useModelMeta';
 import { useToast } from '../toast';
 import { useUnsavedGuard } from '../useUnsavedGuard';
 
@@ -31,21 +31,9 @@ export function CreatePage() {
   const client = useApiClient();
   const navigate = useNavigate();
   const toast = useToast();
-  const registry = useRegistry();
-
-  // Heading shows the model's singular verbose name only — never the app
-  // label (#354). Matches Django's "Add <verbose_name>" and respects a
-  // Meta.verbose_name override, which the registry already surfaces.
-  const modelTitle = useMemo(() => {
-    for (const app of registry.data?.apps ?? []) {
-      for (const m of app.models) {
-        if (m.model_name === modelName && (m.real_app_label === appLabel || m.app_label === appLabel)) {
-          return m.verbose_name;
-        }
-      }
-    }
-    return modelName;
-  }, [registry.data, appLabel, modelName]);
+  // Heading + breadcrumb use the model's verbose labels (never the app
+  // label), honouring Meta.verbose_name[_plural] (#354).
+  const { singular: modelTitle, plural: modelPlural } = useModelMeta(appLabel, modelName);
 
   const [schema, setSchema] = useState<AddFormResponse | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -77,11 +65,20 @@ export function CreatePage() {
 
   return (
     <div className="space-y-4">
-      <header>
-        <Link to={`/${appLabel}/${modelName}`} className="text-sm text-blue-600 hover:underline">
-          ← Back to list
-        </Link>
-        <h1 className="mt-1 text-2xl font-semibold">Add {modelTitle}</h1>
+      <header className="space-y-1">
+        <Breadcrumb
+          items={[
+            { label: 'Home', to: '/' },
+            { label: modelPlural, to: `/${appLabel}/${modelName}` },
+            { label: `Add ${modelTitle}` },
+          ]}
+          renderLink={(to, className, label) => (
+            <Link to={to} className={className}>
+              {label}
+            </Link>
+          )}
+        />
+        <h1 className="text-2xl font-semibold">Add {modelTitle}</h1>
       </header>
       <CreateForm
         key={formKey}

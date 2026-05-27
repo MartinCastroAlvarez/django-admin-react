@@ -18,7 +18,7 @@ import {
   type FilterOption,
   type ListRow,
 } from '@dar/data';
-import { Button, Card, EmptyState, Input, Modal, Skeleton, Table } from '@dar/ui';
+import { Breadcrumb, Button, Card, EmptyState, Input, Modal, Skeleton, Table } from '@dar/ui';
 import { FieldValueView } from '@dar/details';
 
 import { useToast } from '../toast';
@@ -400,15 +400,23 @@ export function ListPage() {
   const sortKey = ordering.replace(/^-/, '');
   const sortDirection: 'asc' | 'desc' = ordering.startsWith('-') ? 'desc' : 'asc';
 
+  const listTitle = data.verbose_name_plural
+    ? capitalize(data.verbose_name_plural)
+    : data.object_name || modelName;
+
   return (
     <div className="space-y-4">
       <header className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-semibold">
-            {data.verbose_name_plural
-              ? capitalize(data.verbose_name_plural)
-              : data.object_name || modelName}
-          </h1>
+        <div className="space-y-1">
+          <Breadcrumb
+            items={[{ label: 'Home', to: '/' }, { label: listTitle }]}
+            renderLink={(to, className, label) => (
+              <Link to={to} className={className}>
+                {label}
+              </Link>
+            )}
+          />
+          <h1 className="text-2xl font-semibold">{listTitle}</h1>
           <p className="text-sm text-gray-500">
             {data.full_count != null && data.full_count !== data.total
               ? `${data.total.toLocaleString()} of ${data.full_count.toLocaleString()} ${
