@@ -144,17 +144,30 @@ def _spec_for_fk(
         "to": {"app_label": meta.app_label, "model_name": meta.model_name},
     }
     # Inline up to _FK_FILTER_MAX_OPTIONS choices for tiny tables;
-    # larger tables defer to the autocomplete endpoint (#59).
+    # larger tables defer to the autocomplete endpoint (#59). Respect the
+    # FK's ``limit_choices_to`` so the offered options match Django's
+    # RelatedFieldListFilter, whose choices come from
+    # ``complex_filter(limit_choices_to)`` — a FK declared with, e.g.,
+    # ``limit_choices_to={"is_active": True}`` must not offer the rows it
+    # excludes (#273). An unset / empty / callable-returning-empty limit
+    # is falsy, so the unfiltered manager is used unchanged (and we never
+    # call ``complex_filter(None)``, which would raise).
+    base_qs = related._default_manager.all()
+    limit = field.get_limit_choices_to()
+    if limit:
+        try:
+            base_qs = related._default_manager.complex_filter(limit)
+        except Exception:
+            base_qs = related._default_manager.all()
     try:
-        count = related._default_manager.count()
+        count = base_qs.count()
     except Exception:
         count = _FK_FILTER_MAX_OPTIONS + 1
     if count <= _FK_FILTER_MAX_OPTIONS:
         from django_admin_react.api.serializers import label_for
 
         payload["choices"] = [
-            {"value": obj.pk, "label": label_for(obj)}
-            for obj in related._default_manager.all()[:_FK_FILTER_MAX_OPTIONS]
+            {"value": obj.pk, "label": label_for(obj)} for obj in base_qs[:_FK_FILTER_MAX_OPTIONS]
         ]
     return payload
 

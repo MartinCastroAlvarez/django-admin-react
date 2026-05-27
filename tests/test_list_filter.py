@@ -20,13 +20,17 @@ from __future__ import annotations
 
 from contextlib import contextmanager
 from contextlib import suppress
+from types import SimpleNamespace
 
 import pytest
 from django.contrib import admin
 from django.contrib.admin import SimpleListFilter
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
+from django.db.models import Q
 from django.test import Client
+
+from django_admin_react.api.filters import _spec_for_fk
 
 LIST_USER_URL = "/admin-react/api/v1/auth/user/"
 
@@ -193,3 +197,57 @@ def test_fk_filter_includes_inline_choices_when_small(
     # The filter is silently skipped (back-compat surface; M2M filter
     # support is part of #55 follow-up). We just assert no 500.
     assert response.status_code == 200
+
+
+# --------------------------------------------------------------------------- #
+# FK filter choices honour the field's ``limit_choices_to`` (#273)            #
+# --------------------------------------------------------------------------- #
+# The test project registers only auth models (no FK with a declared
+# ``limit_choices_to``), so these exercise the choice-building helper
+# directly with a stub field over the registered ``Group`` model. The
+# attributes read are exactly the ones ``_spec_for_fk`` touches:
+# ``related_model``, ``verbose_name``, and ``get_limit_choices_to()``.
+def _fk_stub(limit: object) -> SimpleNamespace:
+    return SimpleNamespace(
+        related_model=Group,
+        verbose_name="group",
+        get_limit_choices_to=lambda: limit,
+    )
+
+
+@pytest.mark.django_db
+def test_fk_filter_choices_respect_dict_limit_choices_to() -> None:
+    """A dict ``limit_choices_to`` narrows the inlined options — parity
+    with Django's RelatedFieldListFilter (#273)."""
+    alpha = Group.objects.create(name="alpha")
+    apex = Group.objects.create(name="apex")
+    Group.objects.create(name="beta")
+
+    spec = _spec_for_fk("grp", _fk_stub({"name__startswith": "a"}), None, admin.site)
+    assert spec is not None
+    assert {c["value"] for c in spec["choices"]} == {alpha.pk, apex.pk}
+
+
+@pytest.mark.django_db
+def test_fk_filter_choices_respect_q_limit_choices_to() -> None:
+    """A ``Q``-object ``limit_choices_to`` is honoured too."""
+    alpha = Group.objects.create(name="alpha")
+    Group.objects.create(name="beta")
+    gamma = Group.objects.create(name="gamma")
+
+    spec = _spec_for_fk("grp", _fk_stub(Q(name="alpha") | Q(name="gamma")), None, admin.site)
+    assert spec is not None
+    assert {c["value"] for c in spec["choices"]} == {alpha.pk, gamma.pk}
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("empty", [{}, None])
+def test_fk_filter_choices_unlimited_when_no_limit(empty: object) -> None:
+    """An empty / unset limit is a no-op — every related row is offered,
+    and the guard must never call ``complex_filter(None)`` (which raises)."""
+    alpha = Group.objects.create(name="alpha")
+    beta = Group.objects.create(name="beta")
+
+    spec = _spec_for_fk("grp", _fk_stub(empty), None, admin.site)
+    assert spec is not None
+    assert {c["value"] for c in spec["choices"]} == {alpha.pk, beta.pk}
