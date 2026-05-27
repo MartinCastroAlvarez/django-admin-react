@@ -62,3 +62,27 @@ body,
 .dark .hover\:bg-gray-100:hover {
   background-color: #1f2937 !important;
 }
+/* Form controls have no explicit bg utility (the @dar/ui Input + the
+   filter selects render on the browser-default white), so the bg-white
+   remap above misses them — they'd stay white in dark mode. Style them
+   directly. Checkboxes / radios / ranges keep their native accent. */
+.dark input:not([type='checkbox']):not([type='radio']):not([type='range']),
+.dark select,
+.dark textarea {
+  background-color: #111827 !important;
+  color: #e5e7eb !important;
+  border-color: #374151 !important;
+}
+.dark input::placeholder,
+.dark textarea::placeholder {
+  color: #6b7280 !important;
+}
+/* Selected/active highlight (e.g. the Settings appearance toggle): the
+   light blue-50 tint + blue-700 text read as a white button on a dark
+   surface. Recolour to a dark elevated tint with light-blue text. */
+.dark .bg-blue-50 {
+  background-color: #1e293b !important;
+}
+.dark .text-blue-700 {
+  color: #93c5fd !important;
+}
