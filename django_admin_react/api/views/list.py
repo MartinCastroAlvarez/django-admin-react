@@ -296,7 +296,7 @@ def _row_for(
     return {"pk": obj.pk, "label": label_for(obj), "fields": fields}
 
 
-def _apply_select_related(queryset: Any, model_admin: ModelAdmin, list_display: list[str]) -> Any:
+def _apply_select_related(queryset: Any, model_admin: ModelAdmin, list_display: list[Any]) -> Any:
     """Apply ``ModelAdmin.list_select_related``, mirroring Django's changelist.
 
     - ``True``           → ``select_related()`` (follow every FK).
@@ -320,7 +320,7 @@ def _apply_select_related(queryset: Any, model_admin: ModelAdmin, list_display: 
     return queryset
 
 
-def _has_related_field_in_list_display(model_admin: ModelAdmin, list_display: list[str]) -> bool:
+def _has_related_field_in_list_display(model_admin: ModelAdmin, list_display: list[Any]) -> bool:
     """True if any ``list_display`` entry is a forward FK / one-to-one field.
 
     Only forward single-valued relations benefit from ``select_related``;
