@@ -850,8 +850,18 @@ Request body:
 Response 200:
 
 ```json
-{ "executed": true, "action": "mark_inactive", "pks": [1, 2, 3] }
+{
+  "executed": true,
+  "action": "mark_inactive",
+  "pks": [1, 2, 3],
+  "messages": [{ "level": "success", "message": "3 users were deactivated." }]
+}
 ```
+
+`messages` carries any output the action queued via
+`ModelAdmin.message_user` (always present, `[]` when none); the SPA toasts
+each by `level` (Django's `success` / `info` / `warning` / `error` /
+`debug`) so an action can talk back, matching the HTML admin (`#442`).
 
 When the action callable returns an `HttpResponse` (e.g., a redirect
 to a confirmation page in legacy admin), the JSON envelope surfaces

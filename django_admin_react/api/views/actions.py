@@ -32,6 +32,7 @@ from __future__ import annotations
 from typing import Any
 
 from django.contrib.admin.utils import model_format_dict
+from django.contrib.messages import get_messages
 from django.db import transaction
 from django.http import HttpRequest
 from django.http import HttpResponse
@@ -131,17 +132,26 @@ class ActionView(View):
         with transaction.atomic():
             result = action_callable(model_admin, request, queryset)
 
+        # Surface any messages the action queued via
+        # ``ModelAdmin.message_user`` (#442) so the SPA can toast them —
+        # iterating ``get_messages`` consumes them, so they don't also leak
+        # into the session for the next page render. ``level_tag`` is
+        # Django's "success" / "info" / "warning" / "error" / "debug".
+        messages = [
+            {"level": m.level_tag or "info", "message": str(m)} for m in get_messages(request)
+        ]
+
         # Django admin's action contract: the callable may return an
         # ``HttpResponse`` (typically a redirect to a confirmation
         # page) — we surface that as a JSON envelope so the SPA can
         # follow it without parsing HTML.
         if isinstance(result, HttpResponse):
             body: dict[str, Any] = {"redirect": result["Location"]} if "Location" in result else {}
-            body.update({"executed": True, "action": action_name})
+            body.update({"executed": True, "action": action_name, "messages": messages})
             response = JsonResponse(body, status=200)
         else:
             response = JsonResponse(
-                {"executed": True, "action": action_name, "pks": list(pks)},
+                {"executed": True, "action": action_name, "pks": list(pks), "messages": messages},
                 status=200,
             )
         response["Cache-Control"] = "no-store"
