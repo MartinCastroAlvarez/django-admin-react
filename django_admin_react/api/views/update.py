@@ -142,7 +142,12 @@ class UpdateView(View):
             with transaction.atomic():
                 instance = form.save(commit=False)
                 model_admin.save_model(request, instance, form, change=True)
-                form.save_m2m()
+                # Honour a consumer's ``save_related`` override instead of
+                # calling ``form.save_m2m()`` directly (Rule 1, #402). The
+                # package's own inline writes run separately below; parent
+                # formsets aren't modelled here, so pass an empty list (the
+                # default ``save_related`` is ``save_m2m()`` + a formset loop).
+                model_admin.save_related(request, form, formsets=[], change=True)
                 log_change(model_admin, request, instance, form)
                 # Inline formsets (Issue #54 write half) round-trip inside
                 # the SAME transaction so a per-row permission denial or a

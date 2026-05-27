@@ -239,7 +239,11 @@ def _apply_one(
         with transaction.atomic():
             instance = form.save(commit=False)
             model_admin.save_model(request, instance, form, change=True)
-            form.save_m2m()
+            # Route M2M / related saves through ``save_related`` so a
+            # consumer's override is honoured on bulk writes too (Rule 1,
+            # #402); default impl is ``form.save_m2m()`` + a formset loop,
+            # so unoverridden behaviour is unchanged.
+            model_admin.save_related(request, form, formsets=[], change=True)
             log_change(model_admin, request, instance, form)
     except IntegrityError:
         return {"pk": pk, "ok": False, "error": conflict_error()}

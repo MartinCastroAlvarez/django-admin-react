@@ -110,7 +110,13 @@ class CreateView(View):
             with transaction.atomic():
                 instance = form.save(commit=False)
                 model_admin.save_model(request, instance, form, change=False)
-                form.save_m2m()
+                # Route M2M / related saves through ``save_related`` (not
+                # ``form.save_m2m()`` directly) so a consumer's override is
+                # honoured — Django's ``_changeform_view`` does the same
+                # (Rule 1, #402). The default impl is ``form.save_m2m()`` +
+                # a formset loop, so behaviour is unchanged when unoverridden.
+                # No parent-level formsets on create yet (#403).
+                model_admin.save_related(request, form, formsets=[], change=False)
                 log_addition(model_admin, request, instance, form)
         except IntegrityError:
             return conflict_response()

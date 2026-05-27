@@ -132,6 +132,24 @@ def test_save_model_is_called_not_obj_save(superuser_client: Client) -> None:
 
 
 @pytest.mark.django_db
+def test_create_routes_writes_through_save_related(superuser_client: Client) -> None:
+    """A consumer's ``save_related`` override is honoured on create (#402,
+    Rule 1 — ``ModelAdmin`` is the only source of truth). Before the fix,
+    create called ``form.save_m2m()`` directly, so a consumer override was
+    silently skipped on every SPA create."""
+    calls = []
+
+    def fake_save_related(self, request, form, formsets, change):  # noqa: ARG001
+        calls.append(change)
+        form.save_m2m()  # preserve the default M2M-save behaviour
+
+    with admin_override(Group, save_related=fake_save_related):
+        response = _post(superuser_client, {"name": "alpha"})
+    assert response.status_code == 201
+    assert calls == [False]  # invoked once; add → change=False
+
+
+@pytest.mark.django_db
 def test_malformed_json_is_bad_request(superuser_client: Client) -> None:
     response = superuser_client.post(
         COLLECTION_URL, data="not json{", content_type="application/json"

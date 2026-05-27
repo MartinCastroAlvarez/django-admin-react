@@ -146,6 +146,31 @@ def test_successful_batch_updates_all_rows(superuser_client: Client) -> None:
     assert g2.name == "g2-renamed"
 
 
+@pytest.mark.django_db
+def test_bulk_routes_writes_through_save_related(superuser_client: Client) -> None:
+    """A consumer's ``save_related`` override is honoured on bulk writes too
+    (#402, Rule 1). Before the fix, bulk called ``form.save_m2m()`` directly
+    and the override was skipped on every row."""
+    g1 = Group.objects.create(name="g1")
+    calls = []
+
+    def fake_save_related(self, request, form, formsets, change):  # noqa: ARG001
+        calls.append(change)
+        form.save_m2m()
+
+    payload = {"updates": [{"pk": g1.pk, "fields": {"name": "g1-renamed"}}]}
+    # `name` must be in list_editable for bulk to accept the write (#401).
+    with (
+        admin_attr(Group, list_editable=("name",)),
+        admin_override(Group, save_related=fake_save_related),
+    ):
+        response = superuser_client.patch(
+            BULK_URL, data=json.dumps(payload), content_type="application/json"
+        )
+    assert response.status_code == 200
+    assert calls == [True]  # invoked per row; change=True
+
+
 # --------------------------------------------------------------------------- #
 # Atomic rollback on partial failure                                          #
 # --------------------------------------------------------------------------- #

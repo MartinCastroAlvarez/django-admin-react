@@ -76,6 +76,24 @@ def test_superuser_can_patch(superuser_client: Client) -> None:
 
 
 @pytest.mark.django_db
+def test_update_routes_writes_through_save_related(superuser_client: Client) -> None:
+    """A consumer's ``save_related`` override is honoured on update (#402,
+    Rule 1). Before the fix, update called ``form.save_m2m()`` directly and
+    a consumer override was silently skipped."""
+    g = Group.objects.create(name="old")
+    calls = []
+
+    def fake_save_related(self, request, form, formsets, change):  # noqa: ARG001
+        calls.append(change)
+        form.save_m2m()
+
+    with admin_override(Group, save_related=fake_save_related):
+        response = _patch(superuser_client, g.pk, {"name": "new"})
+    assert response.status_code == 200
+    assert calls == [True]  # change → change=True
+
+
+@pytest.mark.django_db
 def test_user_without_change_permission_forbidden(superuser_client: Client) -> None:
     g = Group.objects.create(name="example")
     with admin_override(Group, has_change_permission=lambda self, request, obj=None: False):
