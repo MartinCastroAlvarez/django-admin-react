@@ -1,7 +1,7 @@
 import '@testing-library/jest-dom/vitest';
 
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 
 import { Table, type TableColumn } from './Table';
 
@@ -95,5 +95,48 @@ describe('Table', () => {
     const { container } = renderTable();
     expect(container.querySelector('table')?.className).not.toContain('table-fixed');
     expect(container.querySelector('colgroup')).toBeNull();
+  });
+
+  it('makes a sortable header keyboard-operable (tabindex + aria-sort + Enter)', () => {
+    const onSort = vi.fn();
+    const sortableCols: TableColumn<Row>[] = [
+      { key: 'name', header: 'Name', sortable: true, render: (r) => r.name },
+    ];
+    const { container } = render(
+      <Table columns={sortableCols} rows={rows} rowKey={(r) => r.id} onSort={onSort} />,
+    );
+    const th = container.querySelector('th') as HTMLElement;
+    expect(th.getAttribute('tabindex')).toBe('0');
+    expect(th.getAttribute('aria-sort')).toBe('none');
+    fireEvent.keyDown(th, { key: 'Enter' });
+    expect(onSort).toHaveBeenCalledWith('name');
+    fireEvent.keyDown(th, { key: ' ' });
+    expect(onSort).toHaveBeenCalledTimes(2);
+  });
+
+  it('reports the active sort direction via aria-sort', () => {
+    const sortableCols: TableColumn<Row>[] = [
+      { key: 'name', header: 'Name', sortable: true, render: (r) => r.name },
+    ];
+    const { container } = render(
+      <Table
+        columns={sortableCols}
+        rows={rows}
+        rowKey={(r) => r.id}
+        onSort={() => {}}
+        sortKey="name"
+        sortDirection="desc"
+      />,
+    );
+    expect((container.querySelector('th') as HTMLElement).getAttribute('aria-sort')).toBe(
+      'descending',
+    );
+  });
+
+  it('a non-sortable header is not focusable and has no aria-sort', () => {
+    const { container } = renderTable(); // columns have no `sortable`
+    const th = container.querySelector('th') as HTMLElement;
+    expect(th.getAttribute('tabindex')).toBeNull();
+    expect(th.getAttribute('aria-sort')).toBeNull();
   });
 });
