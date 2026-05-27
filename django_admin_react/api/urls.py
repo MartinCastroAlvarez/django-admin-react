@@ -33,6 +33,7 @@ from django_admin_react.api.views.detail import DetailView
 from django_admin_react.api.views.history import HistoryView
 from django_admin_react.api.views.list import ListView
 from django_admin_react.api.views.password import SetPasswordView
+from django_admin_react.api.views.recent_actions import RecentActionsView
 from django_admin_react.api.views.registry import RegistryView
 from django_admin_react.api.views.schema import SchemaView
 from django_admin_react.api.views.update import UpdateView
@@ -83,6 +84,11 @@ class InstanceView(View):
 urlpatterns: list = [
     path("registry/", RegistryView.as_view(), name="registry"),
     path("schema/", SchemaView.as_view(), name="schema"),
+    # Recent-actions feed (#502) — the signed-in user's own LogEntry
+    # history for the index "Recent actions" panel. Single-segment
+    # literal, so it cannot be shadowed by the two-segment
+    # ``<app>/<model>/`` pattern below.
+    path("recent-actions/", RecentActionsView.as_view(), name="recent_actions"),
     # Auth endpoints (React-login feature). Single-segment literals, so
     # they cannot be shadowed by the two-segment ``<app>/<model>/``
     # pattern below. ``login`` / ``logout`` are also added to
