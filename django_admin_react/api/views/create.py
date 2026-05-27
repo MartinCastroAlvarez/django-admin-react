@@ -26,6 +26,9 @@ from django.http import HttpResponse
 from django.http import JsonResponse
 from django.views.generic import View
 
+from django_admin_react.api.inlines_write import InlinePermissionDenied
+from django_admin_react.api.inlines_write import InlineValidationError
+from django_admin_react.api.inlines_write import apply_inline_writes
 from django_admin_react.api.permissions import forbidden_response
 from django_admin_react.api.permissions import is_admin_user
 from django_admin_react.api.registry import get_admin_site
@@ -94,6 +97,9 @@ class CreateView(View):
         # ``request.FILES``; JSON keeps the existing envelope path. CSRF is
         # enforced either way — ``CsrfViewMiddleware`` ran before this view
         # and there is no ``@csrf_exempt``.
+        # Optional inline formsets (#403) — set only on the JSON path; a
+        # multipart create (file uploads) doesn't carry inlines.
+        inlines_payload: Any = None
         is_multipart = (request.content_type or "").startswith("multipart/form-data")
         if is_multipart:
             form_data: Any
@@ -119,6 +125,9 @@ class CreateView(View):
             if isinstance(parsed, HttpResponse):
                 return parsed
             payload: dict[str, Any] = parsed
+            # Strip the inline block before validating parent keys so it
+            # isn't treated as an unknown field; it's saved after the parent.
+            inlines_payload = payload.pop("inlines", None)
             form_data = coerce_fk_values(payload, model)
             files = None
             submitted_keys = payload
@@ -147,8 +156,26 @@ class CreateView(View):
                 # `formsets` list is empty here.
                 model_admin.save_related(request, form, [], change=False)
                 log_addition(model_admin, request, instance, form)
+                # Inline formsets (#403) round-trip in the SAME transaction
+                # as the parent create, so a child permission denial or a
+                # formset validation failure reverts the parent too — exactly
+                # how the update endpoint handles them.
+                if inlines_payload is not None:
+                    inline_errors = apply_inline_writes(
+                        model_admin, request, instance, form, inlines_payload
+                    )
+                    if inline_errors is not None:
+                        raise InlineValidationError(inline_errors)
+        except InlinePermissionDenied:
+            return forbidden_response(request)
+        except InlineValidationError as exc:
+            return validation_failed({"inlines": exc.errors})
         except IntegrityError:
             return conflict_response()
+        except ValueError:
+            # Malformed `inlines` payload shape (not a 500) — fixed generic
+            # message, never echoing exception text (CodeQL stack-trace).
+            return bad_request("Malformed 'inlines' payload.")
 
         body = {
             "pk": instance.pk,

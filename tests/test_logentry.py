@@ -19,6 +19,7 @@ from __future__ import annotations
 import json
 
 import pytest
+from django.contrib import admin
 from django.contrib.admin.models import ADDITION
 from django.contrib.admin.models import CHANGE
 from django.contrib.admin.models import DELETION
@@ -104,18 +105,26 @@ def test_bulk_patch_emits_one_change_per_row(superuser_client: Client) -> None:
     g2 = Group.objects.create(name="g2")
     before = LogEntry.objects.count()
 
-    response = superuser_client.patch(
-        f"{COLLECTION_URL}bulk/",
-        data=json.dumps(
-            {
-                "updates": [
-                    {"pk": g1.pk, "fields": {"name": "g1x"}},
-                    {"pk": g2.pk, "fields": {"name": "g2x"}},
-                ]
-            }
-        ),
-        content_type="application/json",
-    )
+    # The bulk endpoint only writes list_editable fields (#401), so opt
+    # `name` in for this row-change-logging assertion.
+    group_admin = admin.site._registry[Group]
+    original = getattr(group_admin, "list_editable", ())
+    group_admin.list_editable = ("name",)
+    try:
+        response = superuser_client.patch(
+            f"{COLLECTION_URL}bulk/",
+            data=json.dumps(
+                {
+                    "updates": [
+                        {"pk": g1.pk, "fields": {"name": "g1x"}},
+                        {"pk": g2.pk, "fields": {"name": "g2x"}},
+                    ]
+                }
+            ),
+            content_type="application/json",
+        )
+    finally:
+        group_admin.list_editable = original
     assert response.status_code == 200
 
     # One CHANGE entry per successfully-updated row.

@@ -69,6 +69,21 @@ class InlinePermissionDenied(Exception):
         self.state = state
 
 
+class InlineValidationError(Exception):
+    """Carries inline formset errors out of the caller's ``atomic()`` block.
+
+    Raised so the transaction unwinds (reverting the parent write), then
+    caught immediately outside the block and converted to a 400 with the
+    per-inline error detail. Using an exception rather than an early return
+    is what guarantees the rollback — a plain return inside ``atomic()``
+    would commit the parent. Shared by the create + update endpoints.
+    """
+
+    def __init__(self, errors: dict) -> None:
+        super().__init__("inline formset validation failed")
+        self.errors = errors
+
+
 def _inline_name(inline: InlineModelAdmin, parent: Model) -> str:
     """The identifier the read half emits for this inline.
 

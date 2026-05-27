@@ -207,3 +207,51 @@ def test_invalid_formset_data_is_400_no_persist(superuser_client: Client) -> Non
         )
         assert resp.status_code == 400, resp.content
         assert Permission.objects.filter(content_type=ct).count() == before
+
+
+# --------------------------------------------------------------------------- #
+# Create with inlines (#403): parent + children save in one transaction       #
+# --------------------------------------------------------------------------- #
+_COLLECTION_URL = "/admin-react/api/v1/contenttypes/contenttype/"
+
+
+@pytest.mark.django_db
+def test_create_with_inlines_saves_atomically(superuser_client: Client) -> None:
+    """POST a new parent with inline children — both persist in one txn (#403)."""
+    with _ct_admin_registered():
+        body = {
+            "app_label": "dar_test",
+            "model": "gadget",
+            "inlines": {
+                "content_type_set": {
+                    "items": [{"pk": None, "fields": {"name": "Can wibble", "codename": "wibble"}}]
+                }
+            },
+        }
+        resp = superuser_client.post(
+            _COLLECTION_URL, data=json.dumps(body), content_type="application/json"
+        )
+        assert resp.status_code == 201, resp.content
+        ct = ContentType.objects.get(app_label="dar_test", model="gadget")
+        assert Permission.objects.filter(content_type=ct, codename="wibble").exists()
+
+
+@pytest.mark.django_db
+def test_create_inline_validation_failure_rolls_back_parent(superuser_client: Client) -> None:
+    """An invalid inline child reverts the parent create too — no orphan
+    parent, atomic posture matching the update endpoint (#403)."""
+    with _ct_admin_registered():
+        body = {
+            "app_label": "dar_test",
+            "model": "gizmo",
+            "inlines": {
+                # `name` is required on Permission; omit it → formset invalid.
+                "content_type_set": {"items": [{"pk": None, "fields": {"codename": "x"}}]}
+            },
+        }
+        resp = superuser_client.post(
+            _COLLECTION_URL, data=json.dumps(body), content_type="application/json"
+        )
+        assert resp.status_code == 400, resp.content
+        # Parent must NOT have been created (rolled back with the bad child).
+        assert not ContentType.objects.filter(app_label="dar_test", model="gizmo").exists()

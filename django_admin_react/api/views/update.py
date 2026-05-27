@@ -31,6 +31,7 @@ from django.http.multipartparser import MultiPartParserError
 from django.views.generic import View
 
 from django_admin_react.api.inlines_write import InlinePermissionDenied
+from django_admin_react.api.inlines_write import InlineValidationError
 from django_admin_react.api.inlines_write import apply_inline_writes
 from django_admin_react.api.permissions import forbidden_response
 from django_admin_react.api.permissions import is_admin_user
@@ -49,21 +50,6 @@ from django_admin_react.api.writes import readonly_or_excluded_names
 from django_admin_react.api.writes import reject_forbidden_keys
 from django_admin_react.api.writes import validation_failed
 from django_admin_react.api.writes import writable_field_names
-
-
-class _InlineValidationError(Exception):
-    """Carries inline formset errors out of the ``atomic()`` block.
-
-    Raised so the transaction unwinds (reverting the parent write), then
-    caught immediately outside the block and converted to a 400 with the
-    per-inline error detail. Using an exception rather than an early
-    return is what guarantees the rollback — a plain return inside
-    ``atomic()`` would commit the parent.
-    """
-
-    def __init__(self, errors: dict) -> None:
-        super().__init__("inline formset validation failed")
-        self.errors = errors
 
 
 class UpdateView(View):
@@ -210,10 +196,10 @@ class UpdateView(View):
                     )
                     if inline_errors is not None:
                         # Roll back by raising; convert to a 400 below.
-                        raise _InlineValidationError(inline_errors)
+                        raise InlineValidationError(inline_errors)
         except InlinePermissionDenied:
             return forbidden_response(request)
-        except _InlineValidationError as exc:
+        except InlineValidationError as exc:
             return validation_failed({"inlines": exc.errors})
         except IntegrityError:
             # A DB constraint the form didn't catch (race / DB-level

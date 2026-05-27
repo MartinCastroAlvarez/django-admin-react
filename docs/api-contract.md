@@ -683,8 +683,14 @@ Request body:
   configured `Storage` (which sanitises the filename — no path traversal).
   A file part addressed to a readonly / excluded / unknown field is rejected
   `400`, exactly like a scalar key. CSRF still applies (the `X-CSRFToken`
-  header travels with the multipart request). Creating inline children in
-  the same request remains a follow-up (#403).
+  header travels with the multipart request).
+- **Inline children (#403):** a JSON create body may carry an optional
+  `inlines` object — the same shape as the update path (§5.2.1) — and the
+  parent + its inline formsets are saved in **one transaction**. A child
+  permission denial (`403`) or formset validation failure (`400`,
+  `{"inlines": {...}}`) rolls back the parent create too, so a failed
+  request never leaves an orphaned parent. (Inlines are JSON-only; the
+  multipart file-upload path doesn't carry them.)
 
 Response 201:
 
