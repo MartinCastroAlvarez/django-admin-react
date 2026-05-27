@@ -516,6 +516,11 @@ Rules:
   `get_fieldsets`). Anything in `exclude`/`get_exclude` is omitted.
 - `readonly: true` corresponds to membership in
   `ModelAdmin.get_readonly_fields(request, obj)`.
+- `widget: "radio"` is present on a field the admin lists in
+  `ModelAdmin.radio_fields` (`#251`) — a **presentational** hint to render
+  the choice / FK as radio buttons instead of a select. Optional (absent
+  when the field isn't in `radio_fields`); it changes no value, type, or
+  permission gate.
 - Field `type` is a closed v1 vocabulary:
   - `string`, `text`, `email`, `url`, `slug`, `ip`, `filepath`
   - `integer`, `float`, `decimal`, `duration`

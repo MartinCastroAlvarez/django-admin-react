@@ -614,3 +614,43 @@ def test_fieldsets_payload_swallows_get_fieldsets_exception() -> None:
     assert result == [
         {"title": None, "fields": ["name", "email"], "field_rows": [["name"], ["email"]]}
     ]
+
+
+@pytest.mark.django_db
+def test_radio_fields_surface_widget_hint() -> None:
+    """A choice/FK field listed in ``ModelAdmin.radio_fields`` gets a
+    ``widget: "radio"`` hint in its descriptor; other fields don't (#251).
+    Presentational only — no permission/value change."""
+    from django.contrib import admin
+    from django.contrib.auth import get_user_model
+    from django.contrib.auth.models import Permission
+    from django.test import RequestFactory
+
+    from django_admin_react.api.views.detail import _descriptor_for
+
+    class _RadioAdmin(admin.ModelAdmin):
+        # Permission.content_type is a ForeignKey — a valid radio_fields target.
+        radio_fields = {"content_type": admin.HORIZONTAL}
+
+    model_admin = _RadioAdmin(Permission, admin.site)
+    request = RequestFactory().get("/")
+    request.user = get_user_model().objects.create_superuser(
+        username="radio-su", email="radio@example.com", password="x"  # noqa: S106
+    )
+    form = model_admin.get_form(request, obj=None)()
+    obj = Permission()
+
+    common = dict(
+        model=Permission,
+        model_admin=model_admin,
+        obj=obj,
+        form=form,
+        is_readonly=False,
+        admin_site=admin.site,
+        request=request,
+    )
+    fk_desc = _descriptor_for(name="content_type", **common)
+    assert fk_desc["widget"] == "radio"  # in radio_fields → hinted
+
+    other_desc = _descriptor_for(name="codename", **common)
+    assert "widget" not in other_desc  # not in radio_fields → no hint
