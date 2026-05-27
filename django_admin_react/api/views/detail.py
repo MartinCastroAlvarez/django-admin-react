@@ -31,6 +31,7 @@ from django.http import HttpResponse
 from django.http import JsonResponse
 from django.views.generic import View
 
+from django_admin_react.api.custom_views import custom_views_for
 from django_admin_react.api.inlines import inlines_payload
 from django_admin_react.api.permissions import forbidden_response
 from django_admin_react.api.permissions import is_admin_user
@@ -119,7 +120,7 @@ def _build_payload(
 ) -> dict[str, Any]:
     """Compose the full detail response body (contract §4)."""
     visible_names = _visible_field_names(model_admin, request, obj)
-    return {
+    payload: dict[str, Any] = {
         "app_label": model._meta.app_label,
         "model_name": model._meta.model_name,
         "pk": obj.pk,
@@ -132,6 +133,16 @@ def _build_payload(
         "inlines": inlines_payload(model_admin, obj, request, admin_site),
         "view_on_site_url": _view_on_site_url(model_admin, obj),
     }
+    # Custom admin views (Issue #439): link-outs to the consumer's bespoke
+    # admin pages reached via ``ModelAdmin.get_urls()``. Object-level routes
+    # are reversed with this object's pk; changelist-level routes (simple,
+    # no-arg) are included too so the SPA can offer them from the detail
+    # toolbar. Only attached when non-empty so older clients and plain
+    # admins see no extra key.
+    extra_views = custom_views_for(model_admin, admin_site, obj=obj)
+    if extra_views:
+        payload["custom_views"] = extra_views
+    return payload
 
 
 def _view_on_site_url(model_admin: ModelAdmin, obj: Model) -> str | None:

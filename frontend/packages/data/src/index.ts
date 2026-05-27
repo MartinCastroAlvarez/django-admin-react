@@ -20,6 +20,7 @@ export type {
   ColumnDescriptor,
   CreatePayload,
   CreateResponse,
+  CustomView,
   DateHierarchy,
   DateHierarchyBucket,
   DeleteCascadeEntry,
