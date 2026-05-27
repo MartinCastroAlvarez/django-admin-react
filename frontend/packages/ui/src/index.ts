@@ -23,6 +23,11 @@ export type { EmptyStateProps } from './EmptyState';
 export { Table } from './Table';
 export type { TableColumn, TableProps } from './Table';
 
+export { RecordCardList } from './RecordCardList';
+export type { RecordCardListProps } from './RecordCardList';
+
+export { useMediaQuery } from './useMediaQuery';
+
 export { Input } from './Input';
 export type { InputProps } from './Input';
 

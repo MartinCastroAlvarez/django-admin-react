@@ -20,7 +20,18 @@ import {
   usePersistedState,
   writeJSON,
 } from '@dar/customization';
-import { Breadcrumb, Button, Card, Checkbox, EmptyState, Modal, Skeleton, Table } from '@dar/ui';
+import {
+  Breadcrumb,
+  Button,
+  Card,
+  Checkbox,
+  EmptyState,
+  Modal,
+  RecordCardList,
+  Skeleton,
+  Table,
+  useMediaQuery,
+} from '@dar/ui';
 import { FieldValueView } from '@dar/details';
 import { DateHierarchyBar } from '@dar/list';
 import { FilterBar } from '@dar/search';
@@ -47,6 +58,11 @@ export function ListPage() {
   // Router basename (the SPA mount) so row anchors carry a full, openable
   // href for native open-in-new-tab (#253).
   const hrefBase = useHref('/').replace(/\/$/, '');
+  // Below Tailwind's `md` breakpoint (768px) a wide table is unreadable on
+  // phones/tablets — render the same rows as stacked record-cards instead
+  // (#421). Switching in JS (not a CSS `hidden`/`md:block` pair) keeps a
+  // single layout in the DOM, so there are no duplicate inputs/checkboxes.
+  const isNarrow = useMediaQuery('(max-width: 767px)');
   const client = useApiClient();
   const toast = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -562,19 +578,19 @@ export function ListPage() {
         </div>
       )}
 
-      {/* Table is always full-width now — filters live in the modal.
-          Row checkboxes appear only when the model has bulk actions
-          the user can run (#182). An empty list renders a proper
-          empty-state with a "+ Add" call-to-action (#293) instead of a
-          bare message, so a fresh model has an obvious next step. */}
-      <Card>
-        {/* A foreground refetch (filter / search / sort / page change)
-            keeps the previous `data` in hand, so without this the stale
-            rows would just sit there with no sign anything is happening.
-            Show skeleton rows while `loading` so the reload is visible —
-            and only fall back to the empty-state when we're genuinely
-            idle-and-empty, not mid-fetch. */}
-        {!loading && data.results.length === 0 ? (
+      {/* The list is a full-width table on desktop and stacked record-cards
+          on narrow viewports (#421); both read from the same `columns`.
+          Row checkboxes appear only when the model has bulk actions the
+          user can run (#182). An empty list renders a proper empty-state
+          with a "+ Add" call-to-action (#293) instead of a bare message,
+          so a fresh model has an obvious next step.
+
+          A foreground refetch (filter / search / sort / page change) keeps
+          the previous `data` in hand; showing skeletons while `loading`
+          makes the reload visible, and we only fall back to the
+          empty-state when genuinely idle-and-empty, not mid-fetch. */}
+      {!loading && data.results.length === 0 ? (
+        <Card>
           <EmptyState
             title={q || activeFilterCount > 0 ? 'No matches' : 'No objects yet'}
             description={emptyLabel(Boolean(q), activeFilterCount)}
@@ -589,7 +605,34 @@ export function ListPage() {
               ) : undefined
             }
           />
-        ) : (
+        </Card>
+      ) : isNarrow ? (
+        // Stacked record-cards: the card list is its own bordered surface,
+        // so it isn't wrapped in the table's <Card>. Inline list_editable
+        // cells (the `columns` render functions) still work; sort / resize
+        // are desktop-only affordances not surfaced on the cards.
+        <RecordCardList
+          columns={columns}
+          rows={data.results}
+          rowKey={(r) => r.pk}
+          onRowClick={(row) =>
+            navigate(
+              withPreservedFilters(`/${appLabel}/${modelName}/${row.pk}`, searchParams.toString()),
+            )
+          }
+          rowHref={(row) =>
+            withPreservedFilters(
+              `${hrefBase}/${appLabel}/${modelName}/${row.pk}`,
+              searchParams.toString(),
+            )
+          }
+          selectable={canRunActions}
+          selectedKeys={selected}
+          onToggleRow={toggleRow}
+          loading={loading}
+        />
+      ) : (
+        <Card>
           <Table
             columns={columns}
             rows={data.results}
@@ -616,8 +659,8 @@ export function ListPage() {
             columnWidths={colWidths}
             onColumnResize={resizeColumn}
           />
-        )}
-      </Card>
+        </Card>
+      )}
       <Pagination page={data.page} totalPages={totalPages} onChange={setPage} />
 
       {pendingAction && (
