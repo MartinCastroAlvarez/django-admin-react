@@ -999,7 +999,7 @@ v1 error codes:
 | 400  | `validation_failed`     | Form `is_valid()` returned False.                 |
 | 401  | `not_authenticated`     | (Reserved; the package usually redirects to login.) |
 | 403  | `forbidden`             | CSRF or `has_*_permission` failure on a request that was never authenticated, or an authenticated user that lacks the permission. |
-| 403  | `session_expired`       | Request carried a session cookie but the user resolved to anonymous. SPA should render a re-login modal and return the user to the same path after sign-in. See §6.1 (detection) and §10 (`?next=` + optional warning toast). |
+| 403  | `session_expired`       | Request carried a session cookie but the user resolved to anonymous. SPA redirects to login (full-page navigation to the current path → backend gate adds `?next=`) and returns the user to the same path after sign-in. See §6.1 (detection) and §10 (`?next=` + optional warning toast). |
 | 404  | `not_found`             | Model not in registry, or object not in queryset. |
 | 405  | `method_not_allowed`    | e.g., PUT or HEAD.                                |
 | 409  | `conflict`              | A write hit a DB `IntegrityError` the form didn't catch — a uniqueness/constraint race, or a DB-level constraint not mirrored in form validation (`#404`). On the bulk endpoint it appears as a per-row error. The message is generic (never echoes the driver's text). Also reserved for optimistic concurrency in v1.x. |
@@ -1017,7 +1017,7 @@ session cookie *and* the resolved user:
 - **Session cookie present** + anonymous user → `session_expired`.
   The cookie was issued by a previous, now-invalid session (manual
   logout from another device, server-side flush, session-age expiry,
-  …). The SPA shows a re-login modal whose post-login redirect
+  …). The SPA redirects to login (§10.1) whose post-login `?next=`
   brings the user back to the same SPA URL.
 - **Session cookie present** + authenticated user (any permission
   level) → `forbidden`. The user is signed in; they just lack the
@@ -1107,19 +1107,27 @@ the wire-shape detection landed in
 
 ### 10.1 `?next=` round-trip
 
-When the SPA receives `error.code: "session_expired"` (HTTP 403,
-per §6.1), it redirects the user to the configured Django admin
-login URL with a `?next=` parameter carrying the **current SPA
-route path** (not the API endpoint that returned 403). After login,
-Django's login view honours `?next=` and bounces the user back to
-the SPA, which hydrates from cache and resumes the prior view.
+When a request fails with a **session-level** auth error — a `401`,
+or a `403` flagged `error.code: "session_expired"` (per §6.1) — the
+SPA's fetch layer (`@dar/api`) invokes its `onAuthFailure` hook, which
+the app wires to a **full-page navigation to the current SPA deep
+link** (`#414`). The session is gone, so that navigation re-runs the
+backend's anonymous gate (`SpaIndexView`), which redirects to the
+resolved login URL with `?next=<current path>` (`views._redirect_to_login`,
+using `request.get_full_path()`). After login, Django's login view
+honours `?next=` and bounces the user back to the same SPA URL, which
+hydrates from cache and resumes the prior view. (Under
+`DJANGO_ADMIN_REACT["REACT_LOGIN"]` the gate re-serves the SPA shell
+instead, so the in-SPA login renders — same recovery, no dead-end.)
 
-**`?next=` whitelist:** the package never echoes `?next=` from the
-client back to a redirect response. The SPA constructs the
-`?next=<spa-path>` itself from `window.location` (same-origin by
-construction); the Django admin login view's existing
-`url_has_allowed_host_and_scheme` validation is authoritative.
-No open-redirect surface is added by the package. See
+A plain `403` `forbidden` (signed in, lacking a permission) does **not**
+trigger the hook — the page renders the error inline (§6.1).
+
+**No open-redirect surface:** the SPA never constructs a redirect to an
+externally-supplied URL — it only re-navigates to *its own current
+path*. The `?next=` value is built server-side from
+`request.get_full_path()` and re-validated by Django's login view via
+`url_has_allowed_host_and_scheme` before any post-login bounce. See
 [`SECURITY.md`](../SECURITY.md) §4.1 for the broader posture.
 
 ### 10.2 Optional session-warning endpoints
@@ -1134,8 +1142,8 @@ The package may expose two optional endpoints for a pre-expiry
 
 Both endpoints are **optional** — the package only mounts them when
 `DJANGO_ADMIN_REACT["SESSION_WARNING_SECONDS"]` is set to a positive
-integer. Default unset → both endpoints 404 and the SPA shows the
-re-login modal at expiry without prior warning.
+integer. Default unset → both endpoints 404 and the SPA redirects to
+login at expiry (§10.1) without prior warning.
 
 When enabled, the SPA polls `GET /api/v1/session/` no more than
 once per minute, and at `expires_at - SESSION_WARNING_SECONDS`

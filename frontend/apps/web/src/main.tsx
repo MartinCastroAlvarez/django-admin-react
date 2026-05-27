@@ -37,7 +37,24 @@ function detectMount(): string {
 }
 
 const mount = detectMount();
-const client = new ApiClient({ mount });
+
+// Mid-session auth loss (#414): when a request returns a session-level
+// auth failure (401, or a 403 flagged `session_expired`), the operator's
+// session is gone — they must not be dead-ended on an error screen. A
+// full-page navigation to the current deep link re-runs the backend's
+// anonymous gate (`SpaIndexView`), which redirects to the login with
+// `?next=<this path>` (api-contract §10.1) — or, under `REACT_LOGIN`,
+// re-serves the shell so the in-SPA login renders. Either way the
+// operator returns here after signing back in. The guard collapses a
+// burst of concurrently-failing requests into a single navigation.
+let redirectingToLogin = false;
+function handleAuthFailure(): void {
+  if (redirectingToLogin) return;
+  redirectingToLogin = true;
+  window.location.assign(window.location.href);
+}
+
+const client = new ApiClient({ mount, onAuthFailure: handleAuthFailure });
 
 // PWA (#86): register the hand-rolled service worker the package serves
 // at `<mount>sw.js`, scoped to the mount so it never claims sibling

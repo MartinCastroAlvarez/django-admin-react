@@ -38,6 +38,18 @@ export interface ApiClientConfig {
    * Cookie name Django uses for the CSRF token. Default: `csrftoken`.
    */
   csrfCookieName?: string;
+  /**
+   * Called when a request fails with a *session-level* auth error: a
+   * `401`, or a `403` whose envelope code is `session_expired` (the
+   * operator's session went away mid-session — logout elsewhere,
+   * server-side flush, age expiry). The app wires this to a
+   * redirect-to-login so the operator isn't dead-ended on an error
+   * screen and returns to the same path after sign-in (api-contract
+   * §6.1 / §10.1, issue #414). It is **not** called for a plain
+   * `forbidden` 403 (signed-in but lacking a permission) — that stays
+   * on the page as an inline error.
+   */
+  onAuthFailure?: () => void;
 }
 
 export class ApiError extends Error {
@@ -57,11 +69,24 @@ export class ApiClient {
   private readonly mount: string;
   private readonly fetchImpl: typeof fetch;
   private readonly csrfCookieName: string;
+  private readonly onAuthFailure: (() => void) | undefined;
 
   constructor(config: ApiClientConfig) {
     this.mount = config.mount.endsWith('/') ? config.mount : `${config.mount}/`;
     this.fetchImpl = config.fetchImpl ?? globalThis.fetch.bind(globalThis);
     this.csrfCookieName = config.csrfCookieName ?? 'csrftoken';
+    this.onAuthFailure = config.onAuthFailure;
+  }
+
+  /**
+   * A session-level auth failure that should bounce the operator to
+   * login — a `401`, or a `403` flagged `session_expired`. A plain
+   * `forbidden` 403 (authenticated but unauthorized) is deliberately
+   * excluded so per-permission denials render inline instead (§6.1).
+   */
+  private isSessionAuthFailure(status: number, envelope: FieldErrorEnvelope | null): boolean {
+    if (status === 401) return true;
+    return status === 403 && envelope?.error?.code === 'session_expired';
   }
 
   private url(path: string): string {
@@ -118,6 +143,13 @@ export class ApiClient {
 
     if (!response.ok) {
       const envelope = (parsed ?? null) as FieldErrorEnvelope | null;
+      // Mid-session auth loss: hand off to the redirect-to-login hook
+      // *before* throwing, so the operator recovers instead of staring
+      // at a dead-end error (#414). Still throws so callers' error
+      // states stay consistent.
+      if (this.isSessionAuthFailure(response.status, envelope)) {
+        this.onAuthFailure?.();
+      }
       throw new ApiError(
         response.status,
         envelope,
