@@ -763,6 +763,71 @@ def test_formfield_overrides_textarea_promotes_string_to_text() -> None:
     assert descriptor(admin.ModelAdmin(Permission, admin.site))["type"] == "string"
 
 
+@pytest.mark.django_db
+def test_formfield_overrides_passwordinput_masks_field() -> None:
+    """A CharField masked with ``forms.PasswordInput`` via
+    ``formfield_overrides`` surfaces a ``widget: "password"`` hint so the SPA
+    renders a masked input and withholds the value from the DOM (#504). The
+    bound widget is the source of truth; a plain admin gets no hint, and
+    ``raw_id_fields`` by-name still wins."""
+    from django import forms
+    from django.contrib import admin
+    from django.contrib.auth import get_user_model
+    from django.contrib.auth.models import Permission
+    from django.db import models
+    from django.test import RequestFactory
+
+    from django_admin_react.api.views.detail import _descriptor_for
+
+    class _PasswordAdmin(admin.ModelAdmin):
+        formfield_overrides = {models.CharField: {"widget": forms.PasswordInput}}
+
+    class _PasswordRawIdAdmin(admin.ModelAdmin):
+        # CharFields masked AND a raw_id FK — raw_id by-name must still win.
+        formfield_overrides = {models.CharField: {"widget": forms.PasswordInput}}
+        raw_id_fields = ("content_type",)
+
+    request = RequestFactory().get("/")
+    request.user = get_user_model().objects.create_superuser(
+        username="pw-su", email="pw@example.com", password="x"  # noqa: S106
+    )
+
+    def descriptor(model_admin: admin.ModelAdmin, name: str) -> dict:
+        form = model_admin.get_form(request, obj=None)()
+        return _descriptor_for(
+            model=Permission,
+            model_admin=model_admin,
+            obj=Permission(),
+            name=name,
+            form=form,
+            is_readonly=False,
+            admin_site=admin.site,
+            request=request,
+        )
+
+    # CharField masked with PasswordInput → widget "password".
+    assert descriptor(_PasswordAdmin(Permission, admin.site), "name")["widget"] == "password"
+    # Plain admin → no widget hint.
+    assert "widget" not in descriptor(admin.ModelAdmin(Permission, admin.site), "name")
+    # raw_id by-name still wins for the FK even when CharFields are masked.
+    assert (
+        descriptor(_PasswordRawIdAdmin(Permission, admin.site), "content_type")["widget"]
+        == "raw_id"
+    )
+
+
+def test_is_password_widget_detects_passwordinput() -> None:
+    """``_is_password_widget`` is True only for a bound field whose widget is
+    a ``PasswordInput``; None / other widgets → False (#504)."""
+    from django import forms
+
+    from django_admin_react.api.views.detail import _is_password_widget
+
+    assert _is_password_widget(type("F", (), {"widget": forms.PasswordInput()})()) is True
+    assert _is_password_widget(type("F", (), {"widget": forms.TextInput()})()) is False
+    assert _is_password_widget(None) is False
+
+
 def test_apply_widget_override_reconciles_type_with_widget() -> None:
     """``_apply_widget_override`` maps only between the existing ``string``
     and ``text`` types from the bound widget, and no-ops otherwise (#446)."""

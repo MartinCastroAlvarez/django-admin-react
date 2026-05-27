@@ -26,6 +26,7 @@ from django.db.models import FileField
 from django.db.models import ForeignKey
 from django.db.models import ManyToManyField
 from django.db.models import Model
+from django.forms.widgets import PasswordInput
 from django.forms.widgets import Textarea
 from django.forms.widgets import TextInput
 from django.http import HttpRequest
@@ -360,6 +361,14 @@ def _descriptor_for(
     # relations). ``elif`` so ``radio_fields`` wins if a field is in both.
     elif name in (getattr(model_admin, "raw_id_fields", None) or ()):
         descriptor["widget"] = "raw_id"
+    # PasswordInput via formfield_overrides (#504): a CharField masked with
+    # ``forms.PasswordInput`` must render masked in the SPA (confidentiality
+    # parity — API keys / tokens / shared secrets). Derived from the bound
+    # widget (ModelAdmin stays the source of truth), never a parallel config
+    # read. ``elif`` so radio/raw_id by-name still win. The frontend also
+    # mirrors ``render_value=False`` by not seeding the value into the DOM.
+    elif _is_password_widget(form_field):
+        descriptor["widget"] = "password"
     # formfield_overrides (#446): the bound form field's widget already
     # reflects the admin's ``formfield_overrides`` /
     # ``formfield_for_dbfield`` — Django applied them in ``get_form``.
@@ -372,6 +381,18 @@ def _descriptor_for(
     # fields are untouched — their ``choice`` type wins above.
     _apply_widget_override(descriptor, form_field)
     return descriptor
+
+
+def _is_password_widget(form_field: Any) -> bool:
+    """True iff the bound form field renders with a ``PasswordInput``.
+
+    The bound widget already reflects the admin's ``formfield_overrides``
+    (Django applied them in ``get_form``), so this never reads a parallel
+    config — ``ModelAdmin`` stays the source of truth (#504).
+    """
+    if form_field is None:
+        return False
+    return isinstance(getattr(form_field, "widget", None), PasswordInput)
 
 
 def _apply_widget_override(descriptor: dict[str, Any], form_field: Any) -> None:

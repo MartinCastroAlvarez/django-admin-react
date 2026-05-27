@@ -346,6 +346,15 @@ export interface FieldDescriptor {
   decimal_places?: number;
   choices?: FieldChoice[];
   to?: { app_label: string; model_name: string };
+  /**
+   * Optional presentational widget hint derived from the admin's
+   * `radio_fields` / `raw_id_fields` / `formfield_overrides` (the SPA
+   * still renders the field by `type` when absent). Vocabulary:
+   * `'radio'` (choice/FK as radios), `'raw_id'` (FK/M2M as a pk input),
+   * `'password'` (mask the input and never seed the value into the DOM,
+   * mirroring Django's `PasswordInput(render_value=False)`).
+   */
+  widget?: string;
 }
 
 export interface FieldsetDescriptor {

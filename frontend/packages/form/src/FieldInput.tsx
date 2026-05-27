@@ -48,6 +48,27 @@ export function FieldInput({ name, field, value, error, onChange }: FieldInputPr
     );
   }
 
+  // Masked field (#504): a CharField rendered with `PasswordInput` via
+  // `formfield_overrides`. Mask the input and — mirroring Django's
+  // `PasswordInput(render_value=False)` — do NOT seed the stored value
+  // into the DOM. Uncontrolled (`defaultValue=""`) so the secret never
+  // reaches devtools; we send only what the user types.
+  if (field.widget === 'password') {
+    return (
+      <Row id={id} field={field} error={error}>
+        <input
+          id={id}
+          type="password"
+          autoComplete="new-password"
+          defaultValue=""
+          maxLength={field.max_length}
+          onChange={(e) => onChange(e.target.value)}
+          className={base}
+        />
+      </Row>
+    );
+  }
+
   let control: React.ReactNode;
 
   if (field.type === 'boolean') {

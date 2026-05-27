@@ -548,13 +548,17 @@ Rules:
   `get_fieldsets`). Anything in `exclude`/`get_exclude` is omitted.
 - `readonly: true` corresponds to membership in
   `ModelAdmin.get_readonly_fields(request, obj)`.
-- `widget` is an optional **presentational** hint (`#251`): `"radio"` when
+- `widget` is an optional **presentational** hint: `"radio"` when
   the admin lists the field in `ModelAdmin.radio_fields` (render the
-  choice/FK as radio buttons), or `"raw_id"` when it's in
+  choice/FK as radio buttons), `"raw_id"` when it's in
   `ModelAdmin.raw_id_fields` (render a pk input + lookup for a
-  high-cardinality FK/M2M, instead of a select). `radio_fields` wins if a
-  field is in both. Absent when the field is in neither; it changes no
-  value, type, or permission gate.
+  high-cardinality FK/M2M, instead of a select), or `"password"` when the
+  bound form widget is a `forms.PasswordInput` (e.g. a `CharField` masked
+  via `formfield_overrides`) — the SPA renders a masked input and, mirroring
+  Django's `PasswordInput(render_value=False)`, does **not** seed the stored
+  value into the control (`#251`, `#504`). `radio_fields` / `raw_id_fields`
+  by-name win over the `password` widget-derived hint. Absent when none
+  apply; it changes no value, type, or permission gate.
 - `empty_value_display` (top-level, also on the **list** response §3) is the
   admin's placeholder for empty/null values — `ModelAdmin.empty_value_display`
   if set, else the `AdminSite` default (`"-"`) (`#251`). The SPA renders this
