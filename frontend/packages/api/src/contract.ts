@@ -296,6 +296,28 @@ export interface InlineDescriptor {
   rows: InlineRow[];
 }
 
+/**
+ * Visibility + behaviour of Django's save-flow buttons for this view
+ * (api-contract §; backend `registry.save_options`). The SPA renders
+ * only the buttons whose `show_*` flag is true; it never invents a save
+ * routing the backend wouldn't allow.
+ */
+export interface SaveOptions {
+  /** Plain "Save". */
+  show_save: boolean;
+  /** "Save and continue editing". */
+  show_save_and_continue: boolean;
+  /** "Save and add another". */
+  show_save_and_add_another: boolean;
+  /** "Save as new" — change view only, and only when `save_as` is true. */
+  show_save_as_new: boolean;
+  /** Raw `ModelAdmin.save_as`: a "Save as new" POST creates a fresh object. */
+  save_as: boolean;
+  /** Raw `ModelAdmin.save_as_continue`: after "Save as new", land on the
+   *  new object's change view (true) or the changelist (false). */
+  save_as_continue: boolean;
+}
+
 export interface DetailResponse {
   app_label: string;
   model_name: string;
@@ -306,6 +328,9 @@ export interface DetailResponse {
   fields: Record<string, FieldDescriptor>;
   /** `ModelAdmin.inlines` descriptors; always present (empty when none). */
   inlines: InlineDescriptor[];
+  /** Save-flow button visibility for the change view. Optional for
+   *  back-compat with older backends that didn't emit it. */
+  save_options?: SaveOptions;
 }
 
 /**
@@ -320,6 +345,9 @@ export interface AddFormResponse {
   permissions: Permissions;
   fieldsets: FieldsetDescriptor[];
   fields: Record<string, FieldDescriptor>;
+  /** Save-flow button visibility for the add view (Save / Save-and-add-
+   *  another / Save-and-continue). Optional for back-compat. */
+  save_options?: SaveOptions;
 }
 
 /** One typeahead hit from the autocomplete endpoint (contract §3.2). */
