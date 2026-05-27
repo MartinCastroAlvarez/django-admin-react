@@ -207,7 +207,9 @@ def _fieldsets_payload(
     except Exception:
         raw = ()
     if not raw:
-        return [{"title": None, "fields": visible_names, "field_rows": [[n] for n in visible_names]}]
+        return [
+            {"title": None, "fields": visible_names, "field_rows": [[n] for n in visible_names]}
+        ]
 
     visible_set = set(visible_names)
     payload: list[dict[str, Any]] = []
@@ -333,7 +335,7 @@ def _descriptor_for(
         form_field.help_text if form_field is not None else ""
     )
 
-    return field_metadata(
+    descriptor = field_metadata(
         model_field,
         label=_field_label(model_admin, model, name),
         required=required,
@@ -341,6 +343,12 @@ def _descriptor_for(
         help_text=str(help_text),
         value=value,
     )
+    # radio_fields (#251): when the admin lists this choice/FK field in
+    # ``radio_fields``, hint the SPA to render radios instead of a select.
+    # Presentational only — no permission/value change.
+    if name in (getattr(model_admin, "radio_fields", None) or {}):
+        descriptor["widget"] = "radio"
+    return descriptor
 
 
 def _readonly_callable_descriptor(
