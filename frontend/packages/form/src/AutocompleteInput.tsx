@@ -84,14 +84,29 @@ export function AutocompleteInput({
         </span>
         <button
           type="button"
-          className="text-xs text-gray-500 hover:text-gray-800 hover:underline"
+          aria-label="Change"
+          title="Change"
+          className="rounded p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
           onClick={() => {
             onChange(null);
             setSelectedLabel(null);
             setQuery('');
           }}
         >
-          Change
+          {/* Pencil glyph (inline so @dar/form needs no icon dependency). */}
+          <svg
+            aria-hidden="true"
+            viewBox="0 0 24 24"
+            className="h-4 w-4"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M12 20h9" />
+            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z" />
+          </svg>
         </button>
       </div>
     );
