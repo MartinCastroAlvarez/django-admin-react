@@ -208,10 +208,10 @@ Plus whichever feature-specific cases your endpoint introduces.
   - `@dar/data` is the only package that imports `@dar/api`. It owns
     the localStorage cache, the React Context providers, and the
     debounce buffer for user-initiated mutations.
-  - `@dar/list`, `@dar/details`, `@dar/models`, `@dar/sidebar`,
-    `@dar/settings`, and `@dar/web` import **only** `@dar/data` (and
-    `@dar/ui` / sibling UI packages). Importing `@dar/api` from a UI
-    package is a CI-failing lint rule.
+  - `@dar/list`, `@dar/details`, `@dar/models`, `@dar/search`,
+    `@dar/sidebar`, `@dar/settings`, and `@dar/web` import **only**
+    `@dar/data` (and `@dar/ui` / sibling UI packages). Importing
+    `@dar/api` from a UI package is a CI-failing lint rule.
 - Tailwind for styling. Theme overrides go through CSS variables or the
   exported Tailwind config; runtime config swapping is out of scope for
   v1.

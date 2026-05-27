@@ -31,3 +31,6 @@ export type { ModalProps } from './Modal';
 
 export { Breadcrumb } from './Breadcrumb';
 export type { BreadcrumbItem, BreadcrumbProps } from './Breadcrumb';
+
+export { Popover } from './Popover';
+export type { PopoverProps } from './Popover';

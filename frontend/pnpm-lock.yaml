@@ -74,6 +74,9 @@ importers:
       '@dar/history':
         specifier: workspace:*
         version: link:../../packages/history
+      '@dar/search':
+        specifier: workspace:*
+        version: link:../../packages/search
       '@dar/settings':
         specifier: workspace:*
         version: link:../../packages/settings
@@ -225,6 +228,25 @@ importers:
       '@dar/ui':
         specifier: workspace:*
         version: link:../ui
+
+  packages/search:
+    dependencies:
+      '@dar/data':
+        specifier: workspace:*
+        version: link:../data
+      '@dar/ui':
+        specifier: workspace:*
+        version: link:../ui
+    devDependencies:
+      '@types/react':
+        specifier: ^18.3.0
+        version: 18.3.29
+      lucide-react:
+        specifier: ^1.16.0
+        version: 1.16.0(react@18.3.1)
+      react:
+        specifier: ^18.3.0
+        version: 18.3.1
 
   packages/settings:
     dependencies:

@@ -6,7 +6,7 @@
 // the data layer's job.
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ListFilter, Settings2 } from 'lucide-react';
+import { Settings2 } from 'lucide-react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import {
@@ -14,8 +14,6 @@ import {
   useList,
   type ActionDescriptor,
   type DateHierarchy,
-  type FilterDescriptor,
-  type FilterOption,
   type ListRow,
 } from '@dar/data';
 import {
@@ -28,8 +26,9 @@ import {
   usePersistedState,
   writeJSON,
 } from '@dar/customization';
-import { Breadcrumb, Button, Card, EmptyState, Input, Modal, Skeleton, Table } from '@dar/ui';
+import { Breadcrumb, Button, Card, EmptyState, Modal, Skeleton, Table } from '@dar/ui';
 import { FieldValueView } from '@dar/details';
+import { FilterBar } from '@dar/search';
 
 import { useToast } from '../toast';
 
@@ -96,9 +95,6 @@ export function ListPage() {
   });
 
   const [searchDraft, setSearchDraft] = useState(q);
-  // Filters live in a modal/bottom-sheet behind a button so they never
-  // occupy fixed horizontal space on mobile or desktop (#177).
-  const [filterOpen, setFilterOpen] = useState(false);
   // Row selection (page-scoped, matches Django's changelist) drives
   // the Actions dropdown's visibility (#182).
   const [selected, setSelected] = useState<Set<string | number>>(new Set());
@@ -406,8 +402,8 @@ export function ListPage() {
 
   const totalPages = Math.max(1, Math.ceil(data.total / data.page_size));
   const filters = data.filters ?? [];
-  const hasFilters = filters.length > 0;
-  const chips = buildChips(filters, activeFilters);
+  // Count of list_filters currently applied (drives the empty-state copy).
+  const activeFilterCount = filters.filter((f) => activeFilters[f.name]).length;
   const actions = data.actions ?? [];
   const canRunActions = actions.length > 0 && data.permissions.change;
 
@@ -456,127 +452,72 @@ export function ListPage() {
         <DateHierarchyBar dh={data.date_hierarchy} onNavigate={setDatePath} />
       )}
 
-      {/* Toolbar row (#177 / #182): Actions dropdown (only when rows are
-          selected) + a left-aligned debounced search + the Filter
-          button that opens the modal. */}
-      <div className="flex flex-wrap items-center gap-2">
-        {canRunActions && selected.size > 0 && (
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setActionsOpen((o) => !o)}
-              aria-haspopup="menu"
-              aria-expanded={actionsOpen}
-              disabled={runningAction}
-              className="shrink-0 rounded border border-gray-300 px-3 py-2 text-sm hover:bg-gray-100 disabled:opacity-50"
-            >
-              Actions · {selected.size} ▾
-            </button>
-            {actionsOpen && (
-              <div
-                role="menu"
-                className="absolute left-0 z-20 mt-1 min-w-48 rounded border border-gray-200 bg-white py-1 shadow-lg"
-              >
-                {actions.map((a) => (
-                  <button
-                    key={a.name}
-                    type="button"
-                    role="menuitem"
-                    onClick={() => requestAction(a)}
-                    className="block w-full px-3 py-2 text-left text-sm hover:bg-gray-100"
-                    title={a.description}
+      {/* Search + inline per-filter dropdowns + toolbar actions, via the
+          @dar/search FilterBar (replaces the old filter modal + chips). */}
+      <FilterBar
+        showSearch={data.search_fields.length > 0}
+        searchValue={searchDraft}
+        onSearchChange={setSearchDraft}
+        onSearchCommit={commitSearch}
+        searchHelpText={data.search_help_text}
+        filters={filters}
+        active={activeFilters}
+        onFilterChange={setFilter}
+        onClearAll={() => patchParams((next) => filters.forEach((f) => next.delete(f.name)))}
+        trailing={
+          <>
+            {canRunActions && selected.size > 0 && (
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setActionsOpen((o) => !o)}
+                  aria-haspopup="menu"
+                  aria-expanded={actionsOpen}
+                  disabled={runningAction}
+                  className="shrink-0 rounded-md border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-100 disabled:opacity-50"
+                >
+                  Actions · {selected.size} ▾
+                </button>
+                {actionsOpen && (
+                  <div
+                    role="menu"
+                    className="absolute left-0 z-20 mt-1 min-w-48 rounded border border-gray-200 bg-white py-1 shadow-lg"
                   >
-                    {a.label}
-                  </button>
-                ))}
+                    {actions.map((a) => (
+                      <button
+                        key={a.name}
+                        type="button"
+                        role="menuitem"
+                        onClick={() => requestAction(a)}
+                        className="block w-full px-3 py-2 text-left text-sm hover:bg-gray-100"
+                        title={a.description}
+                      >
+                        {a.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
-          </div>
-        )}
-        {data.search_fields.length > 0 && (
-          <form
-            className="w-72 max-w-full"
-            onSubmit={(e) => {
-              e.preventDefault();
-              commitSearch();
-            }}
-          >
-            <Input
-              placeholder="Search…"
-              value={searchDraft}
-              onChange={(e) => setSearchDraft(e.target.value)}
-              onBlur={commitSearch}
-              aria-describedby={data.search_help_text ? 'dar-search-help' : undefined}
-            />
-            {/* ModelAdmin.search_help_text under the box (Django parity, #445). */}
-            {data.search_help_text && (
-              <p id="dar-search-help" className="mt-1 text-xs text-gray-500">
-                {data.search_help_text}
-              </p>
-            )}
-          </form>
-        )}
-        {hasFilters && (
-          <button
-            type="button"
-            onClick={() => setFilterOpen(true)}
-            aria-haspopup="dialog"
-            className="inline-flex shrink-0 items-center gap-1.5 rounded border border-gray-300 px-3 py-2 text-sm hover:bg-gray-100"
-          >
-            <ListFilter className="h-4 w-4" aria-hidden />
-            Filter
-            {chips.length > 0 && (
-              <span className="ml-0.5 rounded-full bg-primary px-1.5 py-0.5 text-xs text-white">
-                {chips.length}
-              </span>
-            )}
-          </button>
-        )}
-        <button
-          type="button"
-          onClick={() => setColsOpen(true)}
-          aria-haspopup="dialog"
-          aria-label="Customize columns"
-          title="Customize columns"
-          className="inline-flex shrink-0 items-center gap-1.5 rounded border border-gray-300 px-3 py-2 text-sm hover:bg-gray-100"
-        >
-          <Settings2 className="h-4 w-4" aria-hidden />
-          Customize
-          {hiddenCols.size > 0 && (
-            <span className="ml-0.5 rounded-full bg-gray-500 px-1.5 py-0.5 text-xs text-white">
-              {hiddenCols.size} hidden
-            </span>
-          )}
-        </button>
-      </div>
-
-      {chips.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {chips.map((chip) => (
-            <button
-              key={chip.name}
-              type="button"
-              onClick={() => setFilter(chip.name, '')}
-              className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-3 py-1 text-xs text-blue-700 hover:bg-blue-100"
-            >
-              <span className="font-medium">{chip.filterLabel}:</span>
-              <span>{chip.valueLabel}</span>
-              <span aria-hidden className="ml-1 text-blue-400">
-                ✕
-              </span>
-            </button>
-          ))}
-          {chips.length > 1 && (
             <button
               type="button"
-              onClick={() => patchParams((next) => chips.forEach((c) => next.delete(c.name)))}
-              className="rounded-full px-3 py-1 text-xs text-gray-500 hover:text-gray-800 hover:underline"
+              onClick={() => setColsOpen(true)}
+              aria-haspopup="dialog"
+              aria-label="Customize columns"
+              title="Customize columns"
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-100"
             >
-              Clear all
+              <Settings2 className="h-4 w-4" aria-hidden />
+              Customize
+              {hiddenCols.size > 0 && (
+                <span className="ml-0.5 rounded-full bg-gray-500 px-1.5 py-0.5 text-xs text-white">
+                  {hiddenCols.size} hidden
+                </span>
+              )}
             </button>
-          )}
-        </div>
-      )}
+          </>
+        }
+      />
 
       {editCount > 0 && (
         <div className="flex items-center justify-between rounded-md border border-blue-300 bg-blue-50 px-3 py-2 text-sm text-blue-700">
@@ -608,8 +549,8 @@ export function ListPage() {
             idle-and-empty, not mid-fetch. */}
         {!loading && data.results.length === 0 ? (
           <EmptyState
-            title={q || chips.length > 0 ? 'No matches' : 'No objects yet'}
-            description={emptyLabel(Boolean(q), chips.length)}
+            title={q || activeFilterCount > 0 ? 'No matches' : 'No objects yet'}
+            description={emptyLabel(Boolean(q), activeFilterCount)}
             action={
               data.permissions.add ? (
                 <Link
@@ -641,16 +582,6 @@ export function ListPage() {
         )}
       </Card>
       <Pagination page={data.page} totalPages={totalPages} onChange={setPage} />
-
-      {filterOpen && (
-        <FilterModal
-          filters={filters}
-          active={activeFilters}
-          onChange={setFilter}
-          onClearAll={() => patchParams((next) => chips.forEach((c) => next.delete(c.name)))}
-          onClose={() => setFilterOpen(false)}
-        />
-      )}
 
       {pendingAction && (
         <Modal
@@ -829,127 +760,6 @@ function DateHierarchyBar({
         </div>
       )}
     </nav>
-  );
-}
-
-interface FilterModalProps {
-  filters: FilterDescriptor[];
-  active: Record<string, string>;
-  onChange: (name: string, value: string) => void;
-  onClearAll: () => void;
-  onClose: () => void;
-}
-
-// Filter modal — shares the generic @dar/ui `Modal` (overlay, card,
-// Esc + backdrop close) with the action-confirm so both look identical
-// (#206). Only the body (filter controls) + footer are bespoke.
-function FilterModal({ filters, active, onChange, onClearAll, onClose }: FilterModalProps) {
-  return (
-    <Modal
-      title="Filters"
-      onClose={onClose}
-      footer={
-        <button
-          type="button"
-          onClick={onClearAll}
-          className="text-sm text-gray-500 underline hover:text-gray-700"
-        >
-          Clear all
-        </button>
-      }
-    >
-      <div className="space-y-4">
-        {filters.map((f) => (
-          <FilterControl
-            key={f.name}
-            filter={f}
-            // Fall back to the descriptor's server-applied `selected` (a
-            // SimpleListFilter default) when the URL carries no value, so
-            // the control reflects the rows actually returned (#283).
-            value={active[f.name] ?? (f.selected != null ? String(f.selected) : '')}
-            onChange={(v) => onChange(f.name, v)}
-          />
-        ))}
-      </div>
-    </Modal>
-  );
-}
-
-interface Chip {
-  name: string;
-  filterLabel: string;
-  valueLabel: string;
-}
-
-function optionsFor(filter: FilterDescriptor): FilterOption[] {
-  return filter.lookups ?? filter.choices ?? [];
-}
-
-function buildChips(filters: FilterDescriptor[], active: Record<string, string>): Chip[] {
-  const byName = new Map(filters.map((f) => [f.name, f]));
-  const chips: Chip[] = [];
-  for (const [name, value] of Object.entries(active)) {
-    const f = byName.get(name);
-    if (!f) continue;
-    const opt = optionsFor(f).find((o) => String(o.value) === value);
-    chips.push({ name, filterLabel: f.label, valueLabel: opt?.label ?? value });
-  }
-  return chips;
-}
-
-interface FilterControlProps {
-  filter: FilterDescriptor;
-  value: string;
-  onChange: (value: string) => void;
-}
-
-function FilterControl({ filter, value, onChange }: FilterControlProps) {
-  const labelId = `dar-filter-${filter.name}`;
-
-  if (filter.type === 'date') {
-    return (
-      <div>
-        <label htmlFor={labelId} className="mb-1 block text-sm font-medium text-gray-700">
-          {filter.label}
-        </label>
-        <input
-          id={labelId}
-          type="date"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
-        />
-      </div>
-    );
-  }
-
-  const options: FilterOption[] =
-    filter.type === 'boolean'
-      ? [
-          { value: 'true', label: 'Yes' },
-          { value: 'false', label: 'No' },
-        ]
-      : optionsFor(filter);
-
-  return (
-    <div>
-      <label htmlFor={labelId} className="mb-1 block text-sm font-medium text-gray-700">
-        {filter.label}
-      </label>
-      <select
-        id={labelId}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
-      >
-        <option value="">All</option>
-        {options.map((o) => (
-          <option key={String(o.value)} value={String(o.value)}>
-            {o.label}
-          </option>
-        ))}
-      </select>
-    </div>
   );
 }
 
