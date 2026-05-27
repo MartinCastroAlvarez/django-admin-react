@@ -196,7 +196,12 @@ def _serialize_range_value(value: Any, field: Field | None) -> dict[str, Any]:
     }
 
 
-def serialize_fk_value(value: Model | None, *, admin_site: Any = None) -> dict[str, Any] | None:
+def serialize_fk_value(
+    value: Model | None,
+    *,
+    admin_site: Any = None,
+    request: Any = None,
+) -> dict[str, Any] | None:
     """Serialize an FK as ``{"id": pk, "label": str(obj)}`` or ``None``.
 
     When ``admin_site`` is provided **and** the related model is
@@ -208,11 +213,25 @@ def serialize_fk_value(value: Model | None, *, admin_site: Any = None) -> dict[s
     leaking adjacency to an unregistered model) is the exact posture
     #89 removed from filter descriptors. ``app_label`` is the real
     ``_meta.app_label`` the detail URL resolves against.
+
+    Issue #301 (least disclosure): when ``request`` is supplied, the
+    ``to`` block is gated on the **target** model's per-user
+    ``has_view_permission`` — we only advertise a navigable link the
+    user could actually follow. Otherwise the ``to`` block would leak
+    the existence + app/model identity of a registered model the user
+    cannot view (and the detail link would 404 anyway). The label is
+    still rendered unconditionally — the related *object* is visible in
+    the cell by design, matching Django's changelist. When ``request``
+    is absent (a direct / unit-test call), the registry-only #89
+    behaviour is preserved for backwards compatibility; every API view
+    passes ``request``.
     """
     if value is None:
         return None
     out: dict[str, Any] = {"id": value.pk, "label": label_for(value)}
-    if admin_site is not None and type(value) in getattr(admin_site, "_registry", {}):
+    registry = getattr(admin_site, "_registry", {})
+    target_admin = registry.get(type(value)) if admin_site is not None else None
+    if target_admin is not None and (request is None or target_admin.has_view_permission(request)):
         meta = value._meta
         out["to"] = {"app_label": meta.app_label, "model_name": meta.model_name}
     return out

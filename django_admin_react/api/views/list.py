@@ -292,7 +292,7 @@ def _row_for(
             _f, _attr, value = lookup_field(name, obj, model_admin)
         except Exception:  # pragma: no cover — defensive
             value = ""
-        fields[name] = _serialize_list_value(obj, name, value, admin_site)
+        fields[name] = _serialize_list_value(obj, name, value, admin_site, request)
     return {"pk": obj.pk, "label": label_for(obj), "fields": fields}
 
 
@@ -340,7 +340,13 @@ def _has_related_field_in_list_display(model_admin: ModelAdmin, list_display: li
     return False
 
 
-def _serialize_list_value(obj: Model, name: str, value: Any, admin_site: Any = None) -> Any:
+def _serialize_list_value(
+    obj: Model,
+    name: str,
+    value: Any,
+    admin_site: Any = None,
+    request: HttpRequest | None = None,
+) -> Any:
     """Serialize a single ``list_display`` cell.
 
     FK fields go through the FK envelope (``{"id", "label"}``);
@@ -350,10 +356,12 @@ def _serialize_list_value(obj: Model, name: str, value: Any, admin_site: Any = N
     by ``lookup_field``. The model_field reference is forwarded so
     consumer-registered custom serializers (see #60 /
     ``register_field_type``) take precedence over the default dispatch.
+    ``request`` is forwarded so the FK ``to`` link is gated on the
+    target's per-user view permission (#301).
     """
     model_field = safe_get_field(obj, name)
     if isinstance(model_field, ForeignKey):
-        return serialize_fk_value(value, admin_site=admin_site)
+        return serialize_fk_value(value, admin_site=admin_site, request=request)
     # A field with ``choices`` displays its human label, not the stored
     # value (Django's ``display_for_field`` parity — e.g. ``1`` → "High").
     # The changelist is a read-only display surface; ``list_editable``

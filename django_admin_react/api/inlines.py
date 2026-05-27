@@ -291,14 +291,16 @@ def _rows_for_inline(
                 continue
             value = getattr(obj, name, None)
             if isinstance(model_field, ForeignKey):
-                fields_payload[name] = serialize_fk_value(value, admin_site=admin_site)
+                fields_payload[name] = serialize_fk_value(
+                    value, admin_site=admin_site, request=request
+                )
             elif isinstance(model_field, ManyToManyField):
                 try:
                     related = list(value.all()) if value is not None else []
                 except Exception:
                     related = []
                 fields_payload[name] = [
-                    serialize_fk_value(r, admin_site=admin_site) for r in related
+                    serialize_fk_value(r, admin_site=admin_site, request=request) for r in related
                 ]
             else:
                 fields_payload[name] = serialize_value(value, field=model_field)

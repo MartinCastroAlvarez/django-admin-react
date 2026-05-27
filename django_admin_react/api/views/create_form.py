@@ -84,6 +84,7 @@ class AddFormView(View):
                 form=form,
                 is_readonly=name in readonly,
                 admin_site=admin_site,
+                request=request,
             )
 
         payload = {
