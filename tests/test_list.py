@@ -512,3 +512,22 @@ def test_list_surfaces_empty_value_display(superuser_client: Client) -> None:
     finally:
         del model_admin.empty_value_display  # restore the class/site default
     assert body["empty_value_display"] == "(none)"
+
+
+@pytest.mark.django_db
+def test_list_surfaces_list_display_links(superuser_client: Client) -> None:
+    """The list response carries ``list_display_links`` (#251) — the column(s)
+    that link to detail (``ModelAdmin.get_list_display_links``); ``[]`` when
+    the admin sets ``list_display_links = None`` to disable linking."""
+    model_admin = admin.site._registry[Group]
+    model_admin.list_display = ("name",)
+    model_admin.list_display_links = ("name",)
+    try:
+        body = superuser_client.get(LIST_URL).json()
+        assert body["list_display_links"] == ["name"]
+        model_admin.list_display_links = None  # disable linking
+        disabled = superuser_client.get(LIST_URL).json()
+        assert disabled["list_display_links"] == []
+    finally:
+        del model_admin.list_display
+        del model_admin.list_display_links

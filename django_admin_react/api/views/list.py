@@ -191,6 +191,17 @@ class ListView(View):
             "pk_field": model._meta.pk.name,
             "permissions": model_permissions(model_admin, request),
             "columns": columns,
+            # list_display_links (#251): the column name(s) that link to the
+            # detail page — ``ModelAdmin.get_list_display_links`` (defaults to
+            # the first column; ``[]`` when the admin set
+            # ``list_display_links = None`` to disable linking). The SPA links
+            # exactly these columns. Callable list_display entries are dropped
+            # (only string column names round-trip).
+            "list_display_links": [
+                name
+                for name in (model_admin.get_list_display_links(request, list_display) or ())
+                if isinstance(name, str)
+            ],
             "search_fields": list(model_admin.search_fields or ()),
             # ModelAdmin.search_help_text (#445): shown under the search box,
             # matching Django's changelist. Empty string when unset.
