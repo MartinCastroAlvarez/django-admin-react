@@ -75,6 +75,79 @@ describe('FilterBar', () => {
     expect(onSearchChange).toHaveBeenCalledWith('abc');
   });
 
+  it('does NOT show a typeahead box for a small filter', () => {
+    setup();
+    fireEvent.click(screen.getByRole('button', { name: /Status/ }));
+    expect(screen.queryByPlaceholderText('Type to filter…')).not.toBeInTheDocument();
+  });
+});
+
+// A filter with enough options to earn the typeahead box (>= 8).
+const bigFilters: FilterDescriptor[] = [
+  {
+    name: 'kind',
+    label: 'Kind',
+    type: 'choice',
+    choices: [
+      { value: 'alpha', label: 'Alpha' },
+      { value: 'beta', label: 'Beta' },
+      { value: 'gamma', label: 'Gamma' },
+      { value: 'delta', label: 'Delta' },
+      { value: 'epsilon', label: 'Epsilon' },
+      { value: 'zeta', label: 'Zeta' },
+      { value: 'elig', label: 'Eligible' },
+      { value: 'inelig', label: 'Ineligible' },
+    ],
+  },
+];
+
+function setupBig() {
+  const onFilterChange = vi.fn();
+  render(
+    <FilterBar
+      searchValue=""
+      onSearchChange={() => {}}
+      filters={bigFilters}
+      active={{}}
+      onFilterChange={onFilterChange}
+    />,
+  );
+  fireEvent.click(screen.getByRole('button', { name: /Kind/ }));
+  return { onFilterChange, input: screen.getByPlaceholderText('Type to filter…') };
+}
+
+describe('FilterBar typeahead (large filter)', () => {
+  it('shows the typeahead box and narrows to matching options only', () => {
+    const { input } = setupBig();
+    expect(input).toBeInTheDocument();
+    fireEvent.change(input, { target: { value: 'elig' } });
+    // Only the two matches survive; non-matches are gone.
+    expect(screen.getByText('Eligible')).toBeInTheDocument();
+    expect(screen.getByText('Ineligible')).toBeInTheDocument();
+    expect(screen.queryByText('Alpha')).not.toBeInTheDocument();
+  });
+
+  it('Enter selects the first match after typing', () => {
+    const { onFilterChange, input } = setupBig();
+    fireEvent.change(input, { target: { value: 'elig' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(onFilterChange).toHaveBeenCalledWith('kind', 'elig'); // Eligible
+  });
+
+  it('Tab advances to the next valid match, then Enter selects it', () => {
+    const { onFilterChange, input } = setupBig();
+    fireEvent.change(input, { target: { value: 'elig' } });
+    fireEvent.keyDown(input, { key: 'Tab' }); // first match → next match
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(onFilterChange).toHaveBeenCalledWith('kind', 'inelig'); // Ineligible
+  });
+
+  it('shows a "No matches" hint when nothing matches', () => {
+    const { input } = setupBig();
+    fireEvent.change(input, { target: { value: 'zzzzz' } });
+    expect(screen.getByText('No matches.')).toBeInTheDocument();
+  });
+
   it('renders `leading` content before the search input (to its left)', () => {
     render(
       <FilterBar
