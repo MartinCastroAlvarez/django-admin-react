@@ -1,4 +1,4 @@
-import { Route, Routes } from 'react-router-dom';
+import { Route, Routes, useParams } from 'react-router-dom';
 
 import { ApiError, useRegistry } from '@dar/data';
 
@@ -10,6 +10,15 @@ import { DetailPage } from './pages/DetailPage';
 import { LoginPage } from './pages/LoginPage';
 import { CreatePage } from './pages/CreatePage';
 import { ToastProvider } from './toast';
+
+// Remount ListPage when the model changes so per-model state (selection,
+// retained "keep previous data" rows) resets cleanly on a model switch —
+// while filter / page / search changes within a model keep the same
+// instance so only the table skeletons, not the whole page (#368).
+function KeyedListPage() {
+  const { appLabel, modelName } = useParams<{ appLabel: string; modelName: string }>();
+  return <ListPage key={`${appLabel}/${modelName}`} />;
+}
 
 export function App() {
   const registry = useRegistry();
@@ -36,7 +45,7 @@ export function App() {
         <ErrorBoundary>
           <Routes>
             <Route path="/" element={<HomePage />} />
-            <Route path=":appLabel/:modelName" element={<ListPage />} />
+            <Route path=":appLabel/:modelName" element={<KeyedListPage />} />
             {/* Literal `add` is ranked above the `:pk` route by React
               Router, so /app/model/add opens the create form, not a
               detail with pk="add". */}

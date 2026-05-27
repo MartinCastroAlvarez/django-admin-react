@@ -88,6 +88,11 @@ export function useList(params: UseListParams): ListState {
     // Keep the list live without a manual reload: poll in the
     // background and re-validate on focus (the hook's default).
     refetchInterval: LIST_REFETCH_INTERVAL_MS,
+    // On a filter / page / search change the cache key changes; keep the
+    // prior response on screen so the page chrome (columns, header) stays
+    // put and only the table shows a loading skeleton, instead of the
+    // whole page blanking to a full-page skeleton (#368).
+    keepPreviousData: true,
   });
 }
 
