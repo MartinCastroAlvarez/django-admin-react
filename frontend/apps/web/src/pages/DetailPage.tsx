@@ -10,7 +10,7 @@
 // Edit/Delete are gated by the `permissions` block the API returns.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ChevronDown, ExternalLink } from 'lucide-react';
+import { ChevronDown, Clock, ExternalLink } from 'lucide-react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import {
@@ -34,6 +34,7 @@ import { Button, Card, EmptyState, Modal, Spinner, Table } from '@dar/ui';
 
 import { FieldInput } from '../components/FieldInput';
 import { FieldValueView } from '../components/FieldValueView';
+import { HistoryModal } from '../components/HistoryModal';
 import { InlineEditor } from '../components/InlineEditor';
 import { useToast } from '../toast';
 import { useUnsavedGuard } from '../useUnsavedGuard';
@@ -147,6 +148,7 @@ export function DetailPage() {
   // Open straight in edit mode when arriving via "Save and continue
   // editing" from the add form (`?edit=1`); otherwise start read-only.
   const [editing, setEditing] = useState(() => searchParams.get('edit') === '1');
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   if (loading && !data) return <Spinner label="Loading…" />;
   if (error && !data) {
@@ -171,6 +173,13 @@ export function DetailPage() {
         </div>
         {!editing && (
           <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setHistoryOpen(true)}
+              className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            >
+              <Clock className="h-4 w-4" aria-hidden /> History
+            </button>
             {data.view_on_site_url && (
               <a
                 href={data.view_on_site_url}
@@ -264,6 +273,15 @@ export function DetailPage() {
               <InlineSection key={inline.name} inline={inline} />
             ))}
         </>
+      )}
+
+      {historyOpen && (
+        <HistoryModal
+          appLabel={appLabel}
+          modelName={modelName}
+          pk={pk}
+          onClose={() => setHistoryOpen(false)}
+        />
       )}
     </div>
   );
