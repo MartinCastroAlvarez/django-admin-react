@@ -18,6 +18,7 @@ import type {
   HistoryResponse,
   ListResponse,
   LoginResponse,
+  RecentActionsResponse,
   RegistryResponse,
   UpdatePayload,
 } from './contract';
@@ -162,6 +163,12 @@ export class ApiClient {
 
   getRegistry(): Promise<RegistryResponse> {
     return this.request<RegistryResponse>('GET', 'registry/');
+  }
+
+  /** The signed-in user's recent admin actions for the index panel (#502). */
+  getRecentActions(limit?: number): Promise<RecentActionsResponse> {
+    const path = limit ? `recent-actions/?limit=${encodeURIComponent(String(limit))}` : 'recent-actions/';
+    return this.request<RecentActionsResponse>('GET', path);
   }
 
   list(

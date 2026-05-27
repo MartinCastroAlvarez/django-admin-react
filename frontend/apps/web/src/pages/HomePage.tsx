@@ -1,10 +1,17 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Star } from 'lucide-react';
+import { Pencil, Plus, Star, Trash2 } from 'lucide-react';
 
 import { PINNED_MODELS_KEY, usePersistedSet } from '@dar/customization';
 import { Card, EmptyState, Skeleton } from '@dar/ui';
-import { useRegistry, type RegistryAppEntry, type RegistryModelEntry } from '@dar/data';
+import {
+  formatTemporal,
+  useRecentActions,
+  useRegistry,
+  type RecentAction,
+  type RegistryAppEntry,
+  type RegistryModelEntry,
+} from '@dar/data';
 
 function routeAppFor(app: RegistryAppEntry, model: RegistryModelEntry): string {
   // Route by real_app_label (see Layout.tsx) — app.app_label may be a
@@ -67,6 +74,10 @@ export function HomePage() {
         </p>
       </header>
 
+      {/* Recent actions (#502) — the user's own latest edits, Django's
+          index "Recent actions" panel. Hides itself when there are none. */}
+      <RecentActions />
+
       {/* Pinned models (#407) surface at the top for quick access. */}
       {pinnedModels.length > 0 && (
         <section>
@@ -111,6 +122,68 @@ export function HomePage() {
         </section>
       ))}
     </div>
+  );
+}
+
+// Recent-actions panel (#502): the signed-in user's own latest admin
+// actions, newest first. Self-hides when empty so a fresh account or a
+// read-only user never sees a dangling empty card.
+function RecentActions() {
+  const { data } = useRecentActions();
+  const actions = data?.actions ?? [];
+  if (actions.length === 0) return null;
+  return (
+    <section>
+      <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-gray-500">
+        Recent actions
+      </h2>
+      <Card>
+        <ul className="divide-y divide-gray-100 dark:divide-gray-800">
+          {actions.map((action) => (
+            <RecentActionRow key={action.id} action={action} />
+          ))}
+        </ul>
+      </Card>
+    </section>
+  );
+}
+
+const ACTION_ICON = {
+  added: { Icon: Plus, className: 'text-green-600', label: 'Added' },
+  changed: { Icon: Pencil, className: 'text-amber-600', label: 'Changed' },
+  deleted: { Icon: Trash2, className: 'text-red-600', label: 'Deleted' },
+  unknown: { Icon: Pencil, className: 'text-gray-400', label: 'Acted on' },
+} as const;
+
+function RecentActionRow({ action }: { action: RecentAction }) {
+  const { Icon, className, label } = ACTION_ICON[action.action];
+  const when = formatTemporal(action.action_time, 'datetime');
+  // A deletion (or any unlinkable target) shows the repr as plain,
+  // struck-through text — the object is gone or unreachable.
+  const repr =
+    action.target == null ? (
+      <span className={action.action === 'deleted' ? 'line-through' : undefined}>
+        {action.object_repr}
+      </span>
+    ) : (
+      <Link
+        to={`/${action.target.app_label}/${action.target.model_name}/${action.target.pk}`}
+        className="font-medium hover:underline"
+      >
+        {action.object_repr}
+      </Link>
+    );
+  return (
+    <li className="flex items-center gap-3 py-2 text-sm">
+      <Icon className={`h-4 w-4 shrink-0 ${className}`} aria-hidden />
+      <span className="sr-only">{label}:</span>
+      <span className="min-w-0 flex-1 truncate">{repr}</span>
+      {when ? (
+        <time dateTime={action.action_time} className="shrink-0 text-xs text-gray-400">
+          {when}
+        </time>
+      ) : null}
+    </li>
   );
 }
 

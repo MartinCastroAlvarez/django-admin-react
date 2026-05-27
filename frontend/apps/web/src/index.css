@@ -140,7 +140,10 @@ body,
   border-color: #92400e !important;
 }
 .dark .text-amber-800,
-.dark .text-amber-700 {
+.dark .text-amber-700,
+.dark .text-amber-600 {
+  /* amber-600 is the "changed" recent-action icon (#502); lighten it
+     for dark like the other amber text. */
   color: #fcd34d !important;
 }
 /* Static (non-hover) bg-gray-100 surfaces — the selected-FK chip, ghost

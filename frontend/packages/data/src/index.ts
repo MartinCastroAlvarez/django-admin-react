@@ -46,6 +46,9 @@ export type {
   ListRow,
   LoginResponse,
   Permissions,
+  RecentAction,
+  RecentActionKind,
+  RecentActionsResponse,
   RegistryAppEntry,
   RegistryModelEntry,
   RegistryResponse,
@@ -60,6 +63,9 @@ export type { RegistryProviderProps, RegistryState } from './registry-context';
 
 export { useList } from './list-context';
 export type { ListState } from './list-context';
+
+export { useRecentActions } from './recent-actions-context';
+export type { RecentActionsState } from './recent-actions-context';
 
 export { useDetail } from './detail-context';
 export type { DetailState } from './detail-context';
