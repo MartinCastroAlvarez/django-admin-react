@@ -485,6 +485,84 @@ def test_fieldset_classes_and_description_are_surfaced(superuser_client: Client)
     assert fs["description"] == "Rarely-changed settings."
 
 
+# --------------------------------------------------------------------------- #
+# View on site (#307)                                                          #
+# --------------------------------------------------------------------------- #
+def test_view_on_site_url_callable() -> None:
+    """A callable ``view_on_site`` is invoked with the object."""
+    from django.contrib import admin as _admin
+
+    from django_admin_react.api.views.detail import _view_on_site_url
+
+    class _MA(_admin.ModelAdmin):
+        view_on_site = staticmethod(lambda obj: f"https://example.com/g/{obj.pk}")
+
+    ma = _MA(Group, _admin.site)
+    g = Group(name="x")
+    g.pk = 7
+    assert _view_on_site_url(ma, g) == "https://example.com/g/7"
+
+
+def test_view_on_site_url_true_uses_get_absolute_url() -> None:
+    """``view_on_site = True`` + a model ``get_absolute_url`` → that URL,
+    resolved directly (no dependency on the legacy admin URLConf)."""
+    from django.contrib import admin as _admin
+
+    from django_admin_react.api.views.detail import _view_on_site_url
+
+    ma = _admin.ModelAdmin(Group, _admin.site)
+    ma.view_on_site = True
+    g = Group(name="x")
+    g.pk = 3
+    g.get_absolute_url = lambda: f"/groups/{g.pk}/"  # type: ignore[attr-defined]
+    assert _view_on_site_url(ma, g) == "/groups/3/"
+
+
+def test_view_on_site_url_false_or_missing_is_none() -> None:
+    """``view_on_site`` falsy, or no ``get_absolute_url`` → ``None``."""
+    from django.contrib import admin as _admin
+
+    from django_admin_react.api.views.detail import _view_on_site_url
+
+    ma = _admin.ModelAdmin(Group, _admin.site)
+    ma.view_on_site = False
+    g = Group(name="x")
+    g.pk = 1
+    assert _view_on_site_url(ma, g) is None
+    # view_on_site True but the model has no get_absolute_url → None.
+    ma.view_on_site = True
+    assert _view_on_site_url(ma, g) is None
+
+
+def test_view_on_site_url_swallows_get_absolute_url_errors() -> None:
+    """A raising ``get_absolute_url`` degrades to ``None`` (never 500s)."""
+    from django.contrib import admin as _admin
+
+    from django_admin_react.api.views.detail import _view_on_site_url
+
+    ma = _admin.ModelAdmin(Group, _admin.site)
+    ma.view_on_site = True
+    g = Group(name="x")
+    g.pk = 1
+
+    def _boom() -> str:
+        raise ValueError("no url yet")
+
+    g.get_absolute_url = _boom  # type: ignore[attr-defined]
+    assert _view_on_site_url(ma, g) is None
+
+
+@pytest.mark.django_db
+def test_detail_includes_view_on_site_url_key(superuser_client: Client) -> None:
+    """The detail response always carries the ``view_on_site_url`` key
+    (``None`` for a default admin, since GroupAdmin has no get_absolute_url
+    and view_on_site defaults route through it)."""
+    g = Group.objects.create(name="example")
+    body = superuser_client.get(_url(g.pk)).json()
+    assert "view_on_site_url" in body
+    assert body["view_on_site_url"] is None
+
+
 @pytest.mark.django_db
 def test_fieldset_without_classes_description_defaults(superuser_client: Client) -> None:
     """A fieldset with no ``classes``/``description`` reports an empty class

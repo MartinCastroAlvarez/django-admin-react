@@ -352,6 +352,10 @@ export interface DetailResponse {
   /** Save-flow button visibility for the change view. Optional for
    *  back-compat with older backends that didn't emit it. */
   save_options?: SaveOptions;
+  /** "View on site" URL (ModelAdmin.view_on_site → callable result or the
+   *  object's get_absolute_url). `null` when not applicable. Optional for
+   *  back-compat with older backends. */
+  view_on_site_url?: string | null;
 }
 
 /**

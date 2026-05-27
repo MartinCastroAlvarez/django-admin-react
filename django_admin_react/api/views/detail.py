@@ -130,7 +130,40 @@ def _build_payload(
         "fieldsets": _fieldsets_payload(model_admin, request, obj, visible_names),
         "fields": _fields_payload(model, model_admin, obj, request, visible_names, admin_site),
         "inlines": inlines_payload(model_admin, obj, request, admin_site),
+        "view_on_site_url": _view_on_site_url(model_admin, obj),
     }
+
+
+def _view_on_site_url(model_admin: ModelAdmin, obj: Model) -> str | None:
+    """The "View on site" URL for this object, or ``None`` (Issue #307).
+
+    Mirrors Django's change-form "View on site" affordance:
+
+    - ``ModelAdmin.view_on_site`` is falsy → no link.
+    - it's a callable → ``view_on_site(obj)`` (the consumer builds the URL).
+    - it's ``True`` and the model defines ``get_absolute_url`` → that URL.
+
+    Unlike Django's ``get_view_on_site_url`` we resolve ``get_absolute_url``
+    directly rather than routing through the ``admin:view_on_site`` shortcut
+    redirect — that shortcut lives on ``django.contrib.admin``'s URLConf,
+    which a consumer who has fully swapped out the legacy admin may no
+    longer mount. Any error degrades to ``None`` (a broken consumer
+    ``get_absolute_url`` must never 500 the detail endpoint).
+    """
+    try:
+        view_on_site = getattr(model_admin, "view_on_site", False)
+        if not view_on_site or obj is None:
+            return None
+        if callable(view_on_site):
+            url = view_on_site(obj)
+            return str(url) if url else None
+        get_absolute_url = getattr(obj, "get_absolute_url", None)
+        if callable(get_absolute_url):
+            url = get_absolute_url()
+            return str(url) if url else None
+    except Exception:
+        return None
+    return None
 
 
 def _visible_field_names(
