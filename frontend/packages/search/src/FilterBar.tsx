@@ -28,8 +28,11 @@ export interface FilterBarProps {
   /** Set/clear one filter — pass '' to clear it. */
   onFilterChange: (name: string, value: string) => void;
   onClearAll: () => void;
+  /** Controls rendered to the **left** of the search input (e.g. the
+   *  bulk-actions menu, which sits before search when rows are selected). */
+  leading?: ReactNode;
   /** Extra toolbar controls rendered to the right of the search input
-   *  (e.g. the column customizer + bulk-actions menu). */
+   *  (e.g. the column customizer). */
   trailing?: ReactNode;
 }
 
@@ -54,12 +57,14 @@ export function FilterBar({
   active,
   onFilterChange,
   onClearAll,
+  leading,
   trailing,
 }: FilterBarProps) {
   const anyActive = filters.some((f) => active[f.name]);
   return (
     <div className="space-y-2">
       <div className="flex flex-wrap items-center gap-2">
+        {leading}
         {showSearch && (
           <form
             className="w-full max-w-sm"
