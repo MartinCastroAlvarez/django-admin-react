@@ -272,9 +272,15 @@ interface EditFormProps {
 function initialValueFor(field: DetailResponse['fields'][string]): WriteValue {
   const v = field.value;
   if (v === null || v === undefined) return null;
+  if (Array.isArray(v)) {
+    // M2M (#240): [{id,label}, ...] → [id, ...] (bare pks for the write).
+    return v.map((item) =>
+      item && typeof item === 'object' && 'id' in item ? item.id : (item as string | number),
+    );
+  }
   if (typeof v === 'object') {
-    // FK envelope {id,label} → id; arrays / html → leave null (not edited here).
-    if (!Array.isArray(v) && 'id' in v) return v.id;
+    // FK envelope {id,label} → id; html → leave null (not edited here).
+    if ('id' in v) return v.id;
     return null;
   }
   return v;

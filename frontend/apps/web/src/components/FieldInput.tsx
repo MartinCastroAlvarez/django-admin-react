@@ -118,6 +118,46 @@ export function FieldInput({ name, field, value, error, onChange }: FieldInputPr
         />
       );
     }
+  } else if (field.type === 'manytomany') {
+    // ManyToMany write (#240). The backend accepts a list of pks
+    // (form.save_m2m). When the target set is small the descriptor
+    // inlines `choices` → render a checkbox multi-select producing a pk
+    // array. Large M2M (filter_horizontal / autocomplete-backed, no
+    // inlined choices) keeps a read-only view — a multi-picker widget is
+    // a tracked follow-up on #240.
+    const choices = field.choices ?? [];
+    const selected = new Set((Array.isArray(value) ? value : []).map(String));
+    if (choices.length > 0) {
+      control = (
+        <div className="max-h-48 space-y-1 overflow-y-auto rounded border border-gray-300 p-2">
+          {choices.map((c) => {
+            const key = String(c.value);
+            return (
+              <label key={key} className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={selected.has(key)}
+                  onChange={(e) => {
+                    const next = new Set(selected);
+                    if (e.target.checked) next.add(key);
+                    else next.delete(key);
+                    onChange(Array.from(next));
+                  }}
+                  className="h-4 w-4 rounded border-gray-300"
+                />
+                {c.label}
+              </label>
+            );
+          })}
+        </div>
+      );
+    } else {
+      control = (
+        <div className="text-sm text-gray-700">
+          <FieldValueView value={field.value} />
+        </div>
+      );
+    }
   } else if (field.type === 'integer' || field.type === 'float' || field.type === 'decimal') {
     control = (
       <input

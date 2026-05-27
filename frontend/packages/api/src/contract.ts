@@ -20,6 +20,7 @@ export type FieldType =
   | 'uuid'
   | 'choice'
   | 'foreignkey'
+  | 'manytomany'
   | 'unsupported';
 
 export interface Permissions {
@@ -414,7 +415,10 @@ export interface FieldErrorEnvelope {
  * envelope ``{id, label}`` for ergonomics, but clients should send
  * the bare pk to stay on the documented contract.
  */
-export type WriteValue = string | number | boolean | null;
+// A scalar field value, OR a list of related pks for a ManyToMany write
+// (Issue #240). The backend M2M write path accepts a list of pks
+// (writes.py `_coerce` → `form.save_m2m()`); the SPA sends `[pk, ...]`.
+export type WriteValue = string | number | boolean | null | Array<string | number>;
 
 export type CreatePayload = Record<string, WriteValue>;
 
