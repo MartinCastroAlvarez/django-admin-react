@@ -8,6 +8,7 @@ import { ListPage } from './pages/ListPage';
 import { DetailPage } from './pages/DetailPage';
 import { LoginPage } from './pages/LoginPage';
 import { CreatePage } from './pages/CreatePage';
+import { ToastProvider } from './toast';
 
 export function App() {
   const registry = useRegistry();
@@ -27,20 +28,22 @@ export function App() {
   }
 
   return (
-    <Layout>
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path=":appLabel/:modelName" element={<ListPage />} />
-        {/* Literal `add` is ranked above the `:pk` route by React
-            Router, so /app/model/add opens the create form, not a
-            detail with pk="add". */}
-        <Route path=":appLabel/:modelName/add" element={<CreatePage />} />
-        <Route path=":appLabel/:modelName/:pk" element={<DetailPage />} />
-        <Route
-          path="*"
-          element={<div className="p-6 text-sm text-gray-500">Page not found.</div>}
-        />
-      </Routes>
-    </Layout>
+    <ToastProvider>
+      <Layout>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path=":appLabel/:modelName" element={<ListPage />} />
+          {/* Literal `add` is ranked above the `:pk` route by React
+              Router, so /app/model/add opens the create form, not a
+              detail with pk="add". */}
+          <Route path=":appLabel/:modelName/add" element={<CreatePage />} />
+          <Route path=":appLabel/:modelName/:pk" element={<DetailPage />} />
+          <Route
+            path="*"
+            element={<div className="p-6 text-sm text-gray-500">Page not found.</div>}
+          />
+        </Routes>
+      </Layout>
+    </ToastProvider>
   );
 }
