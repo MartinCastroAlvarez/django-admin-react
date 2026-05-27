@@ -54,10 +54,16 @@ body,
 .dark .text-gray-500 {
   color: #9ca3af !important;
 }
+/* One border color across the whole shell (buttons, inputs, cards,
+   tables): the same #374151 the form controls use below. Previously the
+   border-gray-* utilities remapped to #1f2937 while inputs sat at
+   #374151, so an input's border didn't match the button/card next to it.
+   Internal row dividers (divide-gray-*) stay subtler at #1f2937 — that's
+   a within-table line, not an element outline. */
 .dark .border-gray-200,
 .dark .border-gray-300,
 .dark .border-gray-100 {
-  border-color: #1f2937 !important;
+  border-color: #374151 !important;
 }
 .dark .divide-gray-100 > :not([hidden]) ~ :not([hidden]),
 .dark .divide-gray-200 > :not([hidden]) ~ :not([hidden]) {

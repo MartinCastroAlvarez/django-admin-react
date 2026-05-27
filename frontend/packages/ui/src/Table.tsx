@@ -167,13 +167,25 @@ export function Table<Row>({
                 <th
                   key={col.key}
                   scope="col"
-                  className={`relative ${hasWidths ? 'overflow-hidden' : 'whitespace-nowrap'} px-4 py-2 font-medium ${align} ${sortable ? 'cursor-pointer hover:bg-gray-100' : ''}`}
+                  className={`group relative ${hasWidths ? 'overflow-hidden' : 'whitespace-nowrap'} px-4 py-2 font-medium ${align} ${sortable ? 'cursor-pointer hover:bg-gray-100' : ''}`}
                   onClick={sortable ? () => onSort(col.key) : undefined}
                 >
                   <span className={`inline-flex items-center gap-1 ${hasWidths ? 'max-w-full truncate' : ''}`}>
                     {col.header}
-                    {sortable && sortKey === col.key ? (
-                      <span aria-hidden>{sortDirection === 'desc' ? '▼' : '▲'}</span>
+                    {sortable ? (
+                      sortKey === col.key ? (
+                        // Active sort: show the current direction.
+                        <span aria-hidden>{sortDirection === 'desc' ? '▼' : '▲'}</span>
+                      ) : (
+                        // Hint sortability: a faint caret that fades in on
+                        // hover so the operator sees the column is clickable.
+                        <span
+                          aria-hidden
+                          className="text-gray-400 opacity-0 transition-opacity group-hover:opacity-100"
+                        >
+                          ▲
+                        </span>
+                      )
                     ) : null}
                   </span>
                   {resizable && (
