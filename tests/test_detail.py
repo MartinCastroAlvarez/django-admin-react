@@ -662,3 +662,37 @@ def test_detail_surfaces_empty_value_display(superuser_client: Client) -> None:
     admin's placeholder for empty values (site default ``"-"``)."""
     g = Group.objects.create(name="evd")
     assert superuser_client.get(_url(g.pk)).json()["empty_value_display"] == "-"
+
+
+@pytest.mark.django_db
+def test_raw_id_fields_surface_widget_hint() -> None:
+    """A FK/M2M field listed in ``ModelAdmin.raw_id_fields`` gets a
+    ``widget: "raw_id"`` hint; ``radio_fields`` wins when a field is in both
+    (#251). Presentational only — no permission/value change."""
+    from django.contrib import admin
+    from django.contrib.auth import get_user_model
+    from django.contrib.auth.models import Permission
+    from django.test import RequestFactory
+
+    from django_admin_react.api.views.detail import _descriptor_for
+
+    class _RawIdAdmin(admin.ModelAdmin):
+        raw_id_fields = ("content_type",)
+
+    model_admin = _RawIdAdmin(Permission, admin.site)
+    request = RequestFactory().get("/")
+    request.user = get_user_model().objects.create_superuser(
+        username="rawid-su", email="rawid@example.com", password="x"  # noqa: S106
+    )
+    form = model_admin.get_form(request, obj=None)()
+    common = dict(
+        model=Permission,
+        model_admin=model_admin,
+        obj=Permission(),
+        form=form,
+        is_readonly=False,
+        admin_site=admin.site,
+        request=request,
+    )
+    assert _descriptor_for(name="content_type", **common)["widget"] == "raw_id"
+    assert "widget" not in _descriptor_for(name="codename", **common)

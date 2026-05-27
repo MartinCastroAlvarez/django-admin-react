@@ -525,11 +525,13 @@ Rules:
   `get_fieldsets`). Anything in `exclude`/`get_exclude` is omitted.
 - `readonly: true` corresponds to membership in
   `ModelAdmin.get_readonly_fields(request, obj)`.
-- `widget: "radio"` is present on a field the admin lists in
-  `ModelAdmin.radio_fields` (`#251`) — a **presentational** hint to render
-  the choice / FK as radio buttons instead of a select. Optional (absent
-  when the field isn't in `radio_fields`); it changes no value, type, or
-  permission gate.
+- `widget` is an optional **presentational** hint (`#251`): `"radio"` when
+  the admin lists the field in `ModelAdmin.radio_fields` (render the
+  choice/FK as radio buttons), or `"raw_id"` when it's in
+  `ModelAdmin.raw_id_fields` (render a pk input + lookup for a
+  high-cardinality FK/M2M, instead of a select). `radio_fields` wins if a
+  field is in both. Absent when the field is in neither; it changes no
+  value, type, or permission gate.
 - `empty_value_display` (top-level, also on the **list** response §3) is the
   admin's placeholder for empty/null values — `ModelAdmin.empty_value_display`
   if set, else the `AdminSite` default (`"-"`) (`#251`). The SPA renders this

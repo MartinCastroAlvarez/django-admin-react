@@ -353,6 +353,11 @@ def _descriptor_for(
     # Presentational only — no permission/value change.
     if name in (getattr(model_admin, "radio_fields", None) or {}):
         descriptor["widget"] = "radio"
+    # raw_id_fields (#251): FK/M2M fields the admin lists here render as a
+    # pk input + lookup instead of a full select (for high-cardinality
+    # relations). ``elif`` so ``radio_fields`` wins if a field is in both.
+    elif name in (getattr(model_admin, "raw_id_fields", None) or ()):
+        descriptor["widget"] = "raw_id"
     return descriptor
 
 
