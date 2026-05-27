@@ -170,7 +170,7 @@ export function Sidebar() {
           aria-label="Open navigation"
           aria-expanded={drawerOpen}
           onClick={() => setDrawerOpen(true)}
-          className="-ml-2 rounded p-2 hover:bg-gray-800"
+          className="-ml-2 rounded p-2 hover:bg-gray-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
         >
           <Menu className="h-5 w-5" aria-hidden />
         </button>
@@ -223,7 +223,7 @@ export function Sidebar() {
               type="button"
               onClick={() => setSettingsOpen(true)}
               aria-label="Settings"
-              className="inline-flex items-center gap-1.5 rounded bg-gray-800 px-2 py-1 text-xs text-gray-200 hover:bg-gray-700"
+              className="inline-flex items-center gap-1.5 rounded bg-gray-800 px-2 py-1 text-xs text-gray-200 hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
             >
               <Settings className="h-3.5 w-3.5" aria-hidden />
               Settings
@@ -232,7 +232,7 @@ export function Sidebar() {
               <button
                 type="button"
                 onClick={promptInstall}
-                className="inline-flex items-center gap-1.5 rounded bg-gray-800 px-2 py-1 text-xs text-gray-200 hover:bg-gray-700"
+                className="inline-flex items-center gap-1.5 rounded bg-gray-800 px-2 py-1 text-xs text-gray-200 hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
               >
                 <Download className="h-3.5 w-3.5" aria-hidden />
                 Install app
@@ -300,6 +300,7 @@ export function Sidebar() {
                             className={({ isActive }) =>
                               [
                                 'block rounded px-2 py-1 text-sm',
+                                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-gray-400',
                                 isActive
                                   ? 'bg-gray-800 font-medium text-white'
                                   : 'hover:bg-gray-800',
