@@ -384,6 +384,7 @@ export function ListPage() {
           className="inline-flex shrink-0 items-center gap-1.5 rounded border border-gray-300 px-3 py-2 text-sm hover:bg-gray-100"
         >
           <Settings2 className="h-4 w-4" aria-hidden />
+          Customize
           {hiddenCols.size > 0 && (
             <span className="ml-0.5 rounded-full bg-gray-500 px-1.5 py-0.5 text-xs text-white">
               {hiddenCols.size} hidden
