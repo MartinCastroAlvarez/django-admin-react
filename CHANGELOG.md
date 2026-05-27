@@ -14,6 +14,13 @@ version section at release.
 
 ## [Unreleased]
 
+### Security
+- A `CharField` the admin masks with `forms.PasswordInput` (e.g. via
+  `formfield_overrides`) no longer leaks its stored value in the detail
+  payload: the backend redacts `value` to `null` (matching Django admin's
+  `render_value=False`) and emits a `widget: "password"` hint, and the SPA
+  renders a masked `<input type="password">` (#504).
+
 ## [0.2.0a8] — 2026-05-28
 [GitHub Release](https://github.com/MartinCastroAlvarez/django-admin-react/releases/tag/v0.2.0a8)
 

@@ -786,3 +786,72 @@ def test_apply_widget_override_reconciles_type_with_widget() -> None:
     none_field = {"type": "string"}
     _apply_widget_override(none_field, None)
     assert none_field["type"] == "string"
+
+
+def test_apply_widget_override_passwordinput_redacts_value() -> None:
+    """A ``PasswordInput`` widget hints ``password`` and redacts the value
+    unless the admin opted into ``render_value=True`` (#504)."""
+    from django import forms
+
+    from django_admin_react.api.views.detail import _apply_widget_override
+
+    def apply(widget: object, value: object = "s3cret") -> dict:
+        d = {"type": "string", "value": value}
+        _apply_widget_override(d, type("F", (), {"widget": widget})())
+        return d
+
+    # Default PasswordInput (render_value=False): value redacted, hinted.
+    masked = apply(forms.PasswordInput())
+    assert masked["widget"] == "password"
+    assert masked["value"] is None
+    # render_value=True: value preserved, still hinted.
+    echoed = apply(forms.PasswordInput(render_value=True))
+    assert echoed["widget"] == "password"
+    assert echoed["value"] == "s3cret"
+    # Password wins over the string/text reconciliation (it returns early).
+    assert "type" in masked and masked["type"] == "string"
+
+
+@pytest.mark.django_db
+def test_formfield_overrides_passwordinput_masks_and_redacts() -> None:
+    """A CharField the admin masks with ``PasswordInput`` via
+    ``formfield_overrides`` never ships its stored value in the detail
+    payload, and carries the ``widget: "password"`` hint so the SPA masks
+    the input (#504). A plain admin ships the value unmasked."""
+    from django import forms
+    from django.contrib import admin
+    from django.contrib.auth import get_user_model
+    from django.contrib.auth.models import Permission
+    from django.db import models
+    from django.test import RequestFactory
+
+    from django_admin_react.api.views.detail import _descriptor_for
+
+    class _PasswordAdmin(admin.ModelAdmin):
+        formfield_overrides = {models.CharField: {"widget": forms.PasswordInput}}
+
+    request = RequestFactory().get("/")
+    request.user = get_user_model().objects.create_superuser(
+        username="pwd-su", email="pwd@example.com", password="x"  # noqa: S106
+    )
+
+    def descriptor(model_admin: admin.ModelAdmin) -> dict:
+        form = model_admin.get_form(request, obj=None)()
+        return _descriptor_for(
+            model=Permission,
+            model_admin=model_admin,
+            obj=Permission(name="top-secret-value"),  # the field's stored value
+            name="name",  # CharField
+            form=form,
+            is_readonly=False,
+            admin_site=admin.site,
+            request=request,
+        )
+
+    masked = descriptor(_PasswordAdmin(Permission, admin.site))
+    assert masked["widget"] == "password"
+    assert masked["value"] is None  # secret never leaves the server
+
+    plain = descriptor(admin.ModelAdmin(Permission, admin.site))
+    assert plain.get("widget") != "password"
+    assert plain["value"] == "top-secret-value"  # unmasked field is unchanged

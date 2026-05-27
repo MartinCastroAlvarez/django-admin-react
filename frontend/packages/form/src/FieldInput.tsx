@@ -50,7 +50,22 @@ export function FieldInput({ name, field, value, error, onChange }: FieldInputPr
 
   let control: React.ReactNode;
 
-  if (field.type === 'boolean') {
+  if (field.widget === 'password') {
+    // Field the admin routed through PasswordInput (#504). The backend
+    // redacts the stored value (it ships `null`, matching Django's
+    // `render_value=False`), so the box starts empty. Mask the input and
+    // keep the browser from offering saved credentials for a secret field.
+    control = (
+      <input
+        id={id}
+        type="password"
+        autoComplete="new-password"
+        value={value == null ? '' : String(value)}
+        onChange={(e) => onChange(e.target.value)}
+        className={base}
+      />
+    );
+  } else if (field.type === 'boolean') {
     control = (
       <Checkbox id={id} checked={value === true} onChange={(e) => onChange(e.target.checked)} />
     );
