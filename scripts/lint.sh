@@ -67,8 +67,14 @@ if [[ "$FE_ONLY" != "1" ]]; then
   step "pylint (errors only)"
   poetry run pylint --errors-only "${PY_TARGETS[@]}"
 
-  step "mypy (best-effort, non-blocking)"
-  poetry run mypy "${PY_TARGETS[@]}" || echo "mypy reported issues — non-blocking for v1"
+  # The package must stay mypy-clean (it regressed silently once — #312 —
+  # precisely because mypy was non-blocking here). Tests carry known
+  # annotation gaps (#318), so they stay best-effort for now.
+  step "mypy (package — BLOCKING; must stay clean)"
+  poetry run mypy django_admin_react
+
+  step "mypy (tests — best-effort; gaps tracked in #318)"
+  poetry run mypy tests || echo "mypy on tests reported issues — non-blocking (see #318)"
 
   step "bandit (security lint, package only — config in pyproject [tool.bandit])"
   poetry run bandit -c pyproject.toml -q -r django_admin_react

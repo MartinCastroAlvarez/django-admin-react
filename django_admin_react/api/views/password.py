@@ -146,7 +146,11 @@ class SetPasswordView(View):
             # rotating the session auth hash (otherwise the password
             # change would log them straight out).
             if request.user.pk == obj.pk:
-                update_session_auth_hash(request, obj)
+                # django-stubs types the ``user`` param as the concrete
+                # ``User``; ``obj`` is the admin's user model (an
+                # ``AbstractBaseUser``), which is correct at runtime. The
+                # stub is over-narrow, so ignore just this arg-type.
+                update_session_auth_hash(request, obj)  # type: ignore[arg-type]
             # Audit parity: the legacy admin logs a CHANGE with the fixed
             # "Changed password." message (never the value or a diff of
             # the password fields). Match it byte-for-byte.
