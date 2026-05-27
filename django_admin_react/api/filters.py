@@ -201,6 +201,15 @@ def _spec_for_fk(
         payload["choices"] = [
             {"value": obj.pk, "label": label_for(obj)} for obj in base_qs[:_FK_FILTER_MAX_OPTIONS]
         ]
+    elif admin_site is not None:
+        # High-cardinality target (#282): don't inline; hint the SPA to use
+        # the autocomplete endpoint for this filter — but only when the
+        # target admin declares ``search_fields`` (autocomplete 400s
+        # otherwise). The endpoint is already staff-gated and runs the
+        # target's own ``get_search_results``; this is purely a UI hint.
+        target_admin = admin_site._registry.get(related)
+        if target_admin is not None and getattr(target_admin, "search_fields", None):
+            payload["autocomplete"] = True
     return payload
 
 
