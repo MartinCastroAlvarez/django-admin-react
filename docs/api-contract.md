@@ -351,7 +351,12 @@ Supported v1 filter types:
 - **`choice`** — exact match against the field's `choices`.
 - **`foreignkey`** — exact pk match. Inlines up to 25 options when
   the target table is small; larger targets defer to autocomplete
-  (#59) — `choices` is absent then.
+  (#59) — `choices` is absent then, and the descriptor instead carries
+  **`autocomplete: true`** (`#282`) when the target admin declares
+  `search_fields` (so the SPA drives the filter through the
+  `…/autocomplete/` endpoint §3.2). When the large target has no
+  `search_fields`, neither `choices` nor `autocomplete` is present
+  (the endpoint would `400`).
 - **`date`** — exact-date match. Range UX deferred (use
   `date_hierarchy` for the heavy date-drill case — §3.1).
 - **`custom`** — `SimpleListFilter` subclass. The filter's own

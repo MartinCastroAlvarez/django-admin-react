@@ -383,3 +383,38 @@ def test_related_path_list_filter_applies_end_to_end(superuser_client: Client) -
             del log_admin.list_filter
         if not registered:
             admin.site.unregister(LogEntry)
+
+
+@pytest.mark.django_db
+def test_fk_filter_high_cardinality_hints_autocomplete() -> None:
+    """When the FK target exceeds the inline cap, the filter drops ``choices``
+    and hints ``autocomplete: true`` — but only when the target admin
+    declares ``search_fields`` (Django's GroupAdmin does) (#282)."""
+    from django_admin_react.api.filters import _FK_FILTER_MAX_OPTIONS
+
+    for i in range(_FK_FILTER_MAX_OPTIONS + 1):
+        Group.objects.create(name=f"grp-{i}")
+    spec = _spec_for_fk("grp", _fk_stub(None), None, admin.site)
+    assert spec is not None
+    assert "choices" not in spec  # high-cardinality → not inlined
+    assert spec["autocomplete"] is True  # GroupAdmin has search_fields
+
+
+@pytest.mark.django_db
+def test_fk_filter_no_autocomplete_without_target_search_fields() -> None:
+    """No autocomplete hint when the high-cardinality target admin lacks
+    ``search_fields`` — the autocomplete endpoint would 400 (#282)."""
+    from django_admin_react.api.filters import _FK_FILTER_MAX_OPTIONS
+
+    for i in range(_FK_FILTER_MAX_OPTIONS + 1):
+        Group.objects.create(name=f"grp-{i}")
+    model_admin = admin.site._registry[Group]
+    original = model_admin.search_fields
+    model_admin.search_fields = ()
+    try:
+        spec = _spec_for_fk("grp", _fk_stub(None), None, admin.site)
+    finally:
+        model_admin.search_fields = original
+    assert spec is not None
+    assert "choices" not in spec
+    assert "autocomplete" not in spec
