@@ -7,7 +7,7 @@
 // input. On success, navigates to the new object's detail page.
 
 import { useEffect, useRef, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import {
   ApiError,
@@ -24,6 +24,7 @@ import { slugify } from '../slugify';
 import { useModelMeta } from '../useModelMeta';
 import { useToast } from '../toast';
 import { useUnsavedGuard } from '../useUnsavedGuard';
+import { carryPreservedFilters, listPathWithPreservedFilters } from '../changelistFilters';
 
 export function CreatePage() {
   const params = useParams<{ appLabel: string; modelName: string }>();
@@ -32,6 +33,10 @@ export function CreatePage() {
   const client = useApiClient();
   const navigate = useNavigate();
   const toast = useToast();
+  const [searchParams] = useSearchParams();
+  // Where "back to the list" goes — restoring the operator's preserved
+  // changelist filters (#441) when they arrived from a filtered list.
+  const listPath = listPathWithPreservedFilters(`/${appLabel}/${modelName}`, searchParams);
   // Heading + breadcrumb use the model's verbose labels (never the app
   // label), honouring Meta.verbose_name[_plural] (#354).
   const { singular: modelTitle, plural: modelPlural } = useModelMeta(appLabel, modelName);
@@ -70,7 +75,7 @@ export function CreatePage() {
         <Breadcrumb
           items={[
             { label: 'Home', to: '/' },
-            { label: modelPlural, to: `/${appLabel}/${modelName}` },
+            { label: modelPlural, to: listPath },
             { label: `Add ${modelTitle}` },
           ]}
           renderLink={(to, className, label) => (
@@ -92,14 +97,17 @@ export function CreatePage() {
             return;
           }
           if (action === 'continue') {
-            // Land on the new object's change view, in edit mode.
-            navigate(`/${appLabel}/${modelName}/${created.pk}?edit=1`);
+            // Land on the new object's change view, in edit mode —
+            // carrying the preserved filters forward (#441).
+            navigate(
+              carryPreservedFilters(`/${appLabel}/${modelName}/${created.pk}?edit=1`, searchParams),
+            );
             return;
           }
-          // Plain "Save" → back to the changelist (Django parity).
-          navigate(`/${appLabel}/${modelName}`);
+          // Plain "Save" → back to the (preserved-filter) changelist.
+          navigate(listPath);
         }}
-        onCancel={() => navigate(`/${appLabel}/${modelName}`)}
+        onCancel={() => navigate(listPath)}
       />
     </div>
   );

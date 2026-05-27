@@ -39,6 +39,7 @@ import { HistoryModal } from '@dar/history';
 import { RecordSkeleton } from '../components/RecordSkeleton';
 import { useModelMeta } from '../useModelMeta';
 import { useToast } from '../toast';
+import { carryPreservedFilters, listPathWithPreservedFilters } from '../changelistFilters';
 import { useUnsavedGuard } from '../useUnsavedGuard';
 
 // Render a detail field's value. ForeignKey values become a navigable
@@ -189,6 +190,10 @@ export function DetailPage() {
   const canChange = data.permissions.change;
   const canDelete = data.permissions.delete;
 
+  // Where "back to the list" goes — restoring the operator's preserved
+  // changelist filters (#441) when they arrived from a filtered list.
+  const listPath = listPathWithPreservedFilters(`/${appLabel}/${modelName}`, searchParams);
+
   return (
     <div className="space-y-4">
       <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
@@ -196,7 +201,7 @@ export function DetailPage() {
           <Breadcrumb
             items={[
               { label: 'Home', to: '/' },
-              { label: modelPlural, to: `/${appLabel}/${modelName}` },
+              { label: modelPlural, to: listPath },
               { label: data.label },
             ]}
             renderLink={(to, className, label) => (
@@ -238,7 +243,7 @@ export function DetailPage() {
                 onConfirm={async () => {
                   await deleteObject({ client, appLabel, modelName, pk });
                   toast.success(`Deleted “${data.label}”.`);
-                  navigate(`/${appLabel}/${modelName}`);
+                  navigate(listPath);
                 }}
               />
             )}
@@ -270,8 +275,11 @@ export function DetailPage() {
               toast.success('Created a new object.');
               navigate(
                 data.save_options?.save_as_continue
-                  ? `/${appLabel}/${modelName}/${created.pk}?edit=1`
-                  : `/${appLabel}/${modelName}`,
+                  ? carryPreservedFilters(
+                      `/${appLabel}/${modelName}/${created.pk}?edit=1`,
+                      searchParams,
+                    )
+                  : listPath,
               );
               return;
             }
@@ -282,11 +290,11 @@ export function DetailPage() {
               return;
             }
             if (action === 'addAnother') {
-              navigate(`/${appLabel}/${modelName}/add`);
+              navigate(carryPreservedFilters(`/${appLabel}/${modelName}/add`, searchParams));
               return;
             }
-            // Plain "Save" → back to the changelist (Django parity).
-            navigate(`/${appLabel}/${modelName}`);
+            // Plain "Save" → back to the (preserved-filter) changelist.
+            navigate(listPath);
           }}
         />
       ) : (
