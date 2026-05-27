@@ -60,7 +60,12 @@ jobs:
           python-version: "3.12"
 
       - name: Install Poetry + pre-commit
-        run: pipx install poetry && pipx install pre-commit
+        # Poetry is pinned to the version that generated poetry.lock (see
+        # its header). `poetry install` compares the lock's content-hash
+        # against the one it computes from pyproject; a different Poetry
+        # can compute it differently and reject an otherwise-valid lock.
+        # Bump this in lockstep whenever the lock is regenerated.
+        run: pipx install poetry==2.1.4 && pipx install pre-commit
 
       - name: Install dependencies (locked)
         run: poetry install --no-interaction
