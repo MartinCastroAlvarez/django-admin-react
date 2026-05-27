@@ -82,5 +82,12 @@ export default tseslint.config(
       ],
     },
   },
+  // Node tooling scripts (e.g. the dark-mode coverage guard) run under
+  // Node, not the browser — give them Node globals so `process`/`console`
+  // aren't flagged as undefined.
+  {
+    files: ['scripts/**/*.{js,mjs}'],
+    languageOptions: { globals: { ...globals.node } },
+  },
   prettier,
 );
