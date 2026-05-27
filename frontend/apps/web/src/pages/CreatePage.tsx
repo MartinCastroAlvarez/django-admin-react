@@ -107,9 +107,14 @@ function CreateForm({ schema, onCreate, onCancel }: CreateFormProps) {
     const init: Record<string, WriteValue> = {};
     for (const [name, field] of Object.entries(schema.fields)) {
       if (field.readonly) continue;
+      if (field.type === 'manytomany') {
+        // M2M starts empty on a new object; the widget produces a pk list.
+        init[name] = [];
+        continue;
+      }
       const v = field.value;
       // Seed with the model default where the wire carries a scalar;
-      // FK envelopes / arrays / html start empty for a new object.
+      // FK envelopes / html start empty for a new object.
       init[name] = v !== null && typeof v !== 'object' ? v : null;
     }
     return init;
