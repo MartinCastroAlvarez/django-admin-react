@@ -256,21 +256,6 @@ export function ListPage() {
     setSearchParams(next);
   }
 
-  // "Show all N" / "Show paginated" (#385). Switching to show-all sets the
-  // bare `?all` flag and drops the page param (show-all has no pages);
-  // switching back removes it. Both keep the URL the source of truth so a
-  // reload / share preserves the chosen mode.
-  function setShowAll(enabled: boolean): void {
-    const next = new URLSearchParams(searchParams);
-    if (enabled) {
-      next.set('all', '');
-      next.delete('page');
-    } else {
-      next.delete('all');
-    }
-    setSearchParams(next);
-  }
-
   // Click-to-sort (#195): the URL `ordering` param is the source of
   // truth (single column in v1). `-name` = name DESC, `name` = ASC.
   // Clicking a header cycles asc → desc → unsorted.
@@ -408,12 +393,6 @@ export function ListPage() {
   const visibleColumnCount = columns.length;
 
   const totalPages = Math.max(1, Math.ceil(data.total / data.page_size));
-  // "Show all N" (#385): offer the control only when the list spans more
-  // than one page AND the total is at/below the admin's
-  // `list_max_show_all` cap — matching Django's changelist guard. When
-  // show-all is active the backend returns every row on a single page, so
-  // the Prev/Next pager is replaced by a "Show paginated" toggle.
-  const canShowAll = !showAll && data.total > data.page_size && data.total <= data.list_max_show_all;
   const filters = data.filters ?? [];
   const hasFilters = filters.length > 0;
   const chips = buildChips(filters, activeFilters);
@@ -640,35 +619,7 @@ export function ListPage() {
           />
         )}
       </Card>
-      {showAll ? (
-        // Show-all mode: every row is on the page, so there's nothing to
-        // page through — offer a way back to the paginated view instead.
-        <nav className="flex items-center justify-between text-sm text-gray-600">
-          <span>Showing all {data.total.toLocaleString()}</span>
-          <button
-            type="button"
-            onClick={() => setShowAll(false)}
-            className="rounded border border-gray-300 px-3 py-1 hover:bg-gray-100"
-          >
-            Show paginated
-          </button>
-        </nav>
-      ) : (
-        <div className="space-y-2">
-          <Pagination page={data.page} totalPages={totalPages} onChange={setPage} />
-          {canShowAll && (
-            <div className="flex justify-end">
-              <button
-                type="button"
-                onClick={() => setShowAll(true)}
-                className="text-sm text-blue-600 hover:underline"
-              >
-                Show all {data.total.toLocaleString()}
-              </button>
-            </div>
-          )}
-        </div>
-      )}
+      <Pagination page={data.page} totalPages={totalPages} onChange={setPage} />
 
       {filterOpen && (
         <FilterModal
@@ -706,13 +657,7 @@ export function ListPage() {
         <Modal
           title="Columns"
           onClose={() => setColsOpen(false)}
-          footer={
-            <Button variant="primary" onClick={() => setColsOpen(false)}>
-              Done
-            </Button>
-          }
         >
-          <p className="mb-3 text-sm text-gray-500">Show or hide list columns.</p>
           <ul className="space-y-2">
             {orderedDescriptors.map((c) => {
               const pk = isPkCol(c.name);
@@ -734,7 +679,6 @@ export function ListPage() {
                       onChange={() => toggleColumn(c.name, visibleColumnCount)}
                     />
                     {c.label}
-                    {pk && <span className="ml-auto text-xs text-gray-400">always shown</span>}
                   </label>
                 </li>
               );
@@ -887,18 +831,13 @@ function FilterModal({ filters, active, onChange, onClearAll, onClose }: FilterM
       title="Filters"
       onClose={onClose}
       footer={
-        <div className="flex w-full items-center justify-between">
-          <button
-            type="button"
-            onClick={onClearAll}
-            className="text-sm text-gray-500 underline hover:text-gray-700"
-          >
-            Clear all
-          </button>
-          <Button variant="primary" onClick={onClose}>
-            Done
-          </Button>
-        </div>
+        <button
+          type="button"
+          onClick={onClearAll}
+          className="text-sm text-gray-500 underline hover:text-gray-700"
+        >
+          Clear all
+        </button>
       }
     >
       <div className="space-y-4">

@@ -215,6 +215,19 @@ Plus whichever feature-specific cases your endpoint introduces.
 - Tailwind for styling. Theme overrides go through CSS variables or the
   exported Tailwind config; runtime config swapping is out of scope for
   v1.
+- **No redundant chrome — let self-evident UI speak for itself.** When a
+  control or form already explains itself through its labels and
+  affordances, do **not** add explanatory text or extra buttons:
+  - No modal subtitle restating what the form obviously does (a list of
+    show/hide checkboxes does not need "Show or hide list columns").
+  - No "Done" / "Close" footer button whose only job is to close — the
+    `Modal` already closes on the `✕`, `Esc`, backdrop click, and mobile
+    back. Footers are for **actions** (Delete, Run, Clear all, Save).
+  - No "always shown" / "disabled" caption next to an already-disabled
+    control — the disabled state is the signal.
+  Only add text when it conveys something **non-obvious** (e.g. "Saved on
+  this device" = the pref is device-scoped, not synced; "clears cached
+  data" = a security side effect). When in doubt, cut it.
 
 ---
 
