@@ -319,6 +319,10 @@ def save_options(
       flag (default True): after a "Save as new", whether the SPA
       lands on the new object's change view (True) or the changelist
       (False).
+    - ``save_on_top`` — the raw ``ModelAdmin.save_on_top`` flag (default
+      False): when True, the SPA mirrors the save-button row at the top
+      of the form too, matching Django's change-form layout (#251).
+      Purely presentational — button visibility is unchanged.
 
     ``has_editable_inline_admin_formsets`` is **not** factored in here
     (the package's inline write-half is tracked under #54). Until that
@@ -330,6 +334,7 @@ def save_options(
     is_add = not is_change
     save_as = bool(getattr(model_admin, "save_as", False))
     save_as_continue = bool(getattr(model_admin, "save_as_continue", True))
+    save_on_top = bool(getattr(model_admin, "save_on_top", False))
 
     has_add = bool(model_admin.has_add_permission(request))
     has_change = bool(model_admin.has_change_permission(request, obj))
@@ -351,6 +356,7 @@ def save_options(
         "show_save_as_new": show_save_as_new,
         "save_as": save_as,
         "save_as_continue": save_as_continue,
+        "save_on_top": save_on_top,
     }
 
 

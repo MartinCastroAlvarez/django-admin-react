@@ -418,6 +418,9 @@ export interface SaveOptions {
   /** Raw `ModelAdmin.save_as_continue`: after "Save as new", land on the
    *  new object's change view (true) or the changelist (false). */
   save_as_continue: boolean;
+  /** Raw `ModelAdmin.save_on_top`: mirror the save-button row at the top
+   *  of the form too, matching Django's change-form layout. */
+  save_on_top: boolean;
 }
 
 export interface DetailResponse {

@@ -194,6 +194,7 @@ def test_detail_includes_save_options_block(superuser_client: Client) -> None:
         "show_save_as_new",
         "save_as",
         "save_as_continue",
+        "save_on_top",
     }
     assert all(isinstance(v, bool) for v in opts.values())
 
@@ -234,6 +235,28 @@ def test_save_options_save_as_true_surfaces_save_as_new(superuser_client: Client
     assert opts["save_as"] is True
     assert opts["show_save_as_new"] is True
     assert opts["show_save_and_add_another"] is False
+
+
+@pytest.mark.django_db
+def test_save_options_save_on_top_defaults_false_and_reflects_admin(
+    superuser_client: Client,
+) -> None:
+    """``save_on_top`` defaults to False (GroupAdmin doesn't set it) and
+    reflects ``ModelAdmin.save_on_top`` when the admin enables it (#251).
+    Like ``save_as`` it's a plain attribute, so set it directly."""
+    from django.contrib import admin as _admin
+
+    g = Group.objects.create(name="example")
+    assert superuser_client.get(_url(g.pk)).json()["save_options"]["save_on_top"] is False
+
+    group_admin = _admin.site._registry[Group]
+    original = group_admin.save_on_top
+    group_admin.save_on_top = True
+    try:
+        opts = superuser_client.get(_url(g.pk)).json()["save_options"]
+    finally:
+        group_admin.save_on_top = original
+    assert opts["save_on_top"] is True
 
 
 @pytest.mark.django_db

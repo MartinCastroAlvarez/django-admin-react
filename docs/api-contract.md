@@ -458,7 +458,8 @@ Response 200:
     "show_save_and_add_another": true,
     "show_save_as_new": false,
     "save_as": false,
-    "save_as_continue": true
+    "save_as_continue": true,
+    "save_on_top": false
   },
   "password_change": { "supported": false },
   "fieldsets": [
@@ -520,6 +521,9 @@ Rules:
   - `save_as` / `save_as_continue` — the raw `ModelAdmin` flags, so the
     SPA knows whether a "Save as new" POST creates a fresh object and
     where it lands afterward.
+  - `save_on_top` — the raw `ModelAdmin.save_on_top` flag (`#251`):
+    when `true` the SPA mirrors the save-button row at the top of the
+    form too. Purely presentational — button visibility is unchanged.
   The SPA renders exactly the buttons that are `true`; the backend
   re-checks the relevant `has_*_permission` on the actual POST/PATCH —
   `save_options` is a UI hint, not the gate. Inline-formset editability
