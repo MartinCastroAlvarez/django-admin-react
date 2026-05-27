@@ -129,7 +129,7 @@ function FieldsetSection({
                 return (
                   <div key={ri} className="grid grid-cols-3 gap-4 py-2 text-sm">
                     <dt className="text-gray-500">{field.label}</dt>
-                    <dd className="col-span-2 whitespace-pre-wrap text-gray-900">
+                    <dd className="col-span-2 min-w-0 whitespace-pre-wrap break-words text-gray-900">
                       <DetailValue field={field} />
                     </dd>
                   </div>
@@ -147,7 +147,7 @@ function FieldsetSection({
                     return (
                       <div key={name}>
                         <dt className="text-gray-500">{field.label}</dt>
-                        <dd className="mt-0.5 whitespace-pre-wrap text-gray-900">
+                        <dd className="mt-0.5 min-w-0 whitespace-pre-wrap break-words text-gray-900">
                           <DetailValue field={field} />
                         </dd>
                       </div>
@@ -741,7 +741,7 @@ function InlineSection({ inline }: { inline: InlineDescriptor }) {
               {inline.fields.map((f) => (
                 <div key={f.name} className="contents">
                   <dt className="text-gray-500">{f.label}</dt>
-                  <dd className="col-span-2 whitespace-pre-wrap text-gray-900">
+                  <dd className="col-span-2 min-w-0 whitespace-pre-wrap break-words text-gray-900">
                     <FieldValueView value={row.fields[f.name]} />
                   </dd>
                 </div>
