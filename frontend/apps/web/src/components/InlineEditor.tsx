@@ -65,16 +65,33 @@ export interface InlineEditorProps {
 export function InlineEditor({ inline, onItems }: InlineEditorProps) {
   const editableFields = useMemo(() => inline.fields.filter((f) => !f.readonly), [inline.fields]);
 
-  const [rows, setRows] = useState<EditRow[]>(() =>
-    inline.rows.map((r) => ({
+  function blankRow(): EditRow {
+    return {
+      key: freshKey(),
+      pk: null,
+      values: Object.fromEntries(editableFields.map((f) => [f.name, null as WriteValue])),
+      deleted: false,
+    };
+  }
+
+  const [rows, setRows] = useState<EditRow[]>(() => {
+    const existing: EditRow[] = inline.rows.map((r) => ({
       key: `existing-${r.pk}`,
       pk: r.pk,
       values: Object.fromEntries(
         editableFields.map((f) => [f.name, initialCell(r.fields[f.name])]),
       ),
       deleted: false,
-    })),
-  );
+    }));
+    // Pre-render Django's `extra` blank rows (only when the user can add),
+    // capped so initial + extra never exceeds max_num. Untouched blanks
+    // are dropped on save by the `touched` filter below — so they're a
+    // convenience, not a forced write.
+    if (!inline.can_add || inline.extra <= 0) return existing;
+    const room = inline.max_num === null ? inline.extra : inline.max_num - existing.length;
+    const blanks = Math.max(0, Math.min(inline.extra, room));
+    return [...existing, ...Array.from({ length: blanks }, () => blankRow())];
+  });
 
   // Report the write items to the parent whenever rows change. A row
   // with a pk + deleted → DELETE; with a pk → change; without → add.
@@ -108,20 +125,25 @@ export function InlineEditor({ inline, onItems }: InlineEditorProps) {
   }
 
   function addRow() {
-    setRows((prev) => [
-      ...prev,
-      {
-        key: freshKey(),
-        pk: null,
-        values: Object.fromEntries(editableFields.map((f) => [f.name, null as WriteValue])),
-        deleted: false,
-      },
-    ]);
+    setRows((prev) => {
+      // Enforce max_num: never let the user add past the cap (Django's
+      // formset would reject it on save).
+      const active = prev.filter((r) => !r.deleted).length;
+      if (inline.max_num !== null && active >= inline.max_num) return prev;
+      return [...prev, blankRow()];
+    });
   }
 
   function removeNewRow(rowKey: string) {
     setRows((prev) => prev.filter((r) => r.key !== rowKey));
   }
+
+  // min_num / max_num gating (Django formset parity). `activeCount` is the
+  // rows that would actually be submitted (not flagged for deletion).
+  const activeCount = rows.filter((r) => !r.deleted).length;
+  const minNum = inline.min_num ?? 0;
+  const atMax = inline.max_num !== null && activeCount >= inline.max_num;
+  const atMin = activeCount <= minNum;
 
   return (
     <div className="space-y-3">
@@ -158,6 +180,10 @@ export function InlineEditor({ inline, onItems }: InlineEditorProps) {
                         <input
                           type="checkbox"
                           checked={row.deleted}
+                          // Block removing below min_num: a not-yet-deleted
+                          // row can't be checked once at the floor (an
+                          // already-checked one can still be restored).
+                          disabled={!row.deleted && atMin}
                           onChange={() => toggleDelete(row.key)}
                         />
                         remove
@@ -166,7 +192,8 @@ export function InlineEditor({ inline, onItems }: InlineEditorProps) {
                   ) : (
                     <button
                       type="button"
-                      className="text-xs text-gray-400 hover:text-red-600"
+                      className="text-xs text-gray-400 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-40"
+                      disabled={atMin}
                       onClick={() => removeNewRow(row.key)}
                     >
                       ✕
@@ -179,9 +206,14 @@ export function InlineEditor({ inline, onItems }: InlineEditorProps) {
         </table>
       </div>
       {inline.can_add && (
-        <Button type="button" variant="secondary" onClick={addRow}>
-          + Add {inline.label.toLowerCase()}
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button type="button" variant="secondary" onClick={addRow} disabled={atMax}>
+            + Add {inline.label.toLowerCase()}
+          </Button>
+          {atMax && (
+            <span className="text-xs text-gray-500">Maximum of {inline.max_num} reached.</span>
+          )}
+        </div>
       )}
     </div>
   );
