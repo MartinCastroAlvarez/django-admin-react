@@ -157,7 +157,9 @@ class ListView(View):
             page = 1
             page_size = max(total, 1)
         else:
-            page_size = _clamp_page_size(request.GET.get("page_size"))
+            page_size = _clamp_page_size(
+                request.GET.get("page_size"), _default_page_size(model_admin)
+            )
             page = _clamp_page(request.GET.get("page"))
         start = (page - 1) * page_size
         end = start + page_size
@@ -253,14 +255,37 @@ def _clamp_page(raw: str | None) -> int:
     return max(1, n)
 
 
-def _clamp_page_size(raw: str | None) -> int:
+def _default_page_size(model_admin: ModelAdmin) -> int:
+    """The default page size when the client sends no ``?page_size=`` (#281).
+
+    Derived from ``ModelAdmin.list_per_page`` so the source of truth is the
+    admin (Rule #1), matching Django's changelist — a consumer who set
+    ``list_per_page`` for the HTML admin gets the same page size in the SPA
+    with no extra setting. Falls back to ``conf.DEFAULT_PAGE_SIZE`` only when
+    ``list_per_page`` is missing/invalid, and is capped at ``MAX_PAGE_SIZE``
+    so the per-request DoS ceiling still holds (a consumer wanting a bigger
+    default raises ``MAX_PAGE_SIZE`` too).
+    """
+    fallback = int(conf.DEFAULT_PAGE_SIZE)
+    try:
+        n = int(getattr(model_admin, "list_per_page", fallback))
+    except (TypeError, ValueError):
+        n = fallback
+    if n < 1:
+        n = fallback
+    return min(n, int(conf.MAX_PAGE_SIZE))
+
+
+def _clamp_page_size(raw: str | None, default: int) -> int:
     """Parse ``?page_size=`` and clamp to ``[1, conf.MAX_PAGE_SIZE]``.
 
-    The clamp is a denial-of-service guard: without an upper bound a
-    client could pass ``?page_size=10_000_000`` and force the
-    database to materialise ten million rows.
+    ``default`` (the model's ``list_per_page``-derived size, see
+    ``_default_page_size``) is used when the param is absent or invalid.
+
+    The upper clamp is a denial-of-service guard: without it a client
+    could pass ``?page_size=10_000_000`` and force the database to
+    materialise ten million rows.
     """
-    default = int(conf.DEFAULT_PAGE_SIZE)
     maximum = int(conf.MAX_PAGE_SIZE)
     try:
         n = int(raw) if raw is not None else default
