@@ -231,7 +231,9 @@ def test_delete_selected_confirmed_actually_deletes(superuser_client: Client) ->
 def test_action_respects_get_queryset(superuser_client: Client) -> None:
     """Action cannot reach a row the admin's get_queryset excludes."""
     User = get_user_model()
-    visible = User.objects.create_user(username="visible", password="x", is_active=True)  # noqa: S106
+    visible = User.objects.create_user(
+        username="visible", password="x", is_active=True
+    )  # noqa: S106
     hidden = User.objects.create_user(username="hidden", password="x", is_active=True)  # noqa: S106
 
     # Pin get_queryset to exclude ``hidden`` by pk.
@@ -287,6 +289,70 @@ def test_action_without_change_permission_forbidden(superuser_client: Client) ->
             content_type="application/json",
         )
     assert response.status_code == 403
+
+
+# --------------------------------------------------------------------------- #
+# Regression (#302): per-action ``allowed_permissions`` is honoured.          #
+#                                                                             #
+# The runner never trusts the URL action name — it re-resolves through        #
+# ``ModelAdmin.get_actions(request)`` (actions.py:83), and Django's           #
+# ``_filter_actions_by_permissions`` drops any action whose                   #
+# ``allowed_permissions`` the user fails. So a delete-gated action is simply  #
+# absent from a non-delete user's dict → 404 (action unknown), and the        #
+# callable never runs. These two tests lock that fail-closed posture so a     #
+# future change to how actions resolve can't silently let a delete-gated      #
+# action run for a user without delete permission.                            #
+# --------------------------------------------------------------------------- #
+def _delete_gated_action(model_admin, request, queryset):  # noqa: ANN001, ANN201
+    """Custom action that requires the *delete* permission."""
+    return queryset.update(is_active=False)
+
+
+# ``@admin.action(permissions=["delete"])`` sets this attribute; we set it
+# directly to avoid the decorator import. Django reads it in
+# ``get_actions`` → ``_filter_actions_by_permissions``.
+_delete_gated_action.allowed_permissions = ("delete",)
+
+
+@pytest.mark.django_db
+def test_action_filtered_out_when_user_lacks_declared_permission(
+    superuser_client: Client,
+) -> None:
+    """A ``allowed_permissions=['delete']`` action is NOT runnable by a user
+    without delete permission: it's filtered out of ``get_actions`` → 404,
+    and the callable never executes (the row is untouched)."""
+    User = get_user_model()
+    u1 = User.objects.create_user(username="a", password="x", is_active=True)  # noqa: S106
+    with (
+        admin_attr(User, actions=[_delete_gated_action]),
+        admin_override(User, has_delete_permission=lambda self, request, obj=None: False),
+    ):
+        response = superuser_client.post(
+            ACTIONS_BASE + "_delete_gated_action/",
+            data=f'{{"pks": [{u1.pk}]}}',
+            content_type="application/json",
+        )
+    assert response.status_code == 404
+    u1.refresh_from_db()
+    assert u1.is_active is True  # callable never ran — no privilege bypass
+
+
+@pytest.mark.django_db
+def test_action_runs_when_user_holds_declared_permission(superuser_client: Client) -> None:
+    """Counterpart: with delete permission present (default superuser), the
+    same delete-gated action runs (200) — proving the 404 above is the
+    permission filter, not an unconditional rejection of the action."""
+    User = get_user_model()
+    u1 = User.objects.create_user(username="a", password="x", is_active=True)  # noqa: S106
+    with admin_attr(User, actions=[_delete_gated_action]):
+        response = superuser_client.post(
+            ACTIONS_BASE + "_delete_gated_action/",
+            data=f'{{"pks": [{u1.pk}]}}',
+            content_type="application/json",
+        )
+    assert response.status_code == 200
+    u1.refresh_from_db()
+    assert u1.is_active is False  # callable ran — permission honoured
 
 
 @pytest.mark.django_db
