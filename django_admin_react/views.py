@@ -25,6 +25,7 @@ the frontend gets a clear next step instead of a JS error.
 from __future__ import annotations
 
 import json
+import re
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
@@ -95,6 +96,7 @@ class SpaIndexView(View):
                 "bundle": _load_manifest_entry(),
                 "brand_title": _resolve_brand_title(admin_site),
                 "brand_logo_url": dar_conf.BRAND_LOGO_URL,
+                "primary_color": _resolve_primary_color(),
             },
         )
         # The SPA shell must never be cached: it references the
@@ -235,6 +237,27 @@ def _resolve_brand_title(admin_site: Any) -> str:
     if site_header:
         return str(site_header)
     return "Django Admin"
+
+
+# A strict hex color: #rgb, #rgba, #rrggbb, or #rrggbbaa. Anything else is
+# rejected (see _resolve_primary_color) so a consumer's PRIMARY_COLOR can
+# never inject CSS through the <style> block it's written into (#437).
+_HEX_COLOR_RE = re.compile(r"^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$")
+
+
+def _resolve_primary_color() -> str:
+    """The validated accent color injected as ``--dar-primary``.
+
+    The value lands inside a ``<style>`` block in the SPA template, where
+    HTML-escaping does NOT prevent CSS injection (``}``/``;`` aren't
+    HTML-special). So only a strict hex color is allowed; anything else
+    (or a non-string) falls back to the default. This is a trust boundary
+    even though the value comes from the consumer's own settings.
+    """
+    configured = dar_conf.PRIMARY_COLOR
+    if isinstance(configured, str) and _HEX_COLOR_RE.match(configured.strip()):
+        return configured.strip()
+    return dar_conf.DEFAULTS["PRIMARY_COLOR"]
 
 
 def _mount_from_request(request: HttpRequest) -> str:

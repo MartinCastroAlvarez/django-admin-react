@@ -20,6 +20,12 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Consumer-themable accent (#437). Bound to the --dar-primary CSS
+        // variable the SPA template injects from DJANGO_ADMIN_REACT
+        // PRIMARY_COLOR; falls back to blue-600 when unset (e.g. in dev /
+        // tests with no template). Components use `bg-primary` /
+        // `text-primary` / `border-primary` for the accent.
+        primary: 'var(--dar-primary, #2563eb)',
         brand: {
           50: '#eff6ff',
           500: '#3b82f6',

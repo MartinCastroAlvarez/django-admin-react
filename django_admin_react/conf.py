@@ -41,6 +41,14 @@ DEFAULTS: dict[str, Any] = {
     #                        URL or a path under your ``STATIC_URL``.
     "BRAND_TITLE": None,
     "BRAND_LOGO_URL": None,
+    # ``PRIMARY_COLOR`` — the accent color for primary buttons, links, and
+    # active states (#437). Injected into the SPA template as the
+    # ``--dar-primary`` CSS variable so a consumer can brand the admin with
+    # no React rebuild. Must be a hex color (``#rgb`` / ``#rgba`` /
+    # ``#rrggbb`` / ``#rrggbbaa``); anything else is rejected at render and
+    # falls back to this default, since the value is written into a
+    # ``<style>`` block and must not be able to inject CSS.
+    "PRIMARY_COLOR": "#2563eb",
     # ``REACT_LOGIN`` — opt-in React-rendered login (Issue #167).
     # Default ``False`` keeps today's behavior: ``SpaIndexView``
     # redirects anonymous / unauthorized users to Django's HTML login
@@ -86,6 +94,7 @@ class _PackageSettings:
     ENABLE_PROFILING: bool = DEFAULTS["ENABLE_PROFILING"]
     BRAND_TITLE: str | None = DEFAULTS["BRAND_TITLE"]
     BRAND_LOGO_URL: str | None = DEFAULTS["BRAND_LOGO_URL"]
+    PRIMARY_COLOR: str = DEFAULTS["PRIMARY_COLOR"]
     REACT_LOGIN: bool = DEFAULTS["REACT_LOGIN"]
     PWA_NAME: str | None = DEFAULTS["PWA_NAME"]
     PWA_SHORT_NAME: str | None = DEFAULTS["PWA_SHORT_NAME"]
