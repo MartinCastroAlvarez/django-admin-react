@@ -14,6 +14,30 @@ version section at release.
 
 ## [Unreleased]
 
+## [0.2.0a7] — 2026-05-27
+[GitHub Release](https://github.com/MartinCastroAlvarez/django-admin-react/releases/tag/v0.2.0a7)
+
+### Added
+- More `ModelAdmin` parity surfaced as API metadata: `radio_fields` +
+  `raw_id_fields` widget hints, `empty_value_display`, `list_display_links`,
+  `search_help_text`, `get_changeform_initial_data` add-form prefill (scoped
+  to writable fields), `message_user` output as SPA toasts, related-field-path
+  `list_filter` entries, and an autocomplete hint for high-cardinality FK
+  filters (#251, #282, #440, #442, #444, #445).
+- SPA: inline filter dropdowns (new `@dar/search`), pin/favourite models on
+  the home page, open list rows in a new tab via real anchors, localized
+  datetime/date/time rendering, an app-shell error boundary, and the brand
+  accent rolled through links + accents (#253, #407, #413, #415, #437, #473).
+- A dark-mode coverage guard wired into the lint gate (#433).
+
+### Fixed
+- Mid-session auth loss now redirects to login (with a server-built,
+  Django-validated `?next=`) instead of dead-ending on an error (#414).
+- No stale detail flash on cache-key change (#416); responsive detail header
+  (#422, #466); long unbroken values wrap on mobile (#420); empty
+  non-addable inline sections hidden (#411); a11y focus-visible rings +
+  keyboard-operable sort headers (#434); sidebar divider/border polish (#469).
+
 ## [0.2.0a6] — 2026-05-27
 [GitHub Release](https://github.com/MartinCastroAlvarez/django-admin-react/releases/tag/v0.2.0a6)
 
@@ -189,7 +213,8 @@ version section at release.
   `ModelAdmin.get_queryset`; writes through `ModelAdmin.get_form`; conservative
   serializer + sensitive-name denylist. Ships the pre-built React bundle.
 
-[Unreleased]: https://github.com/MartinCastroAlvarez/django-admin-react/compare/v0.2.0a6...HEAD
+[Unreleased]: https://github.com/MartinCastroAlvarez/django-admin-react/compare/v0.2.0a7...HEAD
+[0.2.0a7]: https://github.com/MartinCastroAlvarez/django-admin-react/compare/v0.2.0a6...v0.2.0a7
 [0.2.0a6]: https://github.com/MartinCastroAlvarez/django-admin-react/compare/v0.2.0a5...v0.2.0a6
 [0.2.0a5]: https://github.com/MartinCastroAlvarez/django-admin-react/compare/v0.2.0a4...v0.2.0a5
 [0.2.0a4]: https://github.com/MartinCastroAlvarez/django-admin-react/compare/v0.2.0a3...v0.2.0a4
