@@ -30,11 +30,12 @@ import {
   type InlineWritePayload,
   type WriteValue,
 } from '@dar/data';
-import { Button, Card, EmptyState, Modal, Spinner, Table } from '@dar/ui';
+import { Button, Card, EmptyState, Modal, Table } from '@dar/ui';
 import { FieldValueView } from '@dar/details';
 import { FieldInput, InlineEditor } from '@dar/form';
 import { HistoryModal } from '@dar/history';
 
+import { RecordSkeleton } from '../components/RecordSkeleton';
 import { useToast } from '../toast';
 import { useUnsavedGuard } from '../useUnsavedGuard';
 
@@ -149,7 +150,7 @@ export function DetailPage() {
   const [editing, setEditing] = useState(() => searchParams.get('edit') === '1');
   const [historyOpen, setHistoryOpen] = useState(false);
 
-  if (loading && !data) return <Spinner label="Loading…" />;
+  if (loading && !data) return <RecordSkeleton />;
   if (error && !data) {
     return <EmptyState title="Couldn't load the object" description={error.message} />;
   }

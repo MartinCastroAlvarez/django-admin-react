@@ -7,6 +7,7 @@
 // is shown. Clearing the selection sets the value to null.
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { Pencil } from 'lucide-react';
 
 import { useApiClient, type AutocompleteResult, type WriteValue } from '@dar/data';
 
@@ -84,14 +85,16 @@ export function AutocompleteInput({
         </span>
         <button
           type="button"
-          className="text-xs text-gray-500 hover:text-gray-800 hover:underline"
+          aria-label="Change"
+          title="Change"
+          className="inline-flex shrink-0 items-center justify-center rounded p-1.5 text-gray-500 hover:bg-gray-100 hover:text-gray-800"
           onClick={() => {
             onChange(null);
             setSelectedLabel(null);
             setQuery('');
           }}
         >
-          Change
+          <Pencil className="h-4 w-4" aria-hidden />
         </button>
       </div>
     );

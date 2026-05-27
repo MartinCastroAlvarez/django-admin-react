@@ -17,9 +17,10 @@ import {
   type AddFormResponse,
   type WriteValue,
 } from '@dar/data';
-import { Button, Card, EmptyState, Spinner } from '@dar/ui';
+import { Button, Card, EmptyState } from '@dar/ui';
 import { FieldInput } from '@dar/form';
 
+import { RecordSkeleton } from '../components/RecordSkeleton';
 import { useToast } from '../toast';
 import { useUnsavedGuard } from '../useUnsavedGuard';
 
@@ -72,7 +73,7 @@ export function CreatePage() {
   if (loadError) {
     return <EmptyState title="Couldn't open the add form" description={loadError} />;
   }
-  if (!schema) return <Spinner label="Loading…" />;
+  if (!schema) return <RecordSkeleton />;
 
   return (
     <div className="space-y-4">
