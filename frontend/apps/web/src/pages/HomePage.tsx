@@ -1,18 +1,12 @@
 import { Link } from 'react-router-dom';
 
-import { Card, EmptyState, Spinner } from '@dar/ui';
+import { Card, EmptyState, Skeleton } from '@dar/ui';
 import { useRegistry } from '@dar/data';
 
 export function HomePage() {
   const { data, loading, error } = useRegistry();
 
-  if (loading && !data) {
-    return (
-      <div className="flex items-center gap-2 text-gray-500">
-        <Spinner label="Loading registry…" />
-      </div>
-    );
-  }
+  if (loading && !data) return <HomeSkeleton />;
 
   if (error && !data) {
     return <EmptyState title="Couldn't load the admin" description={error.message} />;
@@ -77,6 +71,36 @@ export function HomePage() {
                 </Link>
               );
             })}
+          </div>
+        </section>
+      ))}
+    </div>
+  );
+}
+
+// First-paint skeleton for the registry index — a title block plus two
+// app sections of model-card placeholders, mirroring the real grid so
+// the page has weight while the registry loads (#231).
+function HomeSkeleton() {
+  return (
+    <div className="space-y-8" aria-busy="true">
+      <span role="status" className="sr-only">
+        Loading…
+      </span>
+      <div className="space-y-2">
+        <Skeleton className="h-7 w-40" />
+        <Skeleton className="h-4 w-72" />
+      </div>
+      {Array.from({ length: 2 }).map((_, s) => (
+        <section key={s}>
+          <Skeleton className="mb-3 h-3 w-24" />
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 6 }).map((__, c) => (
+              <Card key={c}>
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="mt-2 h-3 w-20" />
+              </Card>
+            ))}
           </div>
         </section>
       ))}
