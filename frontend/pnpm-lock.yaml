@@ -35,9 +35,6 @@ importers:
 
   apps/web:
     dependencies:
-      '@dar/api':
-        specifier: workspace:*
-        version: link:../../packages/api
       '@dar/data':
         specifier: workspace:*
         version: link:../../packages/data
