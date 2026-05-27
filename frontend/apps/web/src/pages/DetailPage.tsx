@@ -395,11 +395,16 @@ function EditForm({ data, onCancel, onSave }: EditFormProps) {
       initialJsonRef.current = JSON.stringify(values);
     } catch (err) {
       if (err instanceof ApiError && err.envelope?.error) {
-        const fieldErrors = err.envelope.error.fields ?? {};
-        setErrors(fieldErrors);
-        if (Object.keys(fieldErrors).length === 0) {
-          setNonFieldError(err.envelope.error.message || 'Save failed.');
-        }
+        // Non-field errors (a ModelForm.clean() / __all__ cross-field
+        // rule) arrive under the empty-string key (#381). Surface them
+        // as the form-level banner and render the named field errors
+        // inline — both can show at once.
+        const { ['']: nonField, ...namedErrors } = err.envelope.error.fields ?? {};
+        setErrors(namedErrors);
+        const banner =
+          nonField?.join(' ') ||
+          (Object.keys(namedErrors).length === 0 ? err.envelope.error.message : '');
+        setNonFieldError(banner || null);
       } else {
         setNonFieldError(err instanceof Error ? err.message : 'Save failed.');
       }
