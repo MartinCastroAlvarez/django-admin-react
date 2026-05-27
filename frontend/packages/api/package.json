@@ -10,7 +10,7 @@
   },
   "scripts": {
     "lint": "echo 'lint placeholder — wired in PR #6'",
-    "typecheck": "tsc --noEmit -p . || true",
+    "typecheck": "tsc --noEmit -p .",
     "build": "echo 'build placeholder — wired in PR #6'",
     "test": "echo 'no tests yet'"
   }
