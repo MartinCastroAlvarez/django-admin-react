@@ -77,62 +77,79 @@ function DetailValue({ field }: { field: FieldDescriptor }) {
   return <FieldValueView value={field.value} />;
 }
 
-// Render one fieldset in the read view. Honours Django's fieldset
-// `classes` + `description` (#306): a `collapse` section renders
-// collapsed-by-default behind a toggle, and any `description` shows as
-// section help text under the title.
+// Render one fieldset in the read view. Every section is collapsible
+// behind a caret (#359) and remembers its open/closed state per model +
+// section in localStorage. The default honours Django's fieldset
+// `classes` (#306): a `collapse` section starts collapsed, the rest
+// start open; any `description` shows as section help text under the
+// title. A saved preference (if present) wins over that default.
 function FieldsetSection({
   fieldset,
   fields,
+  persistKey,
 }: {
   fieldset: FieldsetDescriptor;
   fields: Record<string, FieldDescriptor>;
+  persistKey: string;
 }) {
-  const collapsible = (fieldset.classes ?? []).includes('collapse');
-  const [open, setOpen] = useState(!collapsible);
+  const startsCollapsed = (fieldset.classes ?? []).includes('collapse');
+  const [open, setOpen] = useState<boolean>(() => {
+    try {
+      const raw = localStorage.getItem(persistKey);
+      if (raw !== null) return raw === '1';
+    } catch {
+      /* localStorage unavailable — fall back to the default. */
+    }
+    return !startsCollapsed;
+  });
+  const toggle = (): void =>
+    setOpen((o) => {
+      const next = !o;
+      try {
+        localStorage.setItem(persistKey, next ? '1' : '0');
+      } catch {
+        /* best effort */
+      }
+      return next;
+    });
 
-  const body = (
-    <>
-      {fieldset.description ? (
-        <p className="mb-3 text-xs text-gray-500">{fieldset.description}</p>
+  return (
+    <Card>
+      <button
+        type="button"
+        onClick={toggle}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-2 text-left text-base font-semibold text-gray-900"
+      >
+        <span>{fieldset.title ?? 'Details'}</span>
+        <ChevronDown
+          className={`h-4 w-4 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`}
+          aria-hidden
+        />
+      </button>
+      {open ? (
+        <div className="mt-3">
+          {fieldset.description ? (
+            <p className="mb-3 text-xs text-gray-500">{fieldset.description}</p>
+          ) : null}
+          <dl className="divide-y divide-gray-100">
+            {fieldset.fields.map((name) => {
+              const field = fields[name];
+              if (!field) return null;
+              return (
+                <div key={name} className="grid grid-cols-3 gap-4 py-2 text-sm">
+                  <dt className="text-gray-500">{field.label}</dt>
+                  <dd className="col-span-2 whitespace-pre-wrap text-gray-900">
+                    <DetailValue field={field} />
+                  </dd>
+                </div>
+              );
+            })}
+          </dl>
+        </div>
       ) : null}
-      <dl className="divide-y divide-gray-100">
-        {fieldset.fields.map((name) => {
-          const field = fields[name];
-          if (!field) return null;
-          return (
-            <div key={name} className="grid grid-cols-3 gap-4 py-2 text-sm">
-              <dt className="text-gray-500">{field.label}</dt>
-              <dd className="col-span-2 whitespace-pre-wrap text-gray-900">
-                <DetailValue field={field} />
-              </dd>
-            </div>
-          );
-        })}
-      </dl>
-    </>
+    </Card>
   );
-
-  if (collapsible) {
-    return (
-      <Card>
-        <button
-          type="button"
-          onClick={() => setOpen((o) => !o)}
-          aria-expanded={open}
-          className="flex w-full items-center justify-between gap-2 text-left text-base font-semibold text-gray-900"
-        >
-          <span>{fieldset.title ?? 'Details'}</span>
-          <ChevronDown
-            className={`h-4 w-4 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`}
-            aria-hidden
-          />
-        </button>
-        {open ? <div className="mt-3">{body}</div> : null}
-      </Card>
-    );
-  }
-  return <Card title={fieldset.title ?? undefined}>{body}</Card>;
 }
 
 export function DetailPage() {
@@ -271,6 +288,7 @@ export function DetailPage() {
               key={`fs-${idx}-${fieldset.title ?? 'default'}`}
               fieldset={fieldset}
               fields={data.fields}
+              persistKey={`dar:detail-collapsed:${appLabel}:${modelName}:${idx}-${fieldset.title ?? 'default'}`}
             />
           ))}
 
