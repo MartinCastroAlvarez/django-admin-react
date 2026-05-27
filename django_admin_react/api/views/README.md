@@ -5,6 +5,7 @@ One module per endpoint, mirroring [`/docs/api-contract.md`](../../../docs/api-c
 | Module         | Endpoint                                          | Lands in PR |
 | -------------- | ------------------------------------------------- | ----------- |
 | `registry.py`  | `GET    /api/v1/registry/`                        | #3          |
+| `recent_actions.py` | `GET    /api/v1/recent-actions/`             | #502        |
 | `list.py`      | `GET    /api/v1/<app>/<model>/`                   | #4          |
 | `detail.py`    | `GET    /api/v1/<app>/<model>/<pk>/`              | #4          |
 | `create.py`    | `POST   /api/v1/<app>/<model>/`                   | #5          |

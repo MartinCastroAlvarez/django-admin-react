@@ -17,9 +17,14 @@ Public surface:
 
 - :func:`object_log_entries` — the ``LogEntry`` queryset for one object,
   newest-first, with the acting user pre-fetched.
+- :func:`user_log_entries` — the requesting user's own recent
+  ``LogEntry`` rows across all models (the admin index "Recent actions"
+  feed), newest-first, with each entry's content type pre-fetched.
 """
 
 from __future__ import annotations
+
+from typing import Any
 
 from django.contrib.admin.models import LogEntry
 from django.contrib.contenttypes.models import ContentType
@@ -39,4 +44,28 @@ def object_log_entries(obj: Model) -> QuerySet[LogEntry]:
         LogEntry.objects.filter(content_type=content_type, object_id=str(obj.pk))
         .select_related("user")
         .order_by("-action_time")
+    )
+
+
+def user_log_entries(user_pk: Any, limit: int) -> list[LogEntry]:
+    """Return the ``LogEntry`` rows for ``user_pk``, newest first.
+
+    Mirrors Django's admin index "Recent actions" panel
+    (``AdminSite.index`` → ``get_admin_log`` →
+    ``LogEntry.objects.filter(user=request.user)``).
+    ``select_related("content_type")`` so the feed serializer doesn't N+1
+    resolving each entry's model labels.
+
+    The ``user_id`` filter is the **security boundary** (issue #502): the
+    feed is a personal activity log and must never surface another user's
+    actions. It is applied unconditionally here so no caller can forget
+    it. ``user_pk`` is typed ``Any`` because the acting user's primary key
+    varies by user model (int / UUID / str); callers must gate the request
+    first and pass an authenticated user's ``pk``. ``limit`` is sliced in
+    the database (it is already clamped by the view).
+    """
+    return list(
+        LogEntry.objects.filter(user_id=user_pk)
+        .select_related("content_type")
+        .order_by("-action_time")[:limit]
     )

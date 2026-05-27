@@ -20,6 +20,7 @@ this file in lockstep**, plus matching changes on both sides.
 | Method | Path                                                | Purpose                          | Auth         |
 | ------ | --------------------------------------------------- | -------------------------------- | ------------ |
 | GET    | `/api/v1/registry/`                                 | List apps/models the user sees   | staff        |
+| GET    | `/api/v1/recent-actions/`                           | The user's own recent actions    | staff        |
 | GET    | `/api/v1/{app_label}/{model_name}/`                 | List objects                     | staff + view |
 | POST   | `/api/v1/{app_label}/{model_name}/`                 | Create an object                 | staff + add  |
 | GET    | `/api/v1/{app_label}/{model_name}/{pk}/`            | Object detail                    | staff + view |
@@ -154,6 +155,69 @@ must still resolve via the real Django app label. A consumer naming a
 synthetic group `session` does **not** collide with the optional session
 endpoints because the package's URL resolver matches `session/` to its
 own view before any `<app_label>/<model_name>/` pattern.
+
+---
+
+## 2.1 `GET /api/v1/recent-actions/`
+
+The requesting user's own recent admin actions — the SPA equivalent of
+Django's admin index *"Recent actions"* sidebar (`AdminSite.index` →
+`get_admin_log` → `LogEntry.objects.filter(user=request.user)`). The feed
+is **per-user**: it returns only the caller's `LogEntry` rows, never any
+other user's, so it leaks nothing about who-changed-what elsewhere.
+
+Query parameters:
+
+| Name    | Type | Default | Notes                                  |
+| ------- | ---- | ------- | -------------------------------------- |
+| `limit` | int  | `10`    | Clamped to `[1, 100]`; bogus → default |
+
+Response 200:
+
+```json
+{
+  "entries": [
+    {
+      "id": 412,
+      "action": "change",
+      "action_time": "2026-05-28T14:03:11.512000+00:00",
+      "object_repr": "Invoice #4471",
+      "content_type": { "app_label": "billing", "model": "invoice", "name": "invoice" },
+      "link": { "app_label": "billing", "model_name": "invoice", "pk": "4471" }
+    },
+    {
+      "id": 410,
+      "action": "deletion",
+      "action_time": "2026-05-28T13:58:02.001000+00:00",
+      "object_repr": "Draft 9",
+      "content_type": { "app_label": "billing", "model": "draft", "name": "draft" },
+      "link": null
+    }
+  ],
+  "limit": 10
+}
+```
+
+Field notes:
+
+- `action` is one of `"addition"`, `"change"`, `"deletion"` (or
+  `"unknown"` for a non-standard flag).
+- `object_repr` is the label Django stored when the action happened — the
+  same string the user already saw, so it discloses nothing new.
+- `content_type` carries the target's app/model labels for display. It is
+  present even when the model is unregistered or its class has since been
+  deleted (`name` falls back to the raw model string); it is `null` only
+  for legacy rows with no content type.
+- `link` is `{app_label, model_name, pk}` for the SPA to build a detail
+  URL — but **only** when the target is safe to link: it is `null` for
+  deletions (the object is gone) and for any target the user can't reach
+  (unregistered model, or no `has_view_permission`). The endpoint never
+  mints a link to a page the user can't open (least disclosure), so the
+  SPA renders those entries as label-only text, exactly like Django.
+
+Auth + caching: staff + `AdminSite.has_permission` (same gate as
+`/registry/`); `Cache-Control: no-store`. CSRF posture is the standard
+middleware gate (GET is safe; no view here is `@csrf_exempt`).
 
 ---
 
