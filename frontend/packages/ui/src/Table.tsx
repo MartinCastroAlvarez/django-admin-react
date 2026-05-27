@@ -167,8 +167,31 @@ export function Table<Row>({
                 <th
                   key={col.key}
                   scope="col"
-                  className={`group relative ${hasWidths ? 'overflow-hidden' : 'whitespace-nowrap'} px-4 py-2 font-medium ${align} ${sortable ? 'cursor-pointer hover:bg-gray-100' : ''}`}
+                  // Keyboard-operable sort (#434): a sortable header is
+                  // focusable (tabIndex 0), reports its state via aria-sort,
+                  // and sorts on Enter / Space — not just a mouse click.
+                  aria-sort={
+                    sortable
+                      ? sortKey === col.key
+                        ? sortDirection === 'desc'
+                          ? 'descending'
+                          : 'ascending'
+                        : 'none'
+                      : undefined
+                  }
+                  tabIndex={sortable ? 0 : undefined}
+                  className={`group relative ${hasWidths ? 'overflow-hidden' : 'whitespace-nowrap'} px-4 py-2 font-medium ${align} ${sortable ? 'cursor-pointer hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500' : ''}`}
                   onClick={sortable ? () => onSort(col.key) : undefined}
+                  onKeyDown={
+                    sortable
+                      ? (e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            onSort(col.key);
+                          }
+                        }
+                      : undefined
+                  }
                 >
                   <span className={`inline-flex items-center gap-1 ${hasWidths ? 'max-w-full truncate' : ''}`}>
                     {col.header}
