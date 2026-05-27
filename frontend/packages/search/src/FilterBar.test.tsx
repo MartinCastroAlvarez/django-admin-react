@@ -21,7 +21,6 @@ const filters: FilterDescriptor[] = [
 
 function setup(active: Record<string, string> = {}) {
   const onFilterChange = vi.fn();
-  const onClearAll = vi.fn();
   const onSearchChange = vi.fn();
   render(
     <FilterBar
@@ -30,10 +29,9 @@ function setup(active: Record<string, string> = {}) {
       filters={filters}
       active={active}
       onFilterChange={onFilterChange}
-      onClearAll={onClearAll}
     />,
   );
-  return { onFilterChange, onClearAll, onSearchChange };
+  return { onFilterChange, onSearchChange };
 }
 
 describe('FilterBar', () => {
@@ -57,8 +55,7 @@ describe('FilterBar', () => {
     expect(onFilterChange).toHaveBeenCalledWith('status', '');
   });
 
-  it('shows Clear all when a filter is active and calls onClearAll', () => {
-    const onClearAll = vi.fn();
+  it('renders trailing toolbar controls on the same row', () => {
     render(
       <FilterBar
         searchValue=""
@@ -66,11 +63,10 @@ describe('FilterBar', () => {
         filters={filters}
         active={{ status: 'a' }}
         onFilterChange={() => {}}
-        onClearAll={onClearAll}
+        trailing={<button type="button">Customize</button>}
       />,
     );
-    fireEvent.click(screen.getByText('Clear all'));
-    expect(onClearAll).toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Customize' })).toBeInTheDocument();
   });
 
   it('relays search input changes', () => {
@@ -87,7 +83,6 @@ describe('FilterBar', () => {
         filters={[]}
         active={{}}
         onFilterChange={() => {}}
-        onClearAll={() => {}}
         leading={<button type="button">Actions · 2 ▾</button>}
         trailing={<button type="button">Customize</button>}
       />,

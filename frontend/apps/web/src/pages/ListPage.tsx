@@ -6,7 +6,7 @@
 // the data layer's job.
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { GripVertical, Settings2 } from 'lucide-react';
+import { GripVertical, Settings2, X } from 'lucide-react';
 import { Link, useHref, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import { useApiClient, useList, type ActionDescriptor, type ListRow } from '@dar/data';
@@ -475,7 +475,6 @@ export function ListPage() {
         filters={filters}
         active={activeFilters}
         onFilterChange={setFilter}
-        onClearAll={() => patchParams((next) => filters.forEach((f) => next.delete(f.name)))}
         // Bulk-actions menu sits to the LEFT of the search input, and
         // only once at least one row is selected (Django changelist
         // parity — the actions selector leads the toolbar).
@@ -515,22 +514,35 @@ export function ListPage() {
           ) : null
         }
         trailing={
-          <button
-            type="button"
-            onClick={() => setColsOpen(true)}
-            aria-haspopup="dialog"
-            aria-label="Customize columns"
-            title="Customize columns"
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-100"
-          >
-            <Settings2 className="h-4 w-4" aria-hidden />
-            Customize
-            {hiddenCols.size > 0 && (
-              <span className="ml-0.5 rounded-full bg-gray-500 px-1.5 py-0.5 text-xs text-white">
-                {hiddenCols.size} hidden
-              </span>
+          <>
+            {activeFilterCount > 0 && (
+              <button
+                type="button"
+                onClick={() => patchParams((next) => filters.forEach((f) => next.delete(f.name)))}
+                title="Clear all filters"
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-100"
+              >
+                <X className="h-4 w-4" aria-hidden />
+                Clear all
+              </button>
             )}
-          </button>
+            <button
+              type="button"
+              onClick={() => setColsOpen(true)}
+              aria-haspopup="dialog"
+              aria-label="Customize columns"
+              title="Customize columns"
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-100"
+            >
+              <Settings2 className="h-4 w-4" aria-hidden />
+              Customize
+              {hiddenCols.size > 0 && (
+                <span className="ml-0.5 rounded-full bg-gray-500 px-1.5 py-0.5 text-xs text-white">
+                  {hiddenCols.size} hidden
+                </span>
+              )}
+            </button>
+          </>
         }
       />
 
@@ -631,7 +643,7 @@ export function ListPage() {
       )}
 
       {colsOpen && (
-        <Modal title="Columns" onClose={() => setColsOpen(false)}>
+        <Modal title="Layout" onClose={() => setColsOpen(false)}>
           <p className="mb-2 text-xs text-gray-500">Drag to reorder; toggle to show or hide.</p>
           <ul className="space-y-1">
             {orderedDescriptors.map((c) => {
