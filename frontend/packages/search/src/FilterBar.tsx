@@ -9,11 +9,16 @@
 // trailing slot is pinned right (the page composes it so the row ends in
 // "Clear all" then "Customize").
 
-import { useState, type ReactNode } from 'react';
+import { useEffect, useState, type KeyboardEvent, type ReactNode } from 'react';
 import { Check, ChevronDown } from 'lucide-react';
 
 import type { FilterDescriptor, FilterOption } from '@dar/data';
 import { Input, Popover } from '@dar/ui';
+
+// Above this many options a dropdown gets a typeahead box — below it,
+// scanning is faster than typing and a search field would just be
+// redundant chrome (CLAUDE.md §7).
+const FILTER_SEARCH_THRESHOLD = 8;
 
 export interface FilterBarProps {
   /** Show the search input (e.g. the model has `search_fields`). */
@@ -160,43 +165,105 @@ function FilterDropdown({ filter, value, onChange }: FilterDropdownProps) {
           ) : null}
         </div>
       ) : (
-        <ul className="max-h-72 overflow-auto py-1">
-          <li>
-            <button
-              type="button"
-              onClick={() => select('')}
-              className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm hover:bg-gray-100 ${
-                value ? 'text-gray-700' : 'font-medium text-primary'
-              }`}
-            >
-              {value ? <span className="w-3.5 shrink-0" /> : <Check className="h-3.5 w-3.5 shrink-0" aria-hidden />}
-              All
-            </button>
-          </li>
-          {opts.map((o) => {
-            const v = String(o.value);
-            const selected = v === value;
-            return (
-              <li key={v}>
-                <button
-                  type="button"
-                  onClick={() => select(v)}
-                  className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm hover:bg-gray-100 ${
-                    selected ? 'font-medium text-primary' : 'text-gray-700'
-                  }`}
-                >
-                  {selected ? (
-                    <Check className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                  ) : (
-                    <span className="w-3.5 shrink-0" />
-                  )}
-                  <span className="truncate">{o.label}</span>
-                </button>
-              </li>
-            );
-          })}
-        </ul>
+        <FilterOptions filterLabel={filter.label} opts={opts} value={value} onSelect={select} />
       )}
     </Popover>
+  );
+}
+
+interface FilterOptionsProps {
+  filterLabel: string;
+  opts: FilterOption[];
+  value: string;
+  onSelect: (value: string) => void;
+}
+
+// The option list inside a filter dropdown. With enough options it gets a
+// typeahead box: typing narrows to the matching options (only valid
+// matches stay selectable), and ↑/↓ + Enter or Tab move through them so
+// the operator can search the filter's values quickly without the mouse.
+function FilterOptions({ filterLabel, opts, value, onSelect }: FilterOptionsProps) {
+  const showSearch = opts.length >= FILTER_SEARCH_THRESHOLD;
+  const [query, setQuery] = useState('');
+  const norm = query.trim().toLowerCase();
+  const matches = norm ? opts.filter((o) => o.label.toLowerCase().includes(norm)) : opts;
+  // Navigable list: "All" (clear) first, then the matching options.
+  const items: FilterOption[] = [{ value: '', label: 'All' }, ...matches];
+  const [highlight, setHighlight] = useState(0);
+
+  // When a query is active, pre-highlight the first real match (so Enter
+  // accepts it); with no query, rest on "All". Re-runs as the list narrows.
+  useEffect(() => {
+    setHighlight(norm && matches.length > 0 ? 1 : 0);
+  }, [norm, matches.length]);
+
+  const onKeyDown = (e: KeyboardEvent<HTMLInputElement>): void => {
+    if (items.length === 0) return;
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setHighlight((h) => Math.min(h + 1, items.length - 1));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setHighlight((h) => Math.max(h - 1, 0));
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      const it = items[highlight];
+      if (it) onSelect(String(it.value));
+    } else if (e.key === 'Tab') {
+      // Tab → next valid match (Shift+Tab → previous), wrapping. Trapped
+      // here so the operator can scan matches without leaving the field.
+      e.preventDefault();
+      setHighlight((h) => (h + (e.shiftKey ? items.length - 1 : 1)) % items.length);
+    }
+  };
+
+  return (
+    <div>
+      {showSearch ? (
+        <div className="border-b border-gray-200 p-2">
+          <input
+            type="text"
+            // The popover just opened expressly to filter, so focusing the
+            // box is the point — the operator can type immediately.
+            autoFocus
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={onKeyDown}
+            placeholder="Type to filter…"
+            aria-label={`Filter ${filterLabel} options`}
+            className="w-full rounded border border-gray-300 px-2 py-1 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+          />
+        </div>
+      ) : null}
+      <ul className="max-h-72 overflow-auto py-1">
+        {items.map((it, i) => {
+          const v = String(it.value);
+          const isAll = v === '';
+          const selected = isAll ? value === '' : v === value;
+          const active = showSearch && i === highlight;
+          return (
+            <li key={isAll ? '__all__' : v}>
+              <button
+                type="button"
+                onClick={() => onSelect(v)}
+                className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm hover:bg-gray-100 ${
+                  active ? 'bg-gray-100' : ''
+                } ${selected ? 'font-medium text-primary' : 'text-gray-700'}`}
+              >
+                {selected ? (
+                  <Check className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                ) : (
+                  <span className="w-3.5 shrink-0" />
+                )}
+                <span className="truncate">{it.label}</span>
+              </button>
+            </li>
+          );
+        })}
+        {showSearch && matches.length === 0 ? (
+          <li className="px-3 py-2 text-sm text-gray-400">No matches.</li>
+        ) : null}
+      </ul>
+    </div>
   );
 }
