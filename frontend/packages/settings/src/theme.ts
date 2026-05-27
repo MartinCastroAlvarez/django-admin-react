@@ -1,13 +1,13 @@
 // Theme (light / dark) preference + application (#84).
 //
 // The preference is a single localStorage key. Applying a theme toggles
-// the `dark` class on <html>; the actual recolouring lives in index.css
-// as a scoped `.dark` utility remap (so existing light-utility
+// the `dark` class on <html>; the actual recolouring lives in the app's
+// index.css as a scoped `.dark` utility remap (so existing light-utility
 // components go dark without per-component `dark:` variants).
 //
-// `initTheme()` runs once, synchronously, before React mounts (see
-// main.tsx) so the correct theme is on the page at first paint — no
-// flash from light to dark.
+// `initTheme()` runs once, synchronously, before React mounts (see the
+// app's main.tsx) so the correct theme is on the page at first paint —
+// no flash from light to dark.
 
 export type Theme = 'light' | 'dark';
 

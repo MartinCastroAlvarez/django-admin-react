@@ -11,6 +11,8 @@ depend on each other in this order (low → high):
                          mutations; the single data source for UI
 @dar/list, @dar/details, @dar/models
                        ← compose @dar/ui + @dar/data into pages
+@dar/settings          ← the Settings dialog + theme state
+@dar/sidebar           ← the navigation chrome (uses @dar/settings)
 @dar/web             ← composes everything; builds with Vite
 ```
 
@@ -39,7 +41,9 @@ UI packages (`list`, `details`, `models`, `shell`) **must not**
 | `@dar/list`      | `@dar/ui`, `@dar/data`                         | `@dar/api`; model-specific names                                   |
 | `@dar/details`   | `@dar/ui`, `@dar/data`                         | `@dar/api`; model-specific names                                   |
 | `@dar/models`    | `@dar/ui`, `@dar/data`                         | `@dar/api`; model-specific names                                   |
-| `@dar/web`     | `@dar/ui`, `@dar/data`, list/details/models + React Router | `@dar/api`; nothing model-specific                      |
+| `@dar/settings`  | `@dar/ui`                                      | `@dar/api`; model-specific names                                   |
+| `@dar/sidebar`   | `@dar/data`, `@dar/settings`                   | `@dar/api`; model-specific names                                   |
+| `@dar/web`     | `@dar/ui`, `@dar/data`, list/details/models, sidebar/settings + React Router | `@dar/api`; nothing model-specific        |
 
 Anything model-specific lives in `examples/` (consumer projects) or
 `tests/test_project/`.

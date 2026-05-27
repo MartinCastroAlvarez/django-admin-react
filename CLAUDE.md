@@ -199,16 +199,19 @@ Plus whichever feature-specific cases your endpoint introduces.
   provide the metadata you need, fix the API, not the UI.
 - Components live in `@dar/ui` only if they have generic, reusable props
   and no business knowledge. Anything model-aware lives in `@dar/list`,
-  `@dar/details`, or `@dar/models`.
+  `@dar/details`, or `@dar/models`. App-shell chrome is isolated too:
+  `@dar/sidebar` (navigation chrome) and `@dar/settings` (the Settings
+  dialog + theme), so `@dar/web` stays a thin composition layer.
 - **Data flow is one-way and gated by `@dar/data`.**
   - `@dar/api` is the only package that talks to the backend (React
     Query + fetch).
   - `@dar/data` is the only package that imports `@dar/api`. It owns
     the localStorage cache, the React Context providers, and the
     debounce buffer for user-initiated mutations.
-  - `@dar/list`, `@dar/details`, `@dar/models`, and `@dar/web` import
-    **only** `@dar/data` (and `@dar/ui`). Importing `@dar/api` from a
-    UI package is a CI-failing lint rule.
+  - `@dar/list`, `@dar/details`, `@dar/models`, `@dar/sidebar`,
+    `@dar/settings`, and `@dar/web` import **only** `@dar/data` (and
+    `@dar/ui` / sibling UI packages). Importing `@dar/api` from a UI
+    package is a CI-failing lint rule.
 - Tailwind for styling. Theme overrides go through CSS variables or the
   exported Tailwind config; runtime config swapping is out of scope for
   v1.
