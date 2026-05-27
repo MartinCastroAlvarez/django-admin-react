@@ -39,6 +39,7 @@ export type {
   ListResponse,
   ListRow,
   LoginResponse,
+  LogoutResponse,
   Permissions,
   RegistryAppEntry,
   RegistryModelEntry,
@@ -59,6 +60,8 @@ export type { DetailState } from './detail-context';
 
 export { createObject, updateObject, deleteObject } from './mutations';
 export type { CreateArgs, UpdateArgs, DeleteArgs } from './mutations';
+
+export { logout, purgeClientCaches } from './auth';
 
 export { renderValue, isHtmlValue, isForeignKeyValue } from './format';
 

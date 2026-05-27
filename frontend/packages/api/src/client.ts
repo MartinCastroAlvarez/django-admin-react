@@ -14,6 +14,7 @@ import type {
   FieldErrorEnvelope,
   ListResponse,
   LoginResponse,
+  LogoutResponse,
   RegistryResponse,
   UpdatePayload,
 } from './contract';
@@ -173,6 +174,16 @@ export class ApiClient {
    */
   login(username: string, password: string): Promise<LoginResponse> {
     return this.request<LoginResponse>('POST', 'login/', { username, password });
+  }
+
+  /**
+   * Flush the current session (contract §7 — thin shell over Django's
+   * own `logout`). Idempotent: a logout while already anonymous is a
+   * harmless 200. CSRF is enforced (POST). The caller is responsible
+   * for purging client-side caches — see `@dar/data`'s `logout()`.
+   */
+  logout(): Promise<LogoutResponse> {
+    return this.request<LogoutResponse>('POST', 'logout/', {});
   }
 
   /** The create-form schema for a NEW object (GET <app>/<model>/add/). */

@@ -327,6 +327,11 @@ export interface LoginResponse {
   user: RegistryUser;
 }
 
+/** Response of `POST /api/v1/logout/` (contract §7) — session flushed. */
+export interface LogoutResponse {
+  detail: string;
+}
+
 export interface FieldErrorEnvelope {
   error: {
     code: string;

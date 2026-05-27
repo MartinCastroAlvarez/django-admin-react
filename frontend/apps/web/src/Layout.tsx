@@ -1,9 +1,9 @@
 import type { PropsWithChildren } from 'react';
 import { useEffect, useMemo, useState } from 'react';
-import { Download, Menu } from 'lucide-react';
+import { Download, LogOut, Menu } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
-import { useRegistry } from '@dar/data';
+import { logout, useApiClient, useRegistry } from '@dar/data';
 
 // The browser's `beforeinstallprompt` event (Chromium). Captured so we
 // can show an explicit "Install" affordance and call `.prompt()` on
@@ -109,9 +109,27 @@ function filterApps(apps: RegistryApp[], query: string): RegistryApp[] {
 }
 
 export function Layout({ children }: PropsWithChildren) {
-  const { data } = useRegistry();
+  const { data, refresh } = useRegistry();
+  const client = useApiClient();
   const { canInstall, promptInstall } = useInstallPrompt();
   const [query, setQuery] = useState('');
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  // Logout (#225): flush the session, purge the client caches (the SW
+  // `dar:purge` + `dar:*` localStorage), then re-validate auth. The
+  // registry refetch 403s and `App` swaps in the login screen, so no
+  // router navigation is needed. Best-effort — `logout()` purges caches
+  // even if the network call fails.
+  const handleLogout = async () => {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    try {
+      await logout(client);
+      refresh();
+    } finally {
+      setLoggingOut(false);
+    }
+  };
   // The sidebar is a static column on desktop (≥ md) and a slide-in
   // overlay drawer on mobile so it never eats horizontal space on a
   // phone. ``drawerOpen`` only affects the mobile presentation.
@@ -193,15 +211,30 @@ export function Layout({ children }: PropsWithChildren) {
               {data.user.is_superuser ? ' · superuser' : ''}
             </div>
           )}
-          {canInstall && (
-            <button
-              type="button"
-              onClick={promptInstall}
-              className="mt-3 inline-flex items-center gap-1.5 rounded border border-gray-700 px-2 py-1 text-xs text-gray-200 hover:bg-gray-800"
-            >
-              <Download className="h-3.5 w-3.5" aria-hidden />
-              Install app
-            </button>
+          {(canInstall || data?.user) && (
+            <div className="mt-3 flex flex-wrap gap-2">
+              {canInstall && (
+                <button
+                  type="button"
+                  onClick={promptInstall}
+                  className="inline-flex items-center gap-1.5 rounded border border-gray-700 px-2 py-1 text-xs text-gray-200 hover:bg-gray-800"
+                >
+                  <Download className="h-3.5 w-3.5" aria-hidden />
+                  Install app
+                </button>
+              )}
+              {data?.user && (
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  disabled={loggingOut}
+                  className="inline-flex items-center gap-1.5 rounded border border-gray-700 px-2 py-1 text-xs text-gray-200 hover:bg-gray-800 disabled:opacity-60"
+                >
+                  <LogOut className="h-3.5 w-3.5" aria-hidden />
+                  {loggingOut ? 'Logging out…' : 'Log out'}
+                </button>
+              )}
+            </div>
           )}
         </div>
 
