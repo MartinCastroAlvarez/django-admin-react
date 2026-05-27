@@ -265,7 +265,15 @@ export interface ListResponse {
   date_hierarchy?: DateHierarchy;
   page: number;
   page_size: number;
+  /** Row count after search / filter / date narrowing. */
   total: number;
+  /**
+   * Unfiltered base count (`ModelAdmin.get_queryset`). Equals `total` when
+   * the list isn't narrowed; `null` when the admin sets
+   * `show_full_result_count = False`. The SPA shows "<total> of
+   * <full_count>" when they differ (`show_full_result_count` parity).
+   */
+  full_count: number | null;
   results: ListRow[];
 }
 

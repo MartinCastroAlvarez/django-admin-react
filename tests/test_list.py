@@ -8,11 +8,38 @@ not leaked.
 
 from __future__ import annotations
 
+from contextlib import contextmanager
+from contextlib import suppress
+
 import pytest
+from django.contrib import admin
 from django.contrib.auth.models import Group
 from django.test import Client
 
 from tests.helpers import admin_override
+
+
+@contextmanager
+def _admin_attrs(model_cls: type, **values: object):
+    """Temporarily set plain (non-method) attributes on a registered
+    ``ModelAdmin`` — e.g. ``show_full_result_count``. (``admin_override``
+    only binds callables.)"""
+    model_admin = admin.site._registry[model_cls]
+    sentinel = object()
+    originals: dict[str, object] = {}
+    try:
+        for name, value in values.items():
+            originals[name] = model_admin.__dict__.get(name, sentinel)
+            setattr(model_admin, name, value)
+        yield
+    finally:
+        for name, original in originals.items():
+            if original is sentinel:
+                with suppress(AttributeError):
+                    delattr(model_admin, name)
+            else:
+                setattr(model_admin, name, original)
+
 
 # Use auth.Group as the test target — it's always registered in admin,
 # has a name field for list_display tests, and has search_fields.
@@ -60,6 +87,44 @@ def test_list_response_reports_pk_field(superuser_client: Client) -> None:
     response = superuser_client.get(LIST_URL)
     assert response.status_code == 200
     assert response.json()["pk_field"] == "id"
+
+
+# --------------------------------------------------------------------------- #
+# show_full_result_count parity (#311): full_count reports the unfiltered     #
+# base total when the list is narrowed                                        #
+# --------------------------------------------------------------------------- #
+@pytest.mark.django_db
+def test_full_count_equals_total_when_not_narrowed(superuser_client: Client) -> None:
+    """An unnarrowed list reports ``full_count == total`` (no second count)."""
+    Group.objects.create(name="alpha")
+    Group.objects.create(name="beta")
+    body = superuser_client.get(LIST_URL).json()
+    assert body["total"] == 2
+    assert body["full_count"] == 2
+
+
+@pytest.mark.django_db
+def test_full_count_reports_unfiltered_total_when_searched(superuser_client: Client) -> None:
+    """A search-narrowed list keeps ``full_count`` at the unfiltered base
+    count (GroupAdmin searches ``name``) so the SPA can show "X of Y" (#311)."""
+    Group.objects.create(name="alpha")
+    Group.objects.create(name="apex")
+    Group.objects.create(name="beta")
+    body = superuser_client.get(LIST_URL, {"q": "alpha"}).json()
+    assert body["total"] == 1  # only "alpha" matches
+    assert body["full_count"] == 3  # unfiltered base
+
+
+@pytest.mark.django_db
+def test_full_count_null_when_show_full_result_count_disabled(superuser_client: Client) -> None:
+    """``show_full_result_count = False`` opts out of the extra COUNT(*):
+    ``full_count`` is ``null`` even when the list is narrowed (#311)."""
+    Group.objects.create(name="alpha")
+    Group.objects.create(name="beta")
+    with _admin_attrs(Group, show_full_result_count=False):
+        body = superuser_client.get(LIST_URL, {"q": "alpha"}).json()
+    assert body["total"] == 1
+    assert body["full_count"] is None
 
 
 @pytest.mark.django_db

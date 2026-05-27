@@ -410,7 +410,11 @@ export function ListPage() {
               : data.object_name || modelName}
           </h1>
           <p className="text-sm text-gray-500">
-            {data.total.toLocaleString()} object{data.total === 1 ? '' : 's'}
+            {data.full_count != null && data.full_count !== data.total
+              ? `${data.total.toLocaleString()} of ${data.full_count.toLocaleString()} ${
+                  data.full_count === 1 ? 'object' : 'objects'
+                }`
+              : `${data.total.toLocaleString()} object${data.total === 1 ? '' : 's'}`}
           </p>
         </div>
         {data.permissions.add && (

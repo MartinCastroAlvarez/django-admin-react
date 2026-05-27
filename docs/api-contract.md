@@ -177,6 +177,7 @@ Response 200:
 {
   "app_label": "fintech",
   "model_name": "account",
+  "pk_field": "id",
   "permissions": { "view": true, "add": true, "change": true, "delete": false },
   "columns": [
     { "name": "name",     "label": "Name",     "sortable": true  },
@@ -187,6 +188,7 @@ Response 200:
   "page": 1,
   "page_size": 25,
   "total": 137,
+  "full_count": 412,
   "results": [
     {
       "pk": 1,
@@ -203,10 +205,20 @@ Response 200:
 
 Rules:
 
+- `pk_field` names the model's primary-key field (`model._meta.pk.name`,
+  usually `id`). When it appears in `columns`, the SPA pins that column
+  first, never truncates it, and keeps it from being hidden.
 - `columns` is built from `ModelAdmin.get_list_display(request)`. Callable
   list-display values are resolved using the admin's standard helpers.
 - `search_fields` is the literal list from the `ModelAdmin` (so the SPA
   can label the search box). Empty list means no search.
+- `total` is the count *after* search / `list_filter` / `date_hierarchy`
+  narrowing. `full_count` is the unfiltered base count
+  (`ModelAdmin.get_queryset(request)`), so the SPA can show "<total> of
+  <full_count>" when the list is narrowed (`show_full_result_count`
+  parity). It equals `total` when the list isn't narrowed, and is `null`
+  when the `ModelAdmin` sets `show_full_result_count = False` (the opt-out
+  for tables where the extra `COUNT(*)` is too expensive).
 - `results[*].fields` only contains values for `columns[*].name`.
 - `results[*].label` is `str(obj)` (the admin's display fallback).
 - **ForeignKey cells (`#184`):** a FK cell value is
