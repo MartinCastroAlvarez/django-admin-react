@@ -121,6 +121,10 @@ DJANGO_ADMIN_REACT = {
     "BRAND_LOGO_URL": None,     # str | None — used as the favicon and
                                 # the sidebar logo. Absolute URL or a
                                 # path under your STATIC_URL.
+    "PRIMARY_COLOR": "#2563eb", # accent for primary buttons, links, and
+                                # active states. Hex only (validated);
+                                # injected as the --dar-primary CSS var, so
+                                # rebranding needs no React rebuild.
 }
 ```
 
@@ -161,6 +165,50 @@ brand. No flash of the package's defaults.
 - **Auth**: Django's built-in session + CSRF. Works with custom
   `AUTH_USER_MODEL`, custom `AUTHENTICATION_BACKENDS`, and custom
   `AdminSite.has_permission`.
+
+### Production: static files (and media for file uploads)
+
+The wheel ships the pre-built bundle under the package's `static/` and
+serves it through `{% static %}`. With `DEBUG = True`, Django's
+staticfiles app serves it automatically — nothing to do. **In
+production** you collect + serve static files like any Django app:
+
+```python
+# settings.py
+STATIC_URL = "/static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"   # where collectstatic gathers files
+```
+
+```bash
+python manage.py collectstatic --no-input
+```
+
+Then serve `STATIC_ROOT` from your web server / CDN — or let
+[WhiteNoise](https://whitenoise.readthedocs.io/) do it:
+
+```python
+MIDDLEWARE = [
+    "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",   # right after SecurityMiddleware
+    # ...
+]
+```
+
+> If the SPA shell loads but its JS/CSS 404 (blank page, console errors),
+> this `collectstatic` step is what's missing.
+
+**File / image fields.** Editing `FileField` / `ImageField` needs
+Django's media settings:
+
+```python
+# settings.py
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
+```
+
+Uploads go through your configured file storage
+(`STORAGES["default"]` / `DEFAULT_FILE_STORAGE`); in production serve
+`MEDIA_ROOT` from your web server or object storage as usual.
 
 ### Running side-by-side with the legacy admin
 
