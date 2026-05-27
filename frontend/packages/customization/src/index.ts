@@ -11,6 +11,7 @@ export {
   NAV_COLLAPSE_KEY,
   PRESERVED_ON_LOGOUT,
   columnsKey,
+  columnWidthsKey,
   filtersKey,
   detailCollapseKey,
 } from './keys';

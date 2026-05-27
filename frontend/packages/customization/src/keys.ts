@@ -22,6 +22,11 @@ export function columnsKey(appLabel: string, modelName: string): string {
   return `dar:cols:${appLabel}:${modelName}`;
 }
 
+/** Drag-resized list column widths for one model ({ column: px }). */
+export function columnWidthsKey(appLabel: string, modelName: string): string {
+  return `dar:colwidths:${appLabel}:${modelName}`;
+}
+
 /** Persisted `list_filter` selections for one model. */
 export function filtersKey(appLabel: string, modelName: string): string {
   return `dar:filters:${appLabel}:${modelName}`;
