@@ -548,13 +548,22 @@ Rules:
   `get_fieldsets`). Anything in `exclude`/`get_exclude` is omitted.
 - `readonly: true` corresponds to membership in
   `ModelAdmin.get_readonly_fields(request, obj)`.
-- `widget` is an optional **presentational** hint (`#251`): `"radio"` when
-  the admin lists the field in `ModelAdmin.radio_fields` (render the
-  choice/FK as radio buttons), or `"raw_id"` when it's in
-  `ModelAdmin.raw_id_fields` (render a pk input + lookup for a
-  high-cardinality FK/M2M, instead of a select). `radio_fields` wins if a
-  field is in both. Absent when the field is in neither; it changes no
-  value, type, or permission gate.
+- `widget` is an optional hint: `"radio"` when the admin lists the field in
+  `ModelAdmin.radio_fields` (render the choice/FK as radio buttons), or
+  `"raw_id"` when it's in `ModelAdmin.raw_id_fields` (render a pk input +
+  lookup for a high-cardinality FK/M2M, instead of a select). `radio_fields`
+  wins if a field is in both. These two are purely **presentational** —
+  they change no value, type, or permission gate (`#251`).
+  - `"password"` is a **security** hint, not a layout one (`#504`): the admin
+    routed the field through `forms.PasswordInput` (e.g. via
+    `formfield_overrides`). Django's admin renders `PasswordInput` with
+    `render_value=False`, so the stored value never re-enters the page; the
+    SPA reads its value over the wire, so the backend matches that by
+    **redacting `value` to `null`** in this descriptor unless the admin set
+    `render_value=True`. The SPA renders a masked `<input type="password">`.
+    A consumer storing a secret on a `CharField` masked with `PasswordInput`
+    therefore never sees it leave the server in the detail payload.
+  - Absent when the field is in none of these.
 - `empty_value_display` (top-level, also on the **list** response §3) is the
   admin's placeholder for empty/null values — `ModelAdmin.empty_value_display`
   if set, else the `AdminSite` default (`"-"`) (`#251`). The SPA renders this

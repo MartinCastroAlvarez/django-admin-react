@@ -23,6 +23,16 @@ export type FieldType =
   | 'manytomany'
   | 'unsupported';
 
+/**
+ * Presentational widget hint that overrides the default control the SPA
+ * would pick from `type`. `radio` / `raw_id` come from `radio_fields` /
+ * `raw_id_fields` (#251). `password` is a security boundary, not a layout
+ * choice: it marks a field the admin routed through `PasswordInput`, whose
+ * stored value the backend redacts from the payload (matching Django's
+ * `render_value=False`) — the SPA masks the input (#504).
+ */
+export type WidgetHint = 'radio' | 'raw_id' | 'password';
+
 export interface Permissions {
   view: boolean;
   add: boolean;
@@ -346,6 +356,12 @@ export interface FieldDescriptor {
   decimal_places?: number;
   choices?: FieldChoice[];
   to?: { app_label: string; model_name: string };
+  /**
+   * Optional control override (see `WidgetHint`). Absent for the default
+   * control implied by `type`. `password` additionally means the backend
+   * has redacted `value` (it ships `null`).
+   */
+  widget?: WidgetHint;
 }
 
 export interface FieldsetDescriptor {

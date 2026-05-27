@@ -26,6 +26,7 @@ from django.db.models import FileField
 from django.db.models import ForeignKey
 from django.db.models import ManyToManyField
 from django.db.models import Model
+from django.forms.widgets import PasswordInput
 from django.forms.widgets import Textarea
 from django.forms.widgets import TextInput
 from django.http import HttpRequest
@@ -380,11 +381,27 @@ def _apply_widget_override(descriptor: dict[str, Any], form_field: Any) -> None:
     Reuses the form widget (source of truth) so ``formfield_overrides``
     has a visible effect, mapping only to the existing ``string`` /
     ``text`` vocabulary so no new wire type is introduced (#446).
+
+    A ``PasswordInput`` override is handled first and separately (#504):
+    it is a security boundary, not a layout hint. Django's admin renders
+    a ``PasswordInput`` with ``render_value=False`` by default, so the
+    stored value is never echoed back into the page. The SPA reads its
+    value over the wire, so the equivalent is to **redact the value from
+    the payload** unless the admin explicitly opted into echoing it
+    (``render_value=True``), and to hint the SPA to mask the input
+    (``widget: "password"``). Without this, a secret stored on a
+    ``CharField`` the admin masked with ``PasswordInput`` would be sent
+    as plaintext in the detail JSON.
     """
     if form_field is None:
         return
     widget = getattr(form_field, "widget", None)
     if widget is None:
+        return
+    if isinstance(widget, PasswordInput):
+        descriptor["widget"] = "password"
+        if not getattr(widget, "render_value", False):
+            descriptor["value"] = None
         return
     if descriptor["type"] == "string" and isinstance(widget, Textarea):
         descriptor["type"] = "text"
