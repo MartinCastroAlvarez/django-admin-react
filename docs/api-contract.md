@@ -678,7 +678,10 @@ inlines declared).
 ]
 ```
 
-- **`kind`** is `tabular` or `stacked`.
+- **`kind`** is `tabular` or `stacked`, classified by the inline's base
+  class (`admin.TabularInline` → `tabular`, else `stacked`) — not its
+  subclass name, so `class BookInline(admin.TabularInline)` correctly
+  renders as a table (`#417`).
 - **`fk_name`** is the FK on the child that points back at the
   parent (declared via `InlineModelAdmin.fk_name` or auto-detected
   by scanning the child's FKs).

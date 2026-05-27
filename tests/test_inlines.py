@@ -69,13 +69,30 @@ def test_resolve_fk_name_uses_declared_attribute() -> None:
 # --------------------------------------------------------------------------- #
 # Inline kind detection (tabular vs stacked)                                  #
 # --------------------------------------------------------------------------- #
-def test_inline_kind_detection_in_class_name() -> None:
-    """The package detects tabular vs stacked by the class name only."""
-    # We're not building real inline payloads here (those require a
-    # parent/child FK fixture); this is a pure-Python class-name check
-    # to lock the contract.
-    assert "Tabular" in TabularInline.__name__
-    assert "Stacked" in StackedInline.__name__
+def test_inline_kind_classified_by_base_class_not_name() -> None:
+    """Tabular vs stacked is classified by the inline's *base class*, not
+    its subclass name (#417).
+
+    A real-world ``class BookInline(admin.TabularInline)`` has no
+    "Tabular" in its name; the old substring check mis-classified it as
+    ``stacked`` (a card list instead of a table). ``StackedInline`` —
+    whose subclass name likewise need not contain "Stacked" — stays
+    ``stacked``.
+    """
+    from django.contrib.auth.models import Permission
+
+    from django_admin_react.api.inlines import _inline_kind
+
+    class BookInline(TabularInline):  # name has no "Tabular"
+        model = Permission
+        fk_name = "content_type"
+
+    class NotesInline(StackedInline):  # name has no "Stacked"
+        model = Permission
+        fk_name = "content_type"
+
+    assert _inline_kind(BookInline(Permission, admin.site)) == "tabular"
+    assert _inline_kind(NotesInline(Permission, admin.site)) == "stacked"
 
 
 # --------------------------------------------------------------------------- #
