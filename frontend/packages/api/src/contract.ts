@@ -77,6 +77,28 @@ export interface RegistryResponse {
   apps: RegistryAppEntry[];
 }
 
+/** The kind of admin action a `LogEntry` records (`GET recent-actions/`). */
+export type RecentActionKind = 'added' | 'changed' | 'deleted' | 'unknown';
+
+/** One entry in the index "Recent actions" feed (#502). `target` is the
+ *  affected object's change-page locator, or `null` when it can't be
+ *  linked (a deletion, an unregistered model, or no view permission). */
+export interface RecentAction {
+  id: number;
+  action: RecentActionKind;
+  /** ISO-8601 timestamp of the action. */
+  action_time: string;
+  /** The object's string representation at the time of the action. */
+  object_repr: string;
+  target: { app_label: string; model_name: string; pk: string } | null;
+}
+
+/** `GET /api/v1/recent-actions/` — the signed-in user's own recent
+ *  actions, newest first. */
+export interface RecentActionsResponse {
+  actions: RecentAction[];
+}
+
 export interface ColumnDescriptor {
   name: string;
   label: string;

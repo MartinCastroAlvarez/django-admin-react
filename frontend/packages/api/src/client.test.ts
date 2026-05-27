@@ -59,3 +59,40 @@ describe('ApiClient — session-level auth failure (#414)', () => {
     expect(onAuthFailure).not.toHaveBeenCalled();
   });
 });
+
+describe('ApiClient.getRecentActions (#502)', () => {
+  it('GETs recent-actions/ and parses the actions array', async () => {
+    const fetchImpl = vi.fn(async () =>
+      fakeResponse(200, {
+        actions: [
+          {
+            id: 1,
+            action: 'changed',
+            action_time: '2026-05-28T00:00:00Z',
+            object_repr: 'thing',
+            target: { app_label: 'auth', model_name: 'group', pk: '3' },
+          },
+        ],
+      }),
+    ) as unknown as typeof fetch;
+    const client = new ApiClient({ mount: '/admin-react/', fetchImpl });
+
+    const res = await client.getRecentActions();
+    expect(res.actions).toHaveLength(1);
+    expect(res.actions[0]?.target).toEqual({ app_label: 'auth', model_name: 'group', pk: '3' });
+
+    const calls = (fetchImpl as unknown as ReturnType<typeof vi.fn>).mock.calls;
+    expect(calls[0]?.[0]).toBe('/admin-react/api/v1/recent-actions/');
+  });
+
+  it('appends the limit query param when given', async () => {
+    const fetchImpl = vi.fn(
+      async () => fakeResponse(200, { actions: [] }),
+    ) as unknown as typeof fetch;
+    const client = new ApiClient({ mount: '/admin-react/', fetchImpl });
+
+    await client.getRecentActions(5);
+    const calls = (fetchImpl as unknown as ReturnType<typeof vi.fn>).mock.calls;
+    expect(calls[0]?.[0]).toBe('/admin-react/api/v1/recent-actions/?limit=5');
+  });
+});
