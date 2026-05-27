@@ -1,6 +1,6 @@
 import '@testing-library/jest-dom/vitest';
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 
 import { Table, type TableColumn } from './Table';
@@ -62,5 +62,38 @@ describe('Table', () => {
     );
     expect(screen.queryByText('Nothing here')).not.toBeInTheDocument();
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
+  });
+
+  it('applies persisted column widths via a colgroup + fixed layout', () => {
+    const { container } = renderTable({ columnWidths: { name: 320 } });
+    expect(container.querySelector('table')?.className).toContain('table-fixed');
+    const cols = container.querySelectorAll('colgroup col');
+    expect(cols.length).toBeGreaterThan(0);
+    // The `name` column (2nd descriptor) carries the 320px width.
+    expect((cols[1] as HTMLElement).style.width).toBe('320px');
+  });
+
+  it('renders a resize handle per column when onColumnResize is set', () => {
+    const { container } = renderTable({ onColumnResize: () => {} });
+    expect(container.querySelectorAll('th [role="separator"]').length).toBe(columns.length);
+  });
+
+  it('reports a numeric width for the dragged column (mousedown → move)', () => {
+    const onColumnResize = vi.fn();
+    const { container } = renderTable({ onColumnResize, columnWidths: { name: 200 } });
+    const handle = container.querySelectorAll('th [role="separator"]')[1] as HTMLElement;
+    handle.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, clientX: 100 }));
+    document.dispatchEvent(new MouseEvent('mousemove', { bubbles: true, clientX: 160 }));
+    document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }));
+    expect(onColumnResize).toHaveBeenCalled();
+    const [key, width] = onColumnResize.mock.calls.at(-1) as [string, number];
+    expect(key).toBe('name');
+    expect(typeof width).toBe('number');
+  });
+
+  it('stays auto-layout with no colgroup when no widths are set', () => {
+    const { container } = renderTable();
+    expect(container.querySelector('table')?.className).not.toContain('table-fixed');
+    expect(container.querySelector('colgroup')).toBeNull();
   });
 });

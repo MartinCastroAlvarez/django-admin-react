@@ -2,9 +2,12 @@
 // rows of arbitrary shape; consumers (page packages) pass the data and
 // the cell-render function. No business knowledge.
 
-import type { ReactNode } from 'react';
+import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react';
 
 import { Skeleton } from './Skeleton';
+
+// Smallest a column can be dragged to — keeps a handle reachable.
+const MIN_COL_WIDTH = 60;
 
 export interface TableColumn<Row> {
   key: string;
@@ -41,6 +44,20 @@ export interface TableProps<Row> {
   onToggleRow?: (key: string | number) => void;
   onToggleAll?: (checked: boolean) => void;
   /**
+   * Per-column pixel widths (keyed by `column.key`). When any are set the
+   * table switches to fixed layout so the widths are honoured exactly;
+   * unset columns share the remaining space. The consumer owns
+   * persistence (e.g. localStorage per model) — the primitive stays
+   * generic.
+   */
+  columnWidths?: Record<string, number>;
+  /**
+   * Enables drag-to-resize: a handle on each column's right edge reports
+   * the new pixel width here (live, during the drag). Omit to disable
+   * resizing entirely.
+   */
+  onColumnResize?: (key: string, width: number) => void;
+  /**
    * When true, render shimmer placeholder rows instead of `rows` (e.g.
    * during a foreground refetch when stale rows are still in hand). The
    * header — derived from `columns` — stays put so the layout doesn't
@@ -76,6 +93,8 @@ export function Table<Row>({
   onToggleAll,
   loading = false,
   skeletonRows,
+  columnWidths,
+  onColumnResize,
 }: TableProps<Row>) {
   // Only fall back to the empty-state when we're genuinely empty — not
   // while a fetch is in flight, where we'd rather show skeleton rows.
@@ -85,9 +104,50 @@ export function Table<Row>({
   const selected = selectedKeys ?? new Set<string | number>();
   const allSelected = !loading && rows.length > 0 && rows.every((r) => selected.has(rowKey(r)));
   const skeletonCount = skeletonRows ?? Math.min(Math.max(rows.length || 8, 3), 12);
+
+  // Column resize (#218-adjacent): once any width is set we switch to
+  // fixed layout so the px widths are honoured exactly. A drag on a
+  // column's right-edge handle reports the live width via onColumnResize;
+  // the consumer persists it. In fixed mode every cell truncates at its
+  // column width (so the `noTruncate` opt-out only applies to the default
+  // auto layout — when the user controls widths, they widen to see more).
+  const hasWidths = columnWidths != null && Object.keys(columnWidths).length > 0;
+  const resizable = onColumnResize != null;
+
+  const startResize = (key: string, e: ReactMouseEvent): void => {
+    e.preventDefault();
+    e.stopPropagation();
+    const th = (e.currentTarget as HTMLElement).closest('th');
+    const startWidth = th?.offsetWidth ?? columnWidths?.[key] ?? 150;
+    const startX = e.clientX;
+    const prevUserSelect = document.body.style.userSelect;
+    document.body.style.userSelect = 'none';
+    const onMove = (ev: MouseEvent): void => {
+      onColumnResize?.(key, Math.max(MIN_COL_WIDTH, Math.round(startWidth + (ev.clientX - startX))));
+    };
+    const onUp = (): void => {
+      document.body.style.userSelect = prevUserSelect;
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    };
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  };
+
   return (
     <div className="overflow-x-auto" aria-busy={loading || undefined}>
-      <table className="min-w-full text-sm">
+      <table className={`min-w-full text-sm ${hasWidths ? 'table-fixed' : ''}`}>
+        {hasWidths && (
+          <colgroup>
+            {selectable && <col style={{ width: '2.5rem' }} />}
+            {columns.map((col) => (
+              <col
+                key={col.key}
+                style={columnWidths?.[col.key] ? { width: `${columnWidths[col.key]}px` } : undefined}
+              />
+            ))}
+          </colgroup>
+        )}
         <thead className="bg-gray-50 text-gray-700">
           <tr>
             {selectable && (
@@ -107,15 +167,27 @@ export function Table<Row>({
                 <th
                   key={col.key}
                   scope="col"
-                  className={`whitespace-nowrap px-4 py-2 font-medium ${align} ${sortable ? 'cursor-pointer hover:bg-gray-100' : ''}`}
+                  className={`relative ${hasWidths ? 'overflow-hidden' : 'whitespace-nowrap'} px-4 py-2 font-medium ${align} ${sortable ? 'cursor-pointer hover:bg-gray-100' : ''}`}
                   onClick={sortable ? () => onSort(col.key) : undefined}
                 >
-                  <span className="inline-flex items-center gap-1">
+                  <span className={`inline-flex items-center gap-1 ${hasWidths ? 'max-w-full truncate' : ''}`}>
                     {col.header}
                     {sortable && sortKey === col.key ? (
                       <span aria-hidden>{sortDirection === 'desc' ? '▼' : '▲'}</span>
                     ) : null}
                   </span>
+                  {resizable && (
+                    // Drag handle on the right edge. stopPropagation keeps
+                    // a resize from also triggering the column's sort.
+                    <span
+                      role="separator"
+                      aria-orientation="vertical"
+                      aria-label={`Resize column`}
+                      onMouseDown={(e) => startResize(col.key, e)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="absolute right-0 top-0 z-10 h-full w-1.5 cursor-col-resize select-none hover:bg-blue-400/60"
+                    />
+                  )}
                 </th>
               );
             })}
@@ -167,7 +239,15 @@ export function Table<Row>({
                         never split mid-word. A `noTruncate` column (e.g.
                         the primary key) opts out: still one line, but the
                         whole value shows and the table scrolls instead. */}
-                        <div className={col.noTruncate ? 'whitespace-nowrap' : 'max-w-[16rem] truncate'}>
+                        <div
+                          className={
+                            hasWidths
+                              ? 'truncate'
+                              : col.noTruncate
+                                ? 'whitespace-nowrap'
+                                : 'max-w-[16rem] truncate'
+                          }
+                        >
                           {col.render(row)}
                         </div>
                       </td>
