@@ -85,21 +85,38 @@ class CreateView(View):
         if not model_admin.has_add_permission(request):
             return forbidden_response(request)
 
-        parsed = parse_json_body(request)
-        if isinstance(parsed, HttpResponse):
-            return parsed
-        payload: dict[str, Any] = parsed
+        # FileField / ImageField uploads arrive as multipart/form-data
+        # (#241). Branch on content type: multipart feeds the ModelForm
+        # ``request.POST`` (a QueryDict, so ``getlist`` preserves M2M) +
+        # ``request.FILES``; JSON keeps the existing envelope path. CSRF is
+        # enforced either way — ``CsrfViewMiddleware`` ran before this view
+        # and there is no ``@csrf_exempt``.
+        is_multipart = (request.content_type or "").startswith("multipart/form-data")
+        if is_multipart:
+            form_data: Any = request.POST
+            files: Any = request.FILES
+            # Validate the union of POST + FILES keys: a file posted to a
+            # readonly / excluded / unknown field is rejected just like a
+            # scalar would be. Bare multipart values are not {id,label}
+            # envelopes, so ``coerce_fk_values`` is skipped.
+            submitted_keys: dict[str, Any] = dict.fromkeys(request.POST)
+            submitted_keys.update(dict.fromkeys(request.FILES))
+        else:
+            parsed = parse_json_body(request)
+            if isinstance(parsed, HttpResponse):
+                return parsed
+            payload: dict[str, Any] = parsed
+            form_data = coerce_fk_values(payload, model)
+            files = None
+            submitted_keys = payload
 
         writable = writable_field_names(model, model_admin, request, obj=None)
         forbidden = readonly_or_excluded_names(model_admin, request, obj=None)
-        rejection = reject_forbidden_keys(payload, writable, forbidden)
+        rejection = reject_forbidden_keys(submitted_keys, writable, forbidden)
         if rejection is not None:
             return rejection
 
-        form = model_admin.get_form(request, obj=None)(
-            data=coerce_fk_values(payload, model),
-            files=None,
-        )
+        form = model_admin.get_form(request, obj=None)(data=form_data, files=files)
         if not form.is_valid():
             return validation_failed(form_errors_to_envelope(form))
 
