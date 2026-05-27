@@ -85,7 +85,11 @@ class ListView(View):
             return not_found_response()
         model, model_admin = resolved
 
+        list_display = list(model_admin.get_list_display(request))
         queryset = model_admin.get_queryset(request)
+        # Apply ``list_select_related`` up front so FK columns don't issue
+        # one query per row (Django changelist parity / N+1 fix).
+        queryset = _apply_select_related(queryset, model_admin, list_display)
 
         q = request.GET.get("q", "") or ""
         if q and model_admin.search_fields:
@@ -109,7 +113,6 @@ class ListView(View):
         start = (page - 1) * page_size
         end = start + page_size
 
-        list_display = list(model_admin.get_list_display(request))
         columns = _columns_payload(model_admin, list_display, request)
 
         results = [
@@ -291,6 +294,50 @@ def _row_for(
             value = ""
         fields[name] = _serialize_list_value(obj, name, value, admin_site)
     return {"pk": obj.pk, "label": label_for(obj), "fields": fields}
+
+
+def _apply_select_related(queryset: Any, model_admin: ModelAdmin, list_display: list[str]) -> Any:
+    """Apply ``ModelAdmin.list_select_related``, mirroring Django's changelist.
+
+    - ``True``           → ``select_related()`` (follow every FK).
+    - a list / tuple     → ``select_related(*list_select_related)``.
+    - ``False`` (default)→ ``select_related()`` only when ``list_display``
+      includes a forward FK / one-to-one field — Django's automatic
+      behavior that avoids an N+1 on FK columns.
+
+    Never overrides a ``select_related`` the admin's ``get_queryset``
+    already configured.
+    """
+    if getattr(queryset.query, "select_related", False):
+        return queryset
+    lsr = getattr(model_admin, "list_select_related", False)
+    if lsr is True:
+        return queryset.select_related()
+    if lsr:
+        return queryset.select_related(*lsr)
+    if _has_related_field_in_list_display(model_admin, list_display):
+        return queryset.select_related()
+    return queryset
+
+
+def _has_related_field_in_list_display(model_admin: ModelAdmin, list_display: list[str]) -> bool:
+    """True if any ``list_display`` entry is a forward FK / one-to-one field.
+
+    Only forward single-valued relations benefit from ``select_related``;
+    many-to-many (needs ``prefetch_related``) and method/callable columns
+    are skipped.
+    """
+    from django.core.exceptions import FieldDoesNotExist
+
+    meta = model_admin.model._meta
+    for name in list_display:
+        try:
+            field = meta.get_field(name)
+        except FieldDoesNotExist:
+            continue
+        if getattr(field, "many_to_one", False) or getattr(field, "one_to_one", False):
+            return True
+    return False
 
 
 def _serialize_list_value(obj: Model, name: str, value: Any, admin_site: Any = None) -> Any:

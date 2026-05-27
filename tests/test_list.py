@@ -297,3 +297,66 @@ def test_list_cell_non_choice_field_unaffected(monkeypatch) -> None:  # noqa: AN
     monkeypatch.setattr(list_view, "safe_get_field", lambda obj, name: field)
 
     assert list_view._serialize_list_value(object(), "name", "hello") == "hello"
+
+
+# --------------------------------------------------------------------------- #
+# list_select_related — avoid N+1 on FK columns (#305)                        #
+# --------------------------------------------------------------------------- #
+def test_has_related_field_in_list_display_detects_fk() -> None:
+    """A forward FK in list_display is detected; non-relation columns and
+    unknown / method names are not."""
+    from django.contrib import admin
+    from django.contrib.auth.models import Permission
+
+    from django_admin_react.api.views import list as list_view
+
+    ma = admin.ModelAdmin(Permission, admin.site)
+    # Permission.content_type is a ForeignKey.
+    assert list_view._has_related_field_in_list_display(ma, ["content_type"]) is True
+    assert list_view._has_related_field_in_list_display(ma, ["codename", "name"]) is False
+    assert list_view._has_related_field_in_list_display(ma, ["not_a_field"]) is False
+
+
+def test_apply_select_related_auto_when_fk_in_list_display() -> None:
+    """Default (list_select_related=False): auto select_related() when a FK
+    column is present, and a no-op otherwise."""
+    from django.contrib import admin
+    from django.contrib.auth.models import Permission
+
+    from django_admin_react.api.views import list as list_view
+
+    ma = admin.ModelAdmin(Permission, admin.site)
+    qs = Permission.objects.all()
+    assert list_view._apply_select_related(qs, ma, ["content_type"]).query.select_related
+    assert not list_view._apply_select_related(qs, ma, ["codename"]).query.select_related
+
+
+def test_apply_select_related_honours_explicit_list() -> None:
+    """A list/tuple list_select_related is applied verbatim."""
+    from django.contrib import admin
+    from django.contrib.auth.models import Permission
+
+    from django_admin_react.api.views import list as list_view
+
+    class _MA(admin.ModelAdmin):
+        list_select_related = ["content_type"]
+
+    ma = _MA(Permission, admin.site)
+    qs = Permission.objects.all()
+    out = list_view._apply_select_related(qs, ma, ["codename"])
+    assert out.query.select_related == {"content_type": {}}
+
+
+def test_apply_select_related_true_follows_all_fks() -> None:
+    """list_select_related = True → select_related() (all FKs)."""
+    from django.contrib import admin
+    from django.contrib.auth.models import Permission
+
+    from django_admin_react.api.views import list as list_view
+
+    class _MA(admin.ModelAdmin):
+        list_select_related = True
+
+    ma = _MA(Permission, admin.site)
+    out = list_view._apply_select_related(Permission.objects.all(), ma, ["codename"])
+    assert out.query.select_related is True
