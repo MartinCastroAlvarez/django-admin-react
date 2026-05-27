@@ -115,6 +115,29 @@ export function ListPage() {
   });
   const [colsOpen, setColsOpen] = useState(false);
 
+  // Drag-to-resize column widths, persisted per app/model in localStorage
+  // (a UI preference, like hidden columns). The Table owns the drag
+  // interaction; we just hold + persist the px widths.
+  const colWidthsKey = `dar:colwidths:${appLabel}:${modelName}`;
+  const [colWidths, setColWidths] = useState<Record<string, number>>(() => {
+    try {
+      const raw = localStorage.getItem(`dar:colwidths:${appLabel}:${modelName}`);
+      return raw ? (JSON.parse(raw) as Record<string, number>) : {};
+    } catch {
+      return {};
+    }
+  });
+  const resizeColumn = (key: string, width: number): void =>
+    setColWidths((prev) => {
+      const next = { ...prev, [key]: width };
+      try {
+        localStorage.setItem(colWidthsKey, JSON.stringify(next));
+      } catch {
+        /* localStorage unavailable (private mode) — best effort. */
+      }
+      return next;
+    });
+
   // Persist the applied list_filter selections per model (a UI
   // preference, like the column customizer) so a later bare visit can
   // restore them. Keyed outside the `dar:v1:*` data cache.
@@ -616,6 +639,8 @@ export function ListPage() {
             onToggleRow={toggleRow}
             onToggleAll={(checked) => toggleAll(checked, data.results)}
             loading={loading}
+            columnWidths={colWidths}
+            onColumnResize={resizeColumn}
           />
         )}
       </Card>
