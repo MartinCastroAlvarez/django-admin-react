@@ -219,6 +219,7 @@ def _components() -> dict[str, Any]:
                 "required": [
                     "app_label",
                     "model_name",
+                    "pk_field",
                     "permissions",
                     "columns",
                     "search_fields",
@@ -227,11 +228,20 @@ def _components() -> dict[str, Any]:
                     "page",
                     "page_size",
                     "total",
+                    "full_count",
                     "results",
                 ],
                 "properties": {
                     "app_label": {"type": "string"},
                     "model_name": {"type": "string"},
+                    "pk_field": {
+                        "type": "string",
+                        "description": (
+                            "Name of the model's primary-key field "
+                            "(`model._meta.pk.name`). The SPA pins this column "
+                            "first, never truncates it, and keeps it visible."
+                        ),
+                    },
                     "permissions": {
                         "type": "object",
                         "properties": {
@@ -258,6 +268,16 @@ def _components() -> dict[str, Any]:
                     "page": {"type": "integer"},
                     "page_size": {"type": "integer"},
                     "total": {"type": "integer"},
+                    "full_count": {
+                        "type": ["integer", "null"],
+                        "description": (
+                            "Unfiltered (full-table) count from the admin's "
+                            "get_queryset — `show_full_result_count` parity. "
+                            "Equals `total` when the list isn't narrowed; "
+                            "`null` when `show_full_result_count` is False. "
+                            "The SPA renders 'X of Y' when it differs from total."
+                        ),
+                    },
                     "results": {
                         "type": "array",
                         "items": {

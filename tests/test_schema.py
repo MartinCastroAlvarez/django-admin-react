@@ -76,6 +76,25 @@ def test_schema_components_include_known_shapes(superuser_client: Client) -> Non
 
 
 @pytest.mark.django_db
+def test_list_response_schema_includes_pk_field_and_full_count(
+    superuser_client: Client,
+) -> None:
+    """The schema must mirror the list response contract — `pk_field`
+    (#372) and `full_count` (#311) are unconditional response keys, so they
+    belong in both `properties` and `required`. Guards the schema↔contract
+    drift that shipped these fields without updating the OpenAPI envelope."""
+    body = superuser_client.get(SCHEMA_URL).json()
+    list_schema = body["components"]["schemas"]["ListResponse"]
+    props = list_schema["properties"]
+    assert "pk_field" in props
+    assert "full_count" in props
+    # full_count is nullable (null when show_full_result_count is False).
+    assert "null" in props["full_count"]["type"]
+    assert "pk_field" in list_schema["required"]
+    assert "full_count" in list_schema["required"]
+
+
+@pytest.mark.django_db
 def test_field_type_enum_includes_manytomany_and_json(
     superuser_client: Client,
 ) -> None:
