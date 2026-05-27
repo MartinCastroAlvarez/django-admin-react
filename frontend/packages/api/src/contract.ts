@@ -262,6 +262,14 @@ export interface FieldDescriptor {
 export interface FieldsetDescriptor {
   title: string | null;
   fields: string[];
+  /**
+   * Django fieldset `classes` (e.g. `"collapse"`, `"wide"`). When it
+   * includes `"collapse"`, the SPA renders the section collapsed by
+   * default. Absent on the flat fallback group.
+   */
+  classes?: string[];
+  /** Optional fieldset help text shown under the section title. */
+  description?: string | null;
 }
 
 /** One field's header metadata inside an inline.

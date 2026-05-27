@@ -460,6 +460,46 @@ def test_named_fieldsets_are_honoured(superuser_client: Client) -> None:
     assert "Empty" not in titles
 
 
+@pytest.mark.django_db
+def test_fieldset_classes_and_description_are_surfaced(superuser_client: Client) -> None:
+    """Closes #306: a fieldset's ``classes`` (e.g. ``collapse``) and
+    ``description`` are carried on the descriptor so the SPA can render a
+    collapsible section with help text (Django change-form parity)."""
+    g = Group.objects.create(name="example")
+    with admin_override(
+        Group,
+        get_fieldsets=lambda self, request, obj=None: [
+            (
+                "Advanced",
+                {
+                    "fields": ("name",),
+                    "classes": ("collapse", "wide"),
+                    "description": "Rarely-changed settings.",
+                },
+            ),
+        ],
+    ):
+        body = superuser_client.get(_url(g.pk)).json()
+    fs = next(f for f in body["fieldsets"] if f["title"] == "Advanced")
+    assert fs["classes"] == ["collapse", "wide"]
+    assert fs["description"] == "Rarely-changed settings."
+
+
+@pytest.mark.django_db
+def test_fieldset_without_classes_description_defaults(superuser_client: Client) -> None:
+    """A fieldset with no ``classes``/``description`` reports an empty class
+    list and a null description (not missing keys)."""
+    g = Group.objects.create(name="example")
+    with admin_override(
+        Group,
+        get_fieldsets=lambda self, request, obj=None: [("Main", {"fields": ("name",)})],
+    ):
+        body = superuser_client.get(_url(g.pk)).json()
+    fs = next(f for f in body["fieldsets"] if f["title"] == "Main")
+    assert fs["classes"] == []
+    assert fs["description"] is None
+
+
 def test_fieldsets_payload_swallows_get_fieldsets_exception() -> None:
     """`_fieldsets_payload` must degrade to a single flat group when the
     admin's `get_fieldsets` raises (the except + empty-raw fallback).

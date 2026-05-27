@@ -10,6 +10,7 @@
 // Edit/Delete are gated by the `permissions` block the API returns.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { ChevronDown } from 'lucide-react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import {
@@ -23,6 +24,7 @@ import {
   type DeletePreviewResponse,
   type DetailResponse,
   type FieldDescriptor,
+  type FieldsetDescriptor,
   type InlineDescriptor,
   type InlineWriteItem,
   type InlineWritePayload,
@@ -70,6 +72,64 @@ function DetailValue({ field }: { field: FieldDescriptor }) {
     if (match) return <>{match.label}</>;
   }
   return <FieldValueView value={field.value} />;
+}
+
+// Render one fieldset in the read view. Honours Django's fieldset
+// `classes` + `description` (#306): a `collapse` section renders
+// collapsed-by-default behind a toggle, and any `description` shows as
+// section help text under the title.
+function FieldsetSection({
+  fieldset,
+  fields,
+}: {
+  fieldset: FieldsetDescriptor;
+  fields: Record<string, FieldDescriptor>;
+}) {
+  const collapsible = (fieldset.classes ?? []).includes('collapse');
+  const [open, setOpen] = useState(!collapsible);
+
+  const body = (
+    <>
+      {fieldset.description ? (
+        <p className="mb-3 text-xs text-gray-500">{fieldset.description}</p>
+      ) : null}
+      <dl className="divide-y divide-gray-100">
+        {fieldset.fields.map((name) => {
+          const field = fields[name];
+          if (!field) return null;
+          return (
+            <div key={name} className="grid grid-cols-3 gap-4 py-2 text-sm">
+              <dt className="text-gray-500">{field.label}</dt>
+              <dd className="col-span-2 whitespace-pre-wrap text-gray-900">
+                <DetailValue field={field} />
+              </dd>
+            </div>
+          );
+        })}
+      </dl>
+    </>
+  );
+
+  if (collapsible) {
+    return (
+      <Card>
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          aria-expanded={open}
+          className="flex w-full items-center justify-between gap-2 text-left text-base font-semibold text-gray-900"
+        >
+          <span>{fieldset.title ?? 'Details'}</span>
+          <ChevronDown
+            className={`h-4 w-4 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`}
+            aria-hidden
+          />
+        </button>
+        {open ? <div className="mt-3">{body}</div> : null}
+      </Card>
+    );
+  }
+  return <Card title={fieldset.title ?? undefined}>{body}</Card>;
 }
 
 export function DetailPage() {
@@ -176,25 +236,11 @@ export function DetailPage() {
       ) : (
         <>
           {data.fieldsets.map((fieldset, idx) => (
-            <Card
+            <FieldsetSection
               key={`fs-${idx}-${fieldset.title ?? 'default'}`}
-              title={fieldset.title ?? undefined}
-            >
-              <dl className="divide-y divide-gray-100">
-                {fieldset.fields.map((name) => {
-                  const field = data.fields[name];
-                  if (!field) return null;
-                  return (
-                    <div key={name} className="grid grid-cols-3 gap-4 py-2 text-sm">
-                      <dt className="text-gray-500">{field.label}</dt>
-                      <dd className="col-span-2 whitespace-pre-wrap text-gray-900">
-                        <DetailValue field={field} />
-                      </dd>
-                    </div>
-                  );
-                })}
-              </dl>
-            </Card>
+              fieldset={fieldset}
+              fields={data.fields}
+            />
           ))}
 
           {/* Inlines (#54): the backend surfaces ModelAdmin.inlines + their

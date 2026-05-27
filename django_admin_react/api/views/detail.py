@@ -186,7 +186,19 @@ def _fieldsets_payload(
             if sub in visible_set
         ]
         if fields:
-            payload.append({"title": title, "fields": fields})
+            # Carry the fieldset's ``classes`` (e.g. ``collapse`` / ``wide``)
+            # and ``description`` so the SPA can render a collapsible section
+            # and show the section help text (Django change-form parity).
+            classes = [str(c) for c in (opts.get("classes") or ())]
+            description = opts.get("description")
+            payload.append(
+                {
+                    "title": title,
+                    "fields": fields,
+                    "classes": classes,
+                    "description": str(description) if description else None,
+                }
+            )
     return payload or [{"title": None, "fields": visible_names}]
 
 
