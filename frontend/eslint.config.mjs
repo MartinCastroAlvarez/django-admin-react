@@ -56,6 +56,7 @@ export default tseslint.config(
       'packages/form/**/*.{ts,tsx}',
       'packages/history/**/*.{ts,tsx}',
       'packages/models/**/*.{ts,tsx}',
+      'packages/search/**/*.{ts,tsx}',
       'packages/sidebar/**/*.{ts,tsx}',
       'packages/settings/**/*.{ts,tsx}',
       'packages/ui/**/*.{ts,tsx}',
