@@ -6,7 +6,7 @@
 // validation errors come back in the envelope and render next to each
 // input. On success, navigates to the new object's detail page.
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import {
@@ -20,6 +20,7 @@ import { Button, Card, EmptyState, Spinner } from '@dar/ui';
 
 import { FieldInput } from '../components/FieldInput';
 import { useToast } from '../toast';
+import { useUnsavedGuard } from '../useUnsavedGuard';
 
 export function CreatePage() {
   const params = useParams<{ appLabel: string; modelName: string }>();
@@ -117,12 +118,20 @@ function CreateForm({ schema, onCreate, onCancel }: CreateFormProps) {
   const [nonFieldError, setNonFieldError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
+  // Unsaved-changes guard (#290): warn on tab-close/reload once the
+  // operator has typed into the new-object form.
+  const initialJsonRef = useRef<string | null>(null);
+  if (initialJsonRef.current === null) initialJsonRef.current = JSON.stringify(values);
+  const dirty = JSON.stringify(values) !== initialJsonRef.current;
+  useUnsavedGuard(dirty && !saving);
+
   async function runSave(action: CreateSaveAction) {
     setSaving(true);
     setErrors({});
     setNonFieldError(null);
     try {
       await onCreate(values, action);
+      initialJsonRef.current = JSON.stringify(values);
     } catch (err) {
       if (err instanceof ApiError && err.envelope?.error) {
         const fieldErrors = err.envelope.error.fields ?? {};
