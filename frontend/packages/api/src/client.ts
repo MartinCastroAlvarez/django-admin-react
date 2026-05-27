@@ -8,6 +8,8 @@ import type {
   ActionRunResponse,
   AutocompleteResponse,
   AddFormResponse,
+  BulkUpdateEntry,
+  BulkUpdateResponse,
   CreatePayload,
   CreateResponse,
   DeletePreviewResponse,
@@ -195,6 +197,15 @@ export class ApiClient {
 
   create(appLabel: string, modelName: string, payload: CreatePayload): Promise<CreateResponse> {
     return this.request<CreateResponse>('POST', `${appLabel}/${modelName}/`, payload);
+  }
+
+  /** Bulk PATCH for inline list_editable edits (#243) — PATCH <app>/<model>/bulk/. */
+  bulkUpdate(
+    appLabel: string,
+    modelName: string,
+    updates: BulkUpdateEntry[],
+  ): Promise<BulkUpdateResponse> {
+    return this.request<BulkUpdateResponse>('PATCH', `${appLabel}/${modelName}/bulk/`, { updates });
   }
 
   update(
