@@ -26,6 +26,8 @@ from django.db.models import FileField
 from django.db.models import ForeignKey
 from django.db.models import ManyToManyField
 from django.db.models import Model
+from django.forms.widgets import Textarea
+from django.forms.widgets import TextInput
 from django.http import HttpRequest
 from django.http import HttpResponse
 from django.http import JsonResponse
@@ -358,7 +360,40 @@ def _descriptor_for(
     # relations). ``elif`` so ``radio_fields`` wins if a field is in both.
     elif name in (getattr(model_admin, "raw_id_fields", None) or ()):
         descriptor["widget"] = "raw_id"
+    # formfield_overrides (#446): the bound form field's widget already
+    # reflects the admin's ``formfield_overrides`` /
+    # ``formfield_for_dbfield`` — Django applied them in ``get_form``.
+    # Honour the one override the SPA can act on with the existing type
+    # vocabulary: a single-line string promoted to a ``Textarea`` becomes
+    # the multi-line ``text`` type (rendered as a ``<textarea>``), and a
+    # multi-line ``text`` forced to a single-line ``TextInput`` collapses
+    # back to ``string``. Other widget overrides (date pickers, FK
+    # autocomplete) the SPA already renders from the field type. Choice
+    # fields are untouched — their ``choice`` type wins above.
+    _apply_widget_override(descriptor, form_field)
     return descriptor
+
+
+def _apply_widget_override(descriptor: dict[str, Any], form_field: Any) -> None:
+    """Reconcile the descriptor type with the bound form field's widget.
+
+    Reuses the form widget (source of truth) so ``formfield_overrides``
+    has a visible effect, mapping only to the existing ``string`` /
+    ``text`` vocabulary so no new wire type is introduced (#446).
+    """
+    if form_field is None:
+        return
+    widget = getattr(form_field, "widget", None)
+    if widget is None:
+        return
+    if descriptor["type"] == "string" and isinstance(widget, Textarea):
+        descriptor["type"] = "text"
+    elif (
+        descriptor["type"] == "text"
+        and isinstance(widget, TextInput)
+        and not isinstance(widget, Textarea)
+    ):
+        descriptor["type"] = "string"
 
 
 def _readonly_callable_descriptor(

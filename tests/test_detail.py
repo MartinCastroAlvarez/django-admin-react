@@ -719,3 +719,70 @@ def test_raw_id_fields_surface_widget_hint() -> None:
     )
     assert _descriptor_for(name="content_type", **common)["widget"] == "raw_id"
     assert "widget" not in _descriptor_for(name="codename", **common)
+
+
+@pytest.mark.django_db
+def test_formfield_overrides_textarea_promotes_string_to_text() -> None:
+    """A CharField the admin overrides with a ``Textarea`` via
+    ``formfield_overrides`` surfaces as the multi-line ``text`` type (so the
+    SPA renders a ``<textarea>``); a plain admin keeps ``string`` (#446).
+    The form widget is the source of truth — Django applies the override in
+    ``get_form``."""
+    from django import forms
+    from django.contrib import admin
+    from django.contrib.auth import get_user_model
+    from django.contrib.auth.models import Permission
+    from django.db import models
+    from django.test import RequestFactory
+
+    from django_admin_react.api.views.detail import _descriptor_for
+
+    class _TextareaAdmin(admin.ModelAdmin):
+        formfield_overrides = {models.CharField: {"widget": forms.Textarea}}
+
+    request = RequestFactory().get("/")
+    request.user = get_user_model().objects.create_superuser(
+        username="ffo-su", email="ffo@example.com", password="x"  # noqa: S106
+    )
+
+    def descriptor(model_admin: admin.ModelAdmin) -> dict:
+        form = model_admin.get_form(request, obj=None)()
+        return _descriptor_for(
+            model=Permission,
+            model_admin=model_admin,
+            obj=Permission(),
+            name="name",  # CharField
+            form=form,
+            is_readonly=False,
+            admin_site=admin.site,
+            request=request,
+        )
+
+    # Override → multi-line text; default admin → single-line string.
+    assert descriptor(_TextareaAdmin(Permission, admin.site))["type"] == "text"
+    assert descriptor(admin.ModelAdmin(Permission, admin.site))["type"] == "string"
+
+
+def test_apply_widget_override_reconciles_type_with_widget() -> None:
+    """``_apply_widget_override`` maps only between the existing ``string``
+    and ``text`` types from the bound widget, and no-ops otherwise (#446)."""
+    from django import forms
+
+    from django_admin_react.api.views.detail import _apply_widget_override
+
+    def reconcile(type_: str, widget: object) -> str:
+        d = {"type": type_}
+        _apply_widget_override(d, type("F", (), {"widget": widget})())
+        return d["type"]
+
+    # Forward: single-line string + Textarea → text.
+    assert reconcile("string", forms.Textarea()) == "text"
+    # Reverse: multi-line text forced to a single-line TextInput → string.
+    assert reconcile("text", forms.TextInput()) == "string"
+    # No-ops: matching defaults, unrelated types, and absent form fields.
+    assert reconcile("string", forms.TextInput()) == "string"
+    assert reconcile("text", forms.Textarea()) == "text"
+    assert reconcile("integer", forms.Textarea()) == "integer"
+    none_field = {"type": "string"}
+    _apply_widget_override(none_field, None)
+    assert none_field["type"] == "string"
