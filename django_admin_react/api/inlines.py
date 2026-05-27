@@ -135,7 +135,7 @@ def _spec_for_inline(
     if can_view:
         rows = _rows_for_inline(inline, parent, fk_name, visible_fields, request, admin_site)
 
-    return {
+    entry: dict[str, Any] = {
         "name": fk_name + "_set" if not hasattr(child_model, fk_name + "_set") else fk_name,
         "label": str(meta.verbose_name_plural),
         "kind": kind,
@@ -151,6 +151,44 @@ def _spec_for_inline(
         "fields": fields_meta,
         "rows": rows,
     }
+
+    # Django's ``InlineModelAdmin.show_change_link`` adds a per-row link to
+    # each child's own change page. Mirror it, but only advertise a link the
+    # user could actually follow: the child model must be registered on the
+    # admin site *and* the user must have view permission for it (issue #301
+    # least-disclosure, same gate as ``serialize_fk_value``'s ``to``). Without
+    # that gate the SPA would render a link the detail endpoint 404s on and
+    # leak adjacency to a model the user can't view.
+    change_link_to = _change_link_target(child_model, request, admin_site)
+    if getattr(inline, "show_change_link", False) and change_link_to is not None:
+        entry["show_change_link"] = True
+        entry["change_link_to"] = change_link_to
+
+    return entry
+
+
+def _change_link_target(
+    child_model: type[Model],
+    request: HttpRequest,
+    admin_site: Any,
+) -> dict[str, str] | None:
+    """Routing envelope for the inline change link, or ``None``.
+
+    Returns ``{"app_label": ..., "model_name": ...}`` only when the child
+    model is registered on ``admin_site`` and the current user has view
+    permission for it — the same registry + per-user ``has_view_permission``
+    gate ``serialize_fk_value`` uses for its ``to`` block.
+    """
+    if admin_site is None:
+        return None
+    registry = getattr(admin_site, "_registry", {})
+    target_admin = registry.get(child_model)
+    if target_admin is None:
+        return None
+    if request is not None and not target_admin.has_view_permission(request):
+        return None
+    meta = child_model._meta
+    return {"app_label": meta.app_label, "model_name": meta.model_name}
 
 
 def _resolve_fk_name(inline: InlineModelAdmin, parent: Model) -> str | None:

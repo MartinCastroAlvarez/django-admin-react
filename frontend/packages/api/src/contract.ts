@@ -358,6 +358,21 @@ export interface InlineDescriptor {
   can_delete: boolean;
   fields: InlineFieldMeta[];
   rows: InlineRow[];
+  /**
+   * Django's `InlineModelAdmin.show_change_link` — when true, each row
+   * links to the child object's own change page (#384). Present (and
+   * accompanied by `change_link_to`) only when the inline opts in *and*
+   * the child model is registered on the admin site *and* the user has
+   * view permission for it, so the SPA never renders a link the detail
+   * endpoint would 404 on (same gate as `ForeignKeyValue.to`, #301).
+   */
+  show_change_link?: boolean;
+  /**
+   * The child model's `(real_app_label, model_name)` used to build the
+   * per-row change-link URL `<mount>/<app_label>/<model_name>/<pk>`.
+   * Present only alongside `show_change_link`.
+   */
+  change_link_to?: { app_label: string; model_name: string };
 }
 
 /**

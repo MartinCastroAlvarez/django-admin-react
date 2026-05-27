@@ -203,3 +203,122 @@ def test_inline_row_fk_carries_navigation_target() -> None:
     assert len(rows) == 1
     fk = rows[0]["fields"]["content_type"]
     assert fk["to"] == {"app_label": "contenttypes", "model_name": "contenttype"}
+
+
+# --------------------------------------------------------------------------- #
+# show_change_link (#384): per-row link to the child's own change page         #
+# --------------------------------------------------------------------------- #
+@contextmanager
+def _registered(model_cls):
+    """Temporarily register ``model_cls`` on the admin site, if needed."""
+    added = model_cls not in admin.site._registry
+    if added:
+        admin.site.register(model_cls)
+    try:
+        yield
+    finally:
+        if added:
+            with suppress(Exception):
+                admin.site.unregister(model_cls)
+
+
+def _superuser_request():
+    from django.contrib.auth import get_user_model
+    from django.test import RequestFactory
+
+    request = RequestFactory().get("/")
+    request.user = get_user_model().objects.create_superuser(
+        username="scl-su", email="scl@example.com", password="x"
+    )
+    return request
+
+
+@pytest.mark.django_db
+def test_inline_show_change_link_emitted_when_opted_in_and_viewable() -> None:
+    """When the inline sets ``show_change_link`` and the child model is
+    registered + viewable, the descriptor carries ``show_change_link`` plus
+    the child's ``change_link_to`` routing envelope (#384)."""
+    from django.contrib.auth.models import Permission
+    from django.contrib.contenttypes.models import ContentType
+
+    from django_admin_react.api.inlines import _spec_for_inline
+
+    ct = ContentType.objects.create(app_label="dar_test", model="linky")
+
+    class _PermInline(TabularInline):
+        model = Permission
+        fk_name = "content_type"
+        show_change_link = True
+
+    # Parent model is ContentType — the model the child's ``content_type``
+    # FK points back to (so ``get_fields`` can build the inline formset).
+    inline = _PermInline(ContentType, admin.site)
+    request = _superuser_request()
+
+    with _registered(Permission):
+        spec = _spec_for_inline(inline, ct, request, admin.site)
+
+    assert spec is not None
+    assert spec["show_change_link"] is True
+    assert spec["change_link_to"] == {"app_label": "auth", "model_name": "permission"}
+
+
+@pytest.mark.django_db
+def test_inline_show_change_link_absent_when_not_opted_in() -> None:
+    """Without ``show_change_link`` the descriptor omits both keys, even when
+    the child model is registered + viewable."""
+    from django.contrib.auth.models import Permission
+    from django.contrib.contenttypes.models import ContentType
+
+    from django_admin_react.api.inlines import _spec_for_inline
+
+    ct = ContentType.objects.create(app_label="dar_test", model="nolink")
+
+    class _PermInline(TabularInline):
+        model = Permission
+        fk_name = "content_type"
+
+    inline = _PermInline(ContentType, admin.site)
+    request = _superuser_request()
+
+    with _registered(Permission):
+        spec = _spec_for_inline(inline, ct, request, admin.site)
+
+    assert spec is not None
+    assert "show_change_link" not in spec
+    assert "change_link_to" not in spec
+
+
+@pytest.mark.django_db
+def test_inline_show_change_link_gated_on_registration() -> None:
+    """``show_change_link`` is suppressed when the child model is *not*
+    registered on the admin site — we never advertise a link the detail
+    endpoint would 404 on (same gate as the FK ``to`` envelope, #301)."""
+    from django.contrib.auth.models import Permission
+    from django.contrib.contenttypes.models import ContentType
+
+    from django_admin_react.api.inlines import _spec_for_inline
+
+    ct = ContentType.objects.create(app_label="dar_test", model="unreg")
+
+    class _PermInline(TabularInline):
+        model = Permission
+        fk_name = "content_type"
+        show_change_link = True
+
+    inline = _PermInline(ContentType, admin.site)
+    request = _superuser_request()
+
+    # Ensure Permission is unregistered for the duration of this assertion.
+    was_registered = Permission in admin.site._registry
+    if was_registered:
+        admin.site.unregister(Permission)
+    try:
+        spec = _spec_for_inline(inline, ct, request, admin.site)
+    finally:
+        if was_registered:
+            admin.site.register(Permission)
+
+    assert spec is not None
+    assert "show_change_link" not in spec
+    assert "change_link_to" not in spec
