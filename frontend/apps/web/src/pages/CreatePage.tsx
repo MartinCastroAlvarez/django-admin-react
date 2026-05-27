@@ -17,8 +17,8 @@ import {
   type WriteValue,
 } from '@dar/data';
 import { Button, Card, EmptyState, Spinner } from '@dar/ui';
+import { FieldInput } from '@dar/form';
 
-import { FieldInput } from '../components/FieldInput';
 import { useToast } from '../toast';
 import { useUnsavedGuard } from '../useUnsavedGuard';
 

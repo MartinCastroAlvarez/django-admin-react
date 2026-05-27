@@ -19,8 +19,8 @@ import {
   type ListRow,
 } from '@dar/data';
 import { Button, Card, EmptyState, Input, Modal, Skeleton, Table } from '@dar/ui';
+import { FieldValueView } from '@dar/details';
 
-import { FieldValueView } from '../components/FieldValueView';
 import { useToast } from '../toast';
 
 // Query params the page manages itself; everything else is a

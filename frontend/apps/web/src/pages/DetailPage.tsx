@@ -31,11 +31,10 @@ import {
   type WriteValue,
 } from '@dar/data';
 import { Button, Card, EmptyState, Modal, Spinner, Table } from '@dar/ui';
+import { FieldValueView } from '@dar/details';
+import { FieldInput, InlineEditor } from '@dar/form';
 
-import { FieldInput } from '../components/FieldInput';
-import { FieldValueView } from '../components/FieldValueView';
 import { HistoryModal } from '../components/HistoryModal';
-import { InlineEditor } from '../components/InlineEditor';
 import { useToast } from '../toast';
 import { useUnsavedGuard } from '../useUnsavedGuard';
 
