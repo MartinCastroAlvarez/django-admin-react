@@ -192,10 +192,22 @@ def _spec_for_simple_filter(
         lookups = list(instance.lookups(request, model_admin) or [])
     except Exception:  # pragma: no cover — admin author error
         lookups = []
+    # The lookup the filter is currently applying — Django's
+    # ``SimpleListFilter.value()``. Crucially this includes a *default*
+    # the filter applies when no querystring param is present (a common
+    # "exclude test tenants unless opted in" pattern): such a filter
+    # returns its default from ``value()``, so the SPA can reflect the
+    # default as selected instead of showing "All" while the backend
+    # silently narrows the rows (#283). ``None`` means no selection.
+    try:
+        selected = instance.value()
+    except Exception:  # pragma: no cover — admin author error
+        selected = None
     return {
         "name": instance.parameter_name,
         "label": str(getattr(instance, "title", "") or instance.parameter_name),
         "type": "custom",
+        "selected": selected,
         "lookups": [{"value": v, "label": str(lbl)} for v, lbl in lookups],
     }
 

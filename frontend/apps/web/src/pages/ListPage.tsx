@@ -852,7 +852,10 @@ function FilterModal({ filters, active, onChange, onClearAll, onClose }: FilterM
           <FilterControl
             key={f.name}
             filter={f}
-            value={active[f.name] ?? ''}
+            // Fall back to the descriptor's server-applied `selected` (a
+            // SimpleListFilter default) when the URL carries no value, so
+            // the control reflects the rows actually returned (#283).
+            value={active[f.name] ?? (f.selected != null ? String(f.selected) : '')}
             onChange={(v) => onChange(f.name, v)}
           />
         ))}
