@@ -376,6 +376,30 @@ export interface AddFormResponse {
   save_options?: SaveOptions;
 }
 
+/**
+ * One object-history entry (Django LogEntry) — `GET <app>/<model>/<pk>/history/`.
+ * `action` is `addition` / `change` / `deletion` / `unknown`;
+ * `change_message_human` is Django's rendered summary.
+ */
+export interface HistoryEntry {
+  id: number;
+  action: string;
+  action_time: string;
+  user: { id: number; label: string } | null;
+  change_message_human: string;
+  change_message_structured?: unknown;
+}
+
+/** Paginated object-history timeline (#244). */
+export interface HistoryResponse {
+  object: { pk: number | string; label: string };
+  entries: HistoryEntry[];
+  page: number;
+  page_size: number;
+  total: number;
+  num_pages: number;
+}
+
 /** One typeahead hit from the autocomplete endpoint (contract §3.2). */
 export interface AutocompleteResult {
   id: number | string;

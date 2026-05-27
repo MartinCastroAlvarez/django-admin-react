@@ -13,6 +13,7 @@ import type {
   DeletePreviewResponse,
   DetailResponse,
   FieldErrorEnvelope,
+  HistoryResponse,
   ListResponse,
   LoginResponse,
   RegistryResponse,
@@ -179,6 +180,17 @@ export class ApiClient {
   /** The create-form schema for a NEW object (GET <app>/<model>/add/). */
   addForm(appLabel: string, modelName: string): Promise<AddFormResponse> {
     return this.request<AddFormResponse>('GET', `${appLabel}/${modelName}/add/`);
+  }
+
+  /** Object-history timeline (GET <app>/<model>/<pk>/history/) — #244. */
+  history(
+    appLabel: string,
+    modelName: string,
+    pk: string | number,
+    page = 1,
+  ): Promise<HistoryResponse> {
+    const qs = page > 1 ? `?page=${page}` : '';
+    return this.request<HistoryResponse>('GET', `${appLabel}/${modelName}/${pk}/history/${qs}`);
   }
 
   create(appLabel: string, modelName: string, payload: CreatePayload): Promise<CreateResponse> {

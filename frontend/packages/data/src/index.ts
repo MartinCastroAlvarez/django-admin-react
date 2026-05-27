@@ -31,6 +31,8 @@ export type {
   FieldsetDescriptor,
   FilterDescriptor,
   FilterOption,
+  HistoryEntry,
+  HistoryResponse,
   ForeignKeyValue,
   HtmlValue,
   InlineDescriptor,
