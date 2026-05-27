@@ -145,6 +145,82 @@ export function InlineEditor({ inline, onItems }: InlineEditorProps) {
   const atMax = inline.max_num !== null && activeCount >= inline.max_num;
   const atMin = activeCount <= minNum;
 
+  // Per-row remove affordance — shared by both layouts. An existing row
+  // (has a pk) gets a "remove" checkbox (Django's DELETE), gated by
+  // can_delete + min_num; a new unsaved row gets a discard ✕.
+  const removeControl = (row: EditRow) =>
+    row.pk !== null ? (
+      inline.can_delete ? (
+        <label className="flex items-center gap-1 text-xs text-gray-500">
+          <input
+            type="checkbox"
+            checked={row.deleted}
+            // Block removing below min_num: a not-yet-deleted row can't be
+            // checked once at the floor (an already-checked one can still
+            // be restored).
+            disabled={!row.deleted && atMin}
+            onChange={() => toggleDelete(row.key)}
+          />
+          remove
+        </label>
+      ) : null
+    ) : (
+      <button
+        type="button"
+        className="text-xs text-gray-400 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-40"
+        disabled={atMin}
+        onClick={() => removeNewRow(row.key)}
+      >
+        ✕
+      </button>
+    );
+
+  const addFooter = inline.can_add ? (
+    <div className="flex items-center gap-3">
+      <Button type="button" variant="secondary" onClick={addRow} disabled={atMax}>
+        + Add {inline.label.toLowerCase()}
+      </Button>
+      {atMax && <span className="text-xs text-gray-500">Maximum of {inline.max_num} reached.</span>}
+    </div>
+  ) : null;
+
+  // Stacked inlines (Django's StackedInline) edit as vertical label/input
+  // blocks per row — never a wide table — honouring `inline.kind` (#387).
+  if (inline.kind === 'stacked') {
+    return (
+      <div className="space-y-3">
+        {rows.map((row) => (
+          <div
+            key={row.key}
+            className={`rounded border border-gray-200 p-3 ${row.deleted ? 'opacity-40' : ''}`}
+          >
+            <div className="space-y-2">
+              {editableFields.map((f) => (
+                <div key={f.name} className="grid grid-cols-3 items-start gap-3">
+                  <label className="pt-1 text-sm text-gray-500">
+                    {f.label}
+                    {f.required ? <span className="text-red-500"> *</span> : null}
+                  </label>
+                  <div className="col-span-2">
+                    <InlineCellInput
+                      type={f.type}
+                      value={row.values[f.name] ?? null}
+                      disabled={row.deleted}
+                      onChange={(v) => setCell(row.key, f.name, v)}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-2 flex justify-end">{removeControl(row)}</div>
+          </div>
+        ))}
+        {addFooter}
+      </div>
+    );
+  }
+
+  // Tabular inlines (the default): one row per child, columns per field.
   return (
     <div className="space-y-3">
       <div className="overflow-x-auto">
@@ -173,48 +249,13 @@ export function InlineEditor({ inline, onItems }: InlineEditorProps) {
                     />
                   </td>
                 ))}
-                <td className="py-1 align-top">
-                  {row.pk !== null ? (
-                    inline.can_delete ? (
-                      <label className="flex items-center gap-1 text-xs text-gray-500">
-                        <input
-                          type="checkbox"
-                          checked={row.deleted}
-                          // Block removing below min_num: a not-yet-deleted
-                          // row can't be checked once at the floor (an
-                          // already-checked one can still be restored).
-                          disabled={!row.deleted && atMin}
-                          onChange={() => toggleDelete(row.key)}
-                        />
-                        remove
-                      </label>
-                    ) : null
-                  ) : (
-                    <button
-                      type="button"
-                      className="text-xs text-gray-400 hover:text-red-600 disabled:cursor-not-allowed disabled:opacity-40"
-                      disabled={atMin}
-                      onClick={() => removeNewRow(row.key)}
-                    >
-                      ✕
-                    </button>
-                  )}
-                </td>
+                <td className="py-1 align-top">{removeControl(row)}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      {inline.can_add && (
-        <div className="flex items-center gap-3">
-          <Button type="button" variant="secondary" onClick={addRow} disabled={atMax}>
-            + Add {inline.label.toLowerCase()}
-          </Button>
-          {atMax && (
-            <span className="text-xs text-gray-500">Maximum of {inline.max_num} reached.</span>
-          )}
-        </div>
-      )}
+      {addFooter}
     </div>
   );
 }
