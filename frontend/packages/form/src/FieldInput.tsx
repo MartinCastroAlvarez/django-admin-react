@@ -10,6 +10,7 @@
 
 import type { FieldDescriptor, FieldValue, WriteValue } from '@dar/data';
 import { FieldValueView } from '@dar/details';
+import { Checkbox } from '@dar/ui';
 
 import { AutocompleteInput } from './AutocompleteInput';
 
@@ -51,13 +52,7 @@ export function FieldInput({ name, field, value, error, onChange }: FieldInputPr
 
   if (field.type === 'boolean') {
     control = (
-      <input
-        id={id}
-        type="checkbox"
-        checked={value === true}
-        onChange={(e) => onChange(e.target.checked)}
-        className="h-4 w-4 rounded border-gray-300"
-      />
+      <Checkbox id={id} checked={value === true} onChange={(e) => onChange(e.target.checked)} />
     );
   } else if (field.type === 'text') {
     control = (
@@ -134,8 +129,7 @@ export function FieldInput({ name, field, value, error, onChange }: FieldInputPr
             const key = String(c.value);
             return (
               <label key={key} className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
+                <Checkbox
                   checked={selected.has(key)}
                   onChange={(e) => {
                     const next = new Set(selected);
@@ -143,7 +137,6 @@ export function FieldInput({ name, field, value, error, onChange }: FieldInputPr
                     else next.delete(key);
                     onChange(Array.from(next));
                   }}
-                  className="h-4 w-4 rounded border-gray-300"
                 />
                 {c.label}
               </label>

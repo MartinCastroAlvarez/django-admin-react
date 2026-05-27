@@ -4,6 +4,7 @@
 
 import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react';
 
+import { Checkbox } from './Checkbox';
 import { Skeleton } from './Skeleton';
 
 // Smallest a column can be dragged to — keeps a handle reachable.
@@ -161,8 +162,7 @@ export function Table<Row>({
           <tr>
             {selectable && (
               <th scope="col" className="w-10 px-4 py-2">
-                <input
-                  type="checkbox"
+                <Checkbox
                   aria-label="Select all rows on this page"
                   checked={allSelected}
                   onChange={(e) => onToggleAll?.(e.target.checked)}
@@ -263,8 +263,7 @@ export function Table<Row>({
                   >
                     {selectable && (
                       <td className="w-10 px-4 py-2" onClick={(e) => e.stopPropagation()}>
-                        <input
-                          type="checkbox"
+                        <Checkbox
                           aria-label="Select row"
                           checked={selected.has(key)}
                           onChange={() => onToggleRow?.(key)}

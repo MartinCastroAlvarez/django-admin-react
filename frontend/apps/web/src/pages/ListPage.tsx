@@ -20,7 +20,7 @@ import {
   usePersistedState,
   writeJSON,
 } from '@dar/customization';
-import { Breadcrumb, Button, Card, EmptyState, Modal, Skeleton, Table } from '@dar/ui';
+import { Breadcrumb, Button, Card, Checkbox, EmptyState, Modal, Skeleton, Table } from '@dar/ui';
 import { FieldValueView } from '@dar/details';
 import { DateHierarchyBar } from '@dar/list';
 import { FilterBar } from '@dar/search';
@@ -682,8 +682,7 @@ export function ListPage() {
                       locked && !pk ? 'text-gray-400' : 'text-gray-800'
                     }`}
                   >
-                    <input
-                      type="checkbox"
+                    <Checkbox
                       checked={visible}
                       disabled={locked}
                       onChange={() => toggleColumn(c.name, visibleColumnCount)}
