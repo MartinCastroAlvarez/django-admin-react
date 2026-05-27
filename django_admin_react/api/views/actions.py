@@ -114,8 +114,12 @@ class ActionView(View):
         # Without this the SPA confirm would no-op: the page would be
         # rendered server-side and nothing deleted.
         if payload.get("confirmed"):
-            request.POST = request.POST.copy()
-            request.POST["post"] = "yes"
+            # ``.copy()`` yields a *mutable* QueryDict; set the flag on it,
+            # then swap it in. The attribute is typed immutable in the
+            # stubs, so the assignment needs an explicit ignore.
+            mutable_post = request.POST.copy()
+            mutable_post["post"] = "yes"
+            request.POST = mutable_post  # type: ignore[assignment]
 
         # Narrow the queryset by both the admin's own get_queryset
         # (Rule 10) AND the pk filter. Order matters: get_queryset
