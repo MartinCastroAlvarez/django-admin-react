@@ -111,16 +111,19 @@ All settings are optional. Defaults shown:
 ```python
 DJANGO_ADMIN_REACT = {
     "ADMIN_SITE": "django.contrib.admin.site",   # dotted path to AdminSite instance
-    "DEFAULT_PAGE_SIZE": 25,
+    "DEFAULT_PAGE_SIZE": 25,    # fallback only; the list page size derives
+                                # from ModelAdmin.list_per_page (Django parity).
     "MAX_PAGE_SIZE": 200,
     "ENABLE_PROFILING": False,
 
-    # Branding — rendered server-side into the SPA shell, so the
-    # consumer's title + favicon are present on first paint (no FOUC).
-    "BRAND_TITLE": None,        # str | None — sidebar header + browser tab.
-    "BRAND_LOGO_URL": None,     # str | None — used as the favicon and
-                                # the sidebar logo. Absolute URL or a
-                                # path under your STATIC_URL.
+    # Branding — all optional. The defaults derive from your AdminSite
+    # (site_header / site_title / site_logo), so if you already branded
+    # the HTML admin you need nothing here. Rendered server-side into the
+    # SPA shell, so title + favicon are present on first paint (no FOUC).
+    "BRAND_TITLE": None,        # str | None — override for BOTH brand strings.
+    "BRAND_LOGO_URL": None,     # str | None — favicon + sidebar logo;
+                                # falls back to AdminSite.site_logo. Absolute
+                                # URL or a path under your STATIC_URL.
     "PRIMARY_COLOR": "#2563eb", # accent for primary buttons, links, and
                                 # active states. Hex only (validated);
                                 # injected as the --dar-primary CSS var, so
@@ -130,16 +133,28 @@ DJANGO_ADMIN_REACT = {
 
 #### Branding (`BRAND_TITLE` + `BRAND_LOGO_URL`)
 
-Both default to `None`. Resolution order for the title:
+Both default to `None` and **derive from your `AdminSite`**, mirroring
+Django admin — so if you already customised the HTML admin's branding,
+you need no settings here at all.
+
+**Sidebar header** resolution:
 
 1. `DJANGO_ADMIN_REACT["BRAND_TITLE"]` — explicit override.
-2. `<your AdminSite>.site_header` — if you already set `site_header`
-   on a custom `AdminSite`, the SPA reuses it automatically. No need
-   to repeat yourself.
+2. `<your AdminSite>.site_header` — reused automatically.
 3. `"Django Admin"` — last-resort fallback.
 
+**Browser-tab `<title>`** resolution (Django uses `site_title` for the
+tab, `site_header` for the on-page header):
+
+1. `DJANGO_ADMIN_REACT["BRAND_TITLE"]` — explicit override.
+2. `<your AdminSite>.site_title` — Django's tab-title source.
+3. `<your AdminSite>.site_header` — fallback.
+4. `"Django Admin"` — last-resort fallback.
+
 `BRAND_LOGO_URL` accepts either an absolute URL or a path the browser
-can resolve under your `STATIC_URL`. It is used both as the favicon
+can resolve under your `STATIC_URL`. When unset, a `site_logo` attribute
+on your `AdminSite` is used (Django has no logo by default, so set it as
+a constant on your custom site). It is used both as the favicon
 (`<link rel="icon">` in the SPA shell) and as the small logo next to
 the brand title in the sidebar.
 

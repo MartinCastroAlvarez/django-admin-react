@@ -239,18 +239,29 @@ behaviour. v1 keys (all optional):
 DJANGO_ADMIN_REACT = {
     "ADMIN_SITE": "django.contrib.admin.site",   # dotted path; default = the
                                                   # global admin site
-    "DEFAULT_PAGE_SIZE": 25,
+    "DEFAULT_PAGE_SIZE": 25,  # fallback only; the model's
+                              # ModelAdmin.list_per_page is the source (#281).
     "MAX_PAGE_SIZE": 200,
     "ENABLE_PROFILING": False,
 
-    # Branding (consumer-facing SPA shell)
-    "BRAND_TITLE":    None,   # str | None — sidebar header + tab title.
-                              # None → falls back to ADMIN_SITE.site_header,
-                              # then to "Django Admin".
+    # Branding (consumer-facing SPA shell) — all optional overrides;
+    # the defaults derive from the AdminSite (#281), so a consumer who
+    # already branded their admin needs nothing here.
+    "BRAND_TITLE":    None,   # str | None — overrides BOTH brand strings.
+                              # None → sidebar header ← ADMIN_SITE.site_header,
+                              # browser tab title ← ADMIN_SITE.site_title
+                              # (else site_header), then "Django Admin".
     "BRAND_LOGO_URL": None,   # str | None — favicon + sidebar logo.
+                              # None → ADMIN_SITE.site_logo attribute if set.
                               # Absolute URL or a path under STATIC_URL.
 }
 ```
+
+Page size derives from the model's `ModelAdmin.list_per_page` (Django's
+changelist source of truth / Rule #1, #281), so the SPA pages like the
+HTML admin with no extra setting; the global `DEFAULT_PAGE_SIZE` is the
+fallback only when `list_per_page` is missing/invalid. `MAX_PAGE_SIZE`
+always caps `?page_size` (a DoS guard).
 
 The package reads these via `django_admin_react/conf.py` (a thin lazy
 wrapper). Nothing in the package may read `settings.DJANGO_ADMIN_REACT`

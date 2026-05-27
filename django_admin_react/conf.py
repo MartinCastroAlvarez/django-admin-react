@@ -22,6 +22,12 @@ from django.conf import settings as django_settings
 
 DEFAULTS: dict[str, Any] = {
     "ADMIN_SITE": "django.contrib.admin.site",
+    # The list page size derives from the model's
+    # ``ModelAdmin.list_per_page`` (Django's changelist source of truth,
+    # Rule #1 / #281), so the SPA pages like the HTML admin with no extra
+    # setting. ``DEFAULT_PAGE_SIZE`` is the fallback only when
+    # ``list_per_page`` is missing / invalid. ``MAX_PAGE_SIZE`` always caps
+    # ``?page_size`` (a DoS guard).
     "DEFAULT_PAGE_SIZE": 25,
     "MAX_PAGE_SIZE": 200,
     "ENABLE_PROFILING": False,
@@ -29,16 +35,23 @@ DEFAULTS: dict[str, Any] = {
     # rendered server-side into the SPA index template so the SPA
     # picks them up on first paint (no FOUC).
     #
-    # ``BRAND_TITLE``      — string shown in the sidebar header *and*
-    #                        the browser tab title. ``None`` (default)
-    #                        falls back to the configured AdminSite's
-    #                        ``site_header`` if set, else the package
-    #                        name. Plain text; no HTML.
-    # ``BRAND_LOGO_URL``   — URL to a square logo / favicon. Written
-    #                        into the SPA's ``<link rel="icon">``.
-    #                        ``None`` (default) keeps the no-op
-    #                        ``data:,`` placeholder. Either an absolute
-    #                        URL or a path under your ``STATIC_URL``.
+    # ``BRAND_TITLE``      — optional override for *both* the sidebar
+    #                        header and the browser-tab title. ``None``
+    #                        (default) derives them from the AdminSite,
+    #                        mirroring Django admin: ``site_header`` →
+    #                        sidebar header, ``site_title`` → tab title
+    #                        (falling back to ``site_header``), else the
+    #                        package name (#281). A consumer who already
+    #                        set ``site_header`` / ``site_title`` on their
+    #                        ``AdminSite`` needs no branding setting at all.
+    #                        Plain text; no HTML.
+    # ``BRAND_LOGO_URL``   — optional override for the logo / favicon URL,
+    #                        written into the SPA's ``<link rel="icon">``.
+    #                        ``None`` (default) reads ``site_logo`` off the
+    #                        configured ``AdminSite`` if the consumer set
+    #                        that attribute (#281), else keeps the no-op
+    #                        ``data:,`` placeholder. Either an absolute URL
+    #                        or a path under your ``STATIC_URL``.
     "BRAND_TITLE": None,
     "BRAND_LOGO_URL": None,
     # ``PRIMARY_COLOR`` — the accent color for primary buttons, links, and
