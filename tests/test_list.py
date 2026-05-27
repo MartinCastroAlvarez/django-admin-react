@@ -54,6 +54,15 @@ def test_superuser_with_permission_succeeds(superuser_client: Client) -> None:
 
 
 @pytest.mark.django_db
+def test_list_response_reports_pk_field(superuser_client: Client) -> None:
+    """The list response names the model's primary-key field so the SPA
+    can pin / never-truncate / lock that column (#360)."""
+    response = superuser_client.get(LIST_URL)
+    assert response.status_code == 200
+    assert response.json()["pk_field"] == "id"
+
+
+@pytest.mark.django_db
 def test_user_without_view_permission_forbidden(superuser_client: Client) -> None:
     with admin_override(Group, has_view_permission=lambda self, request, obj=None: False):
         response = superuser_client.get(LIST_URL)

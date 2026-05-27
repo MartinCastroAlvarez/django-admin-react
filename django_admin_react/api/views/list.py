@@ -134,6 +134,13 @@ class ListView(View):
             "object_name": model._meta.object_name,
             "verbose_name": str(model._meta.verbose_name),
             "verbose_name_plural": str(model._meta.verbose_name_plural),
+            # Name of the primary-key field (usually ``id``). The SPA uses
+            # it to identify the pk column among ``columns`` so it can pin
+            # it first, never truncate it, and keep it from being hidden —
+            # the pk is the row's identity and must always be readable in
+            # full. May or may not appear in ``list_display``; when it
+            # doesn't, the SPA simply has nothing to pin.
+            "pk_field": model._meta.pk.name,
             "permissions": model_permissions(model_admin, request),
             "columns": columns,
             "search_fields": list(model_admin.search_fields or ()),

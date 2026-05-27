@@ -247,6 +247,13 @@ export interface ListResponse {
   verbose_name: string;
   /** ``Meta.verbose_name_plural``. Use this for list-view titles. */
   verbose_name_plural: string;
+  /**
+   * Name of the model's primary-key field (usually `id`). When this
+   * field appears in `columns`, the SPA pins that column first, never
+   * truncates it, and keeps it from being hidden — the pk is the row's
+   * identity and must stay fully readable.
+   */
+  pk_field: string;
   permissions: Permissions;
   columns: ColumnDescriptor[];
   search_fields: string[];

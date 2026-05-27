@@ -349,12 +349,25 @@ export function ListPage() {
     }
   }
 
-  const columns = data.columns
-    .filter((c) => !hiddenCols.has(c.name))
+  // The primary-key column (when it's part of list_display) is pinned
+  // first, can't be hidden, and never truncates — it's the row's
+  // identity and must stay fully readable (#360). `data.pk_field` names
+  // it; if it isn't displayed, there's nothing to pin.
+  const pkField = data.pk_field;
+  const isPkCol = (name: string): boolean => name === pkField;
+  const pkCol = data.columns.find((c) => isPkCol(c.name));
+  const orderedDescriptors = pkCol
+    ? [pkCol, ...data.columns.filter((c) => !isPkCol(c.name))]
+    : data.columns;
+
+  const columns = orderedDescriptors
+    // The pk column is never hidden, even if a stale preference lists it.
+    .filter((c) => isPkCol(c.name) || !hiddenCols.has(c.name))
     .map((c) => ({
       key: c.name,
       header: c.label,
       sortable: c.sortable,
+      noTruncate: isPkCol(c.name),
       render: (row: ListRow) => {
         if (c.editable && canEdit) {
           const pk = String(row.pk);
@@ -372,7 +385,7 @@ export function ListPage() {
         return <FieldValueView value={row.fields[c.name]} />;
       },
     }));
-  const visibleColumnCount = data.columns.length - hiddenCols.size;
+  const visibleColumnCount = columns.length;
 
   const totalPages = Math.max(1, Math.ceil(data.total / data.page_size));
   const filters = data.filters ?? [];
@@ -635,23 +648,27 @@ export function ListPage() {
         >
           <p className="mb-3 text-sm text-gray-500">Show or hide list columns.</p>
           <ul className="space-y-2">
-            {data.columns.map((c) => {
-              const visible = !hiddenCols.has(c.name);
-              const isLastVisible = visible && visibleColumnCount <= 1;
+            {orderedDescriptors.map((c) => {
+              const pk = isPkCol(c.name);
+              const visible = pk || !hiddenCols.has(c.name);
+              // The pk column is always shown and can't be toggled; the
+              // last remaining visible column also can't be hidden.
+              const locked = pk || (visible && visibleColumnCount <= 1);
               return (
                 <li key={c.name}>
                   <label
                     className={`flex items-center gap-2 text-sm ${
-                      isLastVisible ? 'text-gray-400' : 'text-gray-800'
+                      locked && !pk ? 'text-gray-400' : 'text-gray-800'
                     }`}
                   >
                     <input
                       type="checkbox"
                       checked={visible}
-                      disabled={isLastVisible}
+                      disabled={locked}
                       onChange={() => toggleColumn(c.name, visibleColumnCount)}
                     />
                     {c.label}
+                    {pk && <span className="ml-auto text-xs text-gray-400">always shown</span>}
                   </label>
                 </li>
               );
