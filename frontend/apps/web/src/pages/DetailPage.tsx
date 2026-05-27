@@ -452,39 +452,51 @@ function EditForm({ data, onCancel, onSave }: EditFormProps) {
           {nonFieldError}
         </div>
       )}
-      {data.fieldsets.map((fieldset, idx) => (
-        <Card key={`efs-${idx}-${fieldset.title ?? 'default'}`} title={fieldset.title ?? undefined}>
-          <div className="divide-y divide-gray-100">
-            {(fieldset.field_rows ?? fieldset.fields.map((f) => [f])).map((row, ri) => {
-              const renderInput = (name: string) => {
-                const field = data.fields[name];
-                if (!field) return null;
+      {data.fieldsets.map((fieldset, idx) => {
+        // Edit mode shows only fields the operator can actually change:
+        // drop readonly fields from each row, then drop now-empty rows.
+        // A fieldset left with nothing editable is hidden entirely (no
+        // empty card).
+        const editableRows = (fieldset.field_rows ?? fieldset.fields.map((f) => [f]))
+          .map((row) => row.filter((name) => data.fields[name] && !data.fields[name]?.readonly))
+          .filter((row) => row.length > 0);
+        if (editableRows.length === 0) return null;
+
+        const renderInput = (name: string) => {
+          const field = data.fields[name];
+          if (!field) return null;
+          return (
+            <FieldInput
+              key={name}
+              name={name}
+              field={field}
+              value={values[name] ?? null}
+              error={errors[name]}
+              onChange={(v) => setValues((prev) => ({ ...prev, [name]: v }))}
+            />
+          );
+        };
+
+        return (
+          <Card key={`efs-${idx}-${fieldset.title ?? 'default'}`} title={fieldset.title ?? undefined}>
+            <div className="divide-y divide-gray-100">
+              {editableRows.map((row, ri) => {
+                if (row.length === 1) return renderInput(row[0] as string);
+                // Multi-field row (#382): inputs side by side.
                 return (
-                  <FieldInput
-                    key={name}
-                    name={name}
-                    field={field}
-                    value={values[name] ?? null}
-                    error={errors[name]}
-                    onChange={(v) => setValues((prev) => ({ ...prev, [name]: v }))}
-                  />
+                  <div
+                    key={ri}
+                    className="grid gap-4 py-1"
+                    style={{ gridTemplateColumns: `repeat(${row.length}, minmax(0, 1fr))` }}
+                  >
+                    {row.map((name) => renderInput(name))}
+                  </div>
                 );
-              };
-              if (row.length === 1) return renderInput(row[0] as string);
-              // Multi-field row (#382): inputs side by side.
-              return (
-                <div
-                  key={ri}
-                  className="grid gap-4 py-1"
-                  style={{ gridTemplateColumns: `repeat(${row.length}, minmax(0, 1fr))` }}
-                >
-                  {row.map((name) => renderInput(name))}
-                </div>
-              );
-            })}
-          </div>
-        </Card>
-      ))}
+              })}
+            </div>
+          </Card>
+        );
+      })}
 
       {/* Editable inlines (#54 write half) — typed inputs per child row,
           add/remove, submitted via the PATCH `inlines` block. */}
