@@ -215,7 +215,7 @@ export function DetailPage() {
             <button
               type="button"
               onClick={() => setHistoryOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
             >
               <Clock className="h-4 w-4" aria-hidden /> History
             </button>
@@ -224,7 +224,7 @@ export function DetailPage() {
                 href={data.view_on_site_url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
               >
                 <ExternalLink className="h-4 w-4" aria-hidden /> View on site
               </a>
