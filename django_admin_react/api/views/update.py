@@ -142,7 +142,10 @@ class UpdateView(View):
             with transaction.atomic():
                 instance = form.save(commit=False)
                 model_admin.save_model(request, instance, form, change=True)
-                form.save_m2m()
+                # M2M / related via the admin hook (#402) so a consumer's
+                # save_related override runs (default = save_m2m). Inline
+                # formsets are applied below, so `formsets` is empty here.
+                model_admin.save_related(request, form, [], change=True)
                 log_change(model_admin, request, instance, form)
                 # Inline formsets (Issue #54 write half) round-trip inside
                 # the SAME transaction so a per-row permission denial or a
