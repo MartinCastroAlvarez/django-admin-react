@@ -166,7 +166,7 @@ dl dd > span {
 table td > div > span a,
 dl dd > span a {
   font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  color: #4f46e5; /* indigo-600 — matches the FK link color */
+  color: var(--dar-primary, #4f46e5); /* the themable brand accent (#437) */
 }
 table td > div > span a:hover,
 dl dd > span a:hover {
@@ -174,5 +174,16 @@ dl dd > span a:hover {
 }
 .dark table td > div > span a,
 .dark dl dd > span a {
-  color: #818cf8; /* indigo-400 — legible on the dark surface */
+  /* Lighten the brand color toward white so the link stays legible on the
+     dark surface regardless of how dark PRIMARY_COLOR is. */
+  color: color-mix(in srgb, var(--dar-primary, #4f46e5) 65%, white);
+}
+
+/* The Tailwind `text-primary` token (brand accent on links / breadcrumbs /
+   FK cells, #437) is the consumer's PRIMARY_COLOR. In dark mode lighten it
+   the same way so links don't go low-contrast when the brand color is dark
+   — one rule covers every text-primary link without per-consumer dark
+   config (the proper light/dark token split is tracked in #433). */
+.dark .text-primary {
+  color: color-mix(in srgb, var(--dar-primary, #2563eb) 65%, white);
 }

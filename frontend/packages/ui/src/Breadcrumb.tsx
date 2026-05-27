@@ -26,7 +26,7 @@ export interface BreadcrumbProps {
   renderLink?: (to: string, className: string, label: ReactNode) => ReactNode;
 }
 
-const LINK_CLASS = 'text-blue-600 hover:underline';
+const LINK_CLASS = 'text-primary hover:underline';
 
 export function Breadcrumb({ items, renderLink }: BreadcrumbProps) {
   return (

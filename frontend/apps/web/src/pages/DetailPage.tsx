@@ -60,7 +60,7 @@ function DetailValue({ field }: { field: FieldDescriptor }) {
     return (
       <Link
         to={`/${field.to.app_label}/${field.to.model_name}/${fk.id}`}
-        className="text-blue-600 hover:underline"
+        className="text-primary hover:underline"
       >
         {fk.label}
       </Link>
@@ -712,7 +712,7 @@ function InlineSection({ inline }: { inline: InlineDescriptor }) {
               key: '__change_link',
               header: '',
               render: (row: (typeof inline.rows)[number]) => (
-                <Link to={changeLinkTo(row.pk)} className="text-blue-600 hover:underline">
+                <Link to={changeLinkTo(row.pk)} className="text-primary hover:underline">
                   Edit
                 </Link>
               ),
@@ -745,7 +745,7 @@ function InlineSection({ inline }: { inline: InlineDescriptor }) {
             </dl>
             {inline.show_change_link && (
               <div className="mt-2">
-                <Link to={changeLinkTo(row.pk)} className="text-sm text-blue-600 hover:underline">
+                <Link to={changeLinkTo(row.pk)} className="text-sm text-primary hover:underline">
                   Edit
                 </Link>
               </div>

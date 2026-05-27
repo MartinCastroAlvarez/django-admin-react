@@ -434,7 +434,7 @@ export function ListPage() {
         {data.permissions.add && (
           <Link
             to={`/${appLabel}/${modelName}/add`}
-            className="shrink-0 rounded-md border border-blue-600 bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            className="shrink-0 rounded-md border border-primary bg-primary px-3 py-2 text-sm font-medium text-white hover:opacity-90"
           >
             + Add {data.verbose_name ? capitalize(data.verbose_name) : modelName}
           </Link>
@@ -508,7 +508,7 @@ export function ListPage() {
             <ListFilter className="h-4 w-4" aria-hidden />
             Filter
             {chips.length > 0 && (
-              <span className="ml-0.5 rounded-full bg-blue-600 px-1.5 py-0.5 text-xs text-white">
+              <span className="ml-0.5 rounded-full bg-primary px-1.5 py-0.5 text-xs text-white">
                 {chips.length}
               </span>
             )}

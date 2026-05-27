@@ -51,7 +51,7 @@ export function FieldValueView({ value }: FieldValueViewProps) {
         <Link
           to={`/${value.to.app_label}/${value.to.model_name}/${value.id}`}
           onClick={(e) => e.stopPropagation()}
-          className="font-medium text-indigo-600 hover:underline"
+          className="font-medium text-primary hover:underline"
         >
           {value.label}
         </Link>
@@ -68,7 +68,7 @@ export function FieldValueView({ value }: FieldValueViewProps) {
         href={value.url}
         target="_blank"
         rel="noopener noreferrer"
-        className="text-indigo-600 hover:underline"
+        className="text-primary hover:underline"
       >
         {value.name}
       </a>
