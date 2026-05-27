@@ -14,6 +14,23 @@ import { readString, writeString } from './storage';
 
 export type Theme = 'light' | 'dark';
 
+/**
+ * Cookie the chosen theme is mirrored into so the SPA-serving view can
+ * render the correct `.dark` class on `<html>` *before first paint* — no
+ * light→dark flash (#84). A cookie (not just localStorage) because only the
+ * server can paint pre-JS, and unlike an inline `<script>` it keeps a strict
+ * `script-src 'self'` CSP intact (SECURITY.md QSEC-03). The value is a pure
+ * UI pref (`light`/`dark`), never sensitive.
+ */
+export const THEME_COOKIE = 'dar-theme';
+
+function writeThemeCookie(theme: Theme): void {
+  if (typeof document === 'undefined') return;
+  // SameSite=Lax: sent on the top-level navigation that loads the shell.
+  // path=/ so it reaches the package at any mount; 1-year persistence.
+  document.cookie = `${THEME_COOKIE}=${theme}; path=/; max-age=31536000; SameSite=Lax`;
+}
+
 /** The user's explicitly-chosen theme, or null if they never picked. */
 export function getStoredTheme(): Theme | null {
   const value = readString(THEME_KEY);
@@ -42,6 +59,7 @@ export function applyTheme(theme: Theme): void {
 /** Persist a chosen theme and apply it immediately. */
 export function setTheme(theme: Theme): void {
   writeString(THEME_KEY, theme);
+  writeThemeCookie(theme);
   applyTheme(theme);
 }
 

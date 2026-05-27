@@ -16,7 +16,9 @@ server data.
   `PRESERVED_ON_LOGOUT` (the keys that survive sign-out).
 - **`theme`** — light/dark preference + application (`initTheme`,
   `setTheme`, `resolveTheme`, …), moved here as the canonical "stored UI
-  preference".
+  preference". `setTheme` also mirrors the choice into the `dar-theme`
+  cookie so the SPA-serving view can paint the `.dark` class server-side
+  before first paint — no light→dark flash, and no inline script (#84).
 - **`storage`** — low-level `readJSON` / `writeJSON` / `readString` /
   `writeString` / `removeKey` helpers.
 

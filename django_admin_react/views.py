@@ -97,6 +97,7 @@ class SpaIndexView(View):
                 "brand_title": _resolve_brand_title(admin_site),
                 "brand_logo_url": dar_conf.BRAND_LOGO_URL,
                 "primary_color": _resolve_primary_color(),
+                "initial_theme": _resolve_initial_theme(request),
             },
         )
         # The SPA shell must never be cached: it references the
@@ -258,6 +259,25 @@ def _resolve_primary_color() -> str:
     if isinstance(configured, str) and _HEX_COLOR_RE.match(configured.strip()):
         return configured.strip()
     return dar_conf.DEFAULTS["PRIMARY_COLOR"]
+
+
+def _resolve_initial_theme(request: HttpRequest) -> str | None:
+    """The theme to paint on the server-rendered shell (#84).
+
+    Read from the non-sensitive ``dar-theme`` cookie the SPA writes when the
+    operator picks a theme (see ``@dar/customization``'s ``setTheme``), so
+    the correct ``.dark`` class is on ``<html>`` at first paint — no
+    light→dark flash. A cookie (not an inline ``<script>``) is used on
+    purpose: only the server can paint pre-JS, and this keeps a strict
+    ``script-src 'self'`` CSP intact (SECURITY.md QSEC-03).
+
+    Validated to the literal ``{light, dark}`` set; anything else (or no
+    cookie) returns ``None`` and the shell paints its default (light), with
+    the JS reconciling the effective theme on load. The value is only ever
+    used to choose a CSS class, so it can't inject anything.
+    """
+    theme = request.COOKIES.get("dar-theme")
+    return theme if theme in ("light", "dark") else None
 
 
 def _mount_from_request(request: HttpRequest) -> str:

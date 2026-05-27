@@ -1,5 +1,11 @@
 {% load static %}<!doctype html>
-<html lang="en">
+{% comment %}
+  Dark mode no-flash (#84): paint the `.dark` class on <html> server-side
+  from the `dar-theme` cookie (see views._resolve_initial_theme) so the
+  correct theme is on the page before first paint — no light→dark flash,
+  and no inline script (keeps a strict `script-src 'self'` CSP intact).
+{% endcomment %}
+<html lang="en"{% if initial_theme == 'dark' %} class="dark"{% endif %}>
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
