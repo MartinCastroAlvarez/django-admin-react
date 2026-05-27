@@ -22,6 +22,8 @@ module.exports = {
         "packages/list/**/*.{ts,tsx,js,jsx}",
         "packages/details/**/*.{ts,tsx,js,jsx}",
         "packages/models/**/*.{ts,tsx,js,jsx}",
+        "packages/sidebar/**/*.{ts,tsx,js,jsx}",
+        "packages/settings/**/*.{ts,tsx,js,jsx}",
         "packages/ui/**/*.{ts,tsx,js,jsx}",
       ],
       rules: {
