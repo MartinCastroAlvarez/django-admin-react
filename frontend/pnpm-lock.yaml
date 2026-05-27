@@ -108,9 +108,6 @@ importers:
       eslint:
         specifier: ^9.0.0
         version: 9.39.4(jiti@1.21.7)
-      eslint-plugin-no-restricted-imports:
-        specifier: ^0.0.0
-        version: 0.0.0
       postcss:
         specifier: ^8.4.0
         version: 8.5.15
@@ -1242,10 +1239,6 @@ packages:
     peerDependencies:
       eslint: '>=7.0.0'
 
-  eslint-plugin-no-restricted-imports@0.0.0:
-    resolution: {integrity: sha512-sxHk6vmXheLagzJGKqq93u9sz+xXLyuXcW4ZCPrOMQ0PL365PyJyhaKRWYgMgPZs1YhBmhyopdqO62AlGz+jSQ==}
-    engines: {node: '>=0.10.0'}
-
   eslint-plugin-react-hooks@5.2.0:
     resolution: {integrity: sha512-+f15FfK64YQwZdJNELETdn5ibXEUQmW1DZL6KXhNnc2heoy/sg9VJJeT7n8TlMWouzWqSWavFkIhHyIbIAEapg==}
     engines: {node: '>=10'}
@@ -1859,10 +1852,6 @@ packages:
   require-from-string@2.0.2:
     resolution: {integrity: sha512-Xf0nWe6RseziFMu+Ap9biiUbmplq6S9/p+7w7YXP/JBHhrUDDUhwa+vANyubuqfZWTveU//DYVGsDG7RKL/vEw==}
     engines: {node: '>=0.10.0'}
-
-  requireindex@1.1.0:
-    resolution: {integrity: sha512-LBnkqsDE7BZKvqylbmn7lTIVdpx4K/QCduRATpO5R+wtPmky/a8pN1bO2D6wXppn1497AJF9mNjqAXr6bdl9jg==}
-    engines: {node: '>=0.10.5'}
 
   resolve-from@4.0.0:
     resolution: {integrity: sha512-pb/MYmXstAkysRFx8piNI1tGFNQIFA3vkE3Gq4EuA1dF6gHp/+vgZqsCGJapvy8N3Q+4o7FwvquPJcnZ7RYy4g==}
@@ -3146,10 +3135,6 @@ snapshots:
     dependencies:
       eslint: 9.39.4(jiti@1.21.7)
 
-  eslint-plugin-no-restricted-imports@0.0.0:
-    dependencies:
-      requireindex: 1.1.0
-
   eslint-plugin-react-hooks@5.2.0(eslint@9.39.4(jiti@1.21.7)):
     dependencies:
       eslint: 9.39.4(jiti@1.21.7)
@@ -3710,8 +3695,6 @@ snapshots:
       strip-indent: 3.0.0
 
   require-from-string@2.0.2: {}
-
-  requireindex@1.1.0: {}
 
   resolve-from@4.0.0: {}
 
