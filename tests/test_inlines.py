@@ -271,6 +271,36 @@ def test_inline_show_change_link_gated_on_child_registration() -> None:
 
 
 @pytest.mark.django_db
+def test_inline_spec_carries_child_pk_field() -> None:
+    """The inline spec surfaces the child model's pk field name (#418) so
+    the SPA can render an explicit (e.g. UUID) pk column without truncation,
+    mirroring the list ``pk_field``."""
+    from django.contrib.auth import get_user_model
+    from django.contrib.auth.models import Permission
+    from django.contrib.contenttypes.models import ContentType
+    from django.test import RequestFactory
+
+    from django_admin_react.api.inlines import _spec_for_inline
+
+    ct = ContentType.objects.create(app_label="dar_test_pk", model="thing")
+
+    class _Inline(TabularInline):
+        model = Permission
+        fk_name = "content_type"
+
+    inline = _Inline(ContentType, admin.site)
+    request = RequestFactory().get("/")
+    request.user = get_user_model().objects.create_superuser(
+        username="inline-pk-su", email="pk@example.com", password="x"
+    )
+
+    spec = _spec_for_inline(inline, ct, request, admin.site)
+    assert spec is not None
+    # Permission's pk is the implicit auto "id".
+    assert spec["pk_field"] == Permission._meta.pk.name == "id"
+
+
+@pytest.mark.django_db
 def test_inline_show_change_link_gated_on_child_view_permission() -> None:
     """`show_change_link` requires the user's ``has_view_permission`` on the
     CHILD model, not just registration (#301 least-disclosure). A child that
