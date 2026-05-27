@@ -26,6 +26,7 @@ the design.
 | `permissions.py`  | Staff + AdminSite.has_permission gate; per-op delegation.    |
 | `registry.py`     | AdminSite introspection helpers.                             |
 | `serializers.py`  | Conservative field serialization + denylist.                 |
+| `custom_views.py` | Surface a ModelAdmin's custom `get_urls()` routes (#439).    |
 | `views/`          | One module per endpoint.                                     |
 
 Implementation status is tracked in `../README.md`.

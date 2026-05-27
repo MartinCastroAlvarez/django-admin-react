@@ -57,6 +57,26 @@ export interface RegistryUser {
   display_name: string;
 }
 
+/**
+ * A consumer's bespoke admin page reached via `ModelAdmin.get_urls()`
+ * (Issue #439). The SPA links out to it — a real `<a target="_blank">`
+ * to the Django-rendered page — since it can't render the page itself.
+ *
+ * - `level: 'object'` — a per-object tool view; `url` already carries
+ *   the object's pk (only present on the detail response).
+ * - `level: 'changelist'` — a model-wide page (report / import); `url`
+ *   takes no object (can appear on the registry model entry too).
+ */
+export interface CustomView {
+  /** The URL pattern name (a stable id for the route). */
+  name: string;
+  /** Humanized name, or the view callable's `short_description`. */
+  label: string;
+  /** The reversed admin URL (object-level URLs carry the pk). */
+  url: string;
+  level: 'object' | 'changelist';
+}
+
 export interface RegistryModelEntry {
   /**
    * The *display* app label — equals the group label when the
@@ -77,6 +97,12 @@ export interface RegistryModelEntry {
   verbose_name: string;
   verbose_name_plural: string;
   permissions: Permissions;
+  /**
+   * Changelist-level custom admin views for this model (Issue #439).
+   * Object-level views live on the detail response, not here. Optional;
+   * absent when the model's admin exposes no custom routes.
+   */
+  custom_views?: CustomView[];
 }
 
 export interface RegistryAppEntry {
@@ -494,6 +520,11 @@ export interface DetailResponse {
    *  object's get_absolute_url). `null` when not applicable. Optional for
    *  back-compat with older backends. */
   view_on_site_url?: string | null;
+  /** Custom admin views reachable via `ModelAdmin.get_urls()` (Issue #439):
+   *  object-level tool views (url carries this object's pk) plus any
+   *  changelist-level pages. The SPA links out to the Django-rendered
+   *  page. Optional/absent when the admin exposes no custom routes. */
+  custom_views?: CustomView[];
 }
 
 /**
