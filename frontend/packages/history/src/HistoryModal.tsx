@@ -5,7 +5,7 @@
 import { useEffect, useState } from 'react';
 
 import { useApiClient, type HistoryResponse } from '@dar/data';
-import { Button, Modal, Spinner } from '@dar/ui';
+import { Modal, Spinner } from '@dar/ui';
 
 const ACTION_DOT: Record<string, string> = {
   addition: 'bg-green-500',
@@ -41,15 +41,7 @@ export function HistoryModal({ appLabel, modelName, pk, onClose }: HistoryModalP
   }, [client, appLabel, modelName, pk]);
 
   return (
-    <Modal
-      title="History"
-      onClose={onClose}
-      footer={
-        <Button variant="primary" onClick={onClose}>
-          Close
-        </Button>
-      }
-    >
+    <Modal title="History" onClose={onClose}>
       {error ? (
         <p className="text-sm text-red-600">{error}</p>
       ) : !data ? (

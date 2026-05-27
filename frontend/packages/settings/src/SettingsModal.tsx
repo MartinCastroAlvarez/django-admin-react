@@ -47,15 +47,7 @@ export function SettingsModal({ onClose }: { onClose: () => void }) {
     ].join(' ');
 
   return (
-    <Modal
-      title="Settings"
-      onClose={onClose}
-      footer={
-        <Button variant="primary" onClick={onClose}>
-          Done
-        </Button>
-      }
-    >
+    <Modal title="Settings" onClose={onClose}>
       <div className="space-y-2">
         <div className="text-sm font-medium text-gray-700">Appearance</div>
         <div className="flex gap-2">
