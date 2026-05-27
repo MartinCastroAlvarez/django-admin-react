@@ -194,12 +194,21 @@ export interface ActionDescriptor {
 }
 
 /** Result of running a bulk action (contract §5.4). */
+/** A `ModelAdmin.message_user` message surfaced from a run (#442). */
+export interface UserMessage {
+  /** Django's level tag: `success` / `info` / `warning` / `error` / `debug`. */
+  level: string;
+  message: string;
+}
+
 export interface ActionRunResponse {
   executed: boolean;
   action: string;
   pks?: Array<string | number>;
   /** Present when the action callable returned an HttpResponse. */
   redirect?: string;
+  /** Messages the action queued via `message_user` — the SPA toasts them (#442). */
+  messages?: UserMessage[];
 }
 
 /** One cascading model in a delete preview: `{model, count}`. */

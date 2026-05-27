@@ -134,6 +134,12 @@ def _mark_inactive(model_admin, request, queryset):
     return queryset.update(is_active=False)
 
 
+def _action_with_message(model_admin, request, queryset):
+    """An action that talks back via ``message_user`` (the #442 case)."""
+    n = queryset.update(is_active=False)
+    model_admin.message_user(request, f"Deactivated {n}.")
+
+
 @pytest.mark.django_db
 def test_unknown_action_returns_404(superuser_client: Client) -> None:
     response = superuser_client.post(
@@ -196,6 +202,30 @@ def test_custom_action_runs_over_narrowed_queryset(superuser_client: Client) -> 
     assert u1.is_active is False
     assert u2.is_active is False
     assert u3.is_active is True
+    # An action that queues no message_user output returns messages: [].
+    assert body["messages"] == []
+
+
+# --------------------------------------------------------------------------- #
+# message_user output is surfaced for the SPA to toast (#442)                 #
+# --------------------------------------------------------------------------- #
+@pytest.mark.django_db
+def test_action_message_user_surfaced_in_response(superuser_client: Client) -> None:
+    """A custom action's ``message_user`` text comes back in the envelope as
+    a `{level, message}` so the SPA can toast it (#442)."""
+    User = get_user_model()
+    u1 = User.objects.create_user(username="msg1", password="x")  # noqa: S106
+    with admin_attr(User, actions=[_action_with_message]):
+        response = superuser_client.post(
+            ACTIONS_BASE + "_action_with_message/",
+            data=f'{{"pks": [{u1.pk}]}}',
+            content_type="application/json",
+        )
+    assert response.status_code == 200
+    msgs = response.json()["messages"]
+    assert len(msgs) == 1
+    assert msgs[0]["message"] == "Deactivated 1."
+    assert msgs[0]["level"] == "info"  # message_user defaults to INFO
 
 
 @pytest.mark.django_db

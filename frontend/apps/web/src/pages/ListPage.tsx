@@ -308,10 +308,21 @@ export function ListPage() {
       // confirmation page (the request carries `confirmed`), so we
       // never follow a server-side redirect / full-page navigation.
       // Clear the selection and re-validate the list in place.
-      await client.runAction(appLabel, modelName, action.name, pks);
+      const result = await client.runAction(appLabel, modelName, action.name, pks);
       setSelected(new Set());
       await refresh();
-      toast.success(`${action.label} — ${count} item${count === 1 ? '' : 's'}.`);
+      // Prefer the action's own message_user output (#442); fall back to a
+      // generic confirmation when the action queued nothing.
+      const msgs = result.messages ?? [];
+      if (msgs.length > 0) {
+        for (const m of msgs) {
+          if (m.level === 'error' || m.level === 'warning') toast.error(m.message);
+          else if (m.level === 'info' || m.level === 'debug') toast.info(m.message);
+          else toast.success(m.message);
+        }
+      } else {
+        toast.success(`${action.label} — ${count} item${count === 1 ? '' : 's'}.`);
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Action failed.');
     } finally {
