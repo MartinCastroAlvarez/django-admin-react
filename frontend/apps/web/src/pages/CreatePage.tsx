@@ -134,6 +134,12 @@ function CreateForm({ schema, onCreate, onCancel }: CreateFormProps) {
         continue;
       }
       const v = field.value;
+      if (field.type === 'json') {
+        // JSON editor (#242): seed the textarea with the pretty-printed
+        // default (a string), or empty when there's no default.
+        init[name] = v === null || v === undefined ? null : JSON.stringify(v, null, 2);
+        continue;
+      }
       // Seed with the model default where the wire carries a scalar;
       // FK envelopes / html start empty for a new object.
       init[name] = v !== null && typeof v !== 'object' ? v : null;

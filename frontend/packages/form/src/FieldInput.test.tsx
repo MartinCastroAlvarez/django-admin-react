@@ -56,3 +56,68 @@ describe('FieldInput password widget (#504)', () => {
     expect(onChange).toHaveBeenCalledWith('new-secret');
   });
 });
+
+function field(
+  overrides: Partial<FieldDescriptor> & { type: FieldDescriptor['type'] },
+): FieldDescriptor {
+  return {
+    label: 'F',
+    required: false,
+    readonly: false,
+    help_text: '',
+    value: null,
+    ...overrides,
+  } as FieldDescriptor;
+}
+
+describe('FieldInput — structured editors (#242)', () => {
+  it('renders an editable monospace textarea for a json field', () => {
+    const onChange = vi.fn();
+    render(
+      <FieldInput
+        name="meta"
+        field={field({ type: 'json' })}
+        value={'{\n  "a": 1\n}'}
+        error={undefined}
+        onChange={onChange}
+      />,
+    );
+    const box = screen.getByRole('textbox');
+    expect(box.tagName).toBe('TEXTAREA');
+    expect(box).toHaveValue('{\n  "a": 1\n}');
+    // Edits propagate the raw string (Django parses/validates server-side).
+    fireEvent.change(box, { target: { value: '{"a": 2}' } });
+    expect(onChange).toHaveBeenCalledWith('{"a": 2}');
+  });
+
+  it('renders a text input for a duration field', () => {
+    const onChange = vi.fn();
+    render(
+      <FieldInput
+        name="dur"
+        field={field({ type: 'duration' })}
+        value="01:02:03"
+        error={undefined}
+        onChange={onChange}
+      />,
+    );
+    const input = screen.getByRole('textbox');
+    expect(input.tagName).toBe('INPUT');
+    expect(input).toHaveValue('01:02:03');
+    fireEvent.change(input, { target: { value: '1 00:00:00' } });
+    expect(onChange).toHaveBeenCalledWith('1 00:00:00');
+  });
+
+  it('keeps a readonly json field read-only (no textbox)', () => {
+    render(
+      <FieldInput
+        name="meta"
+        field={field({ type: 'json', readonly: true, value: '{"a":1}' })}
+        value={null}
+        error={undefined}
+        onChange={() => {}}
+      />,
+    );
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+  });
+});
