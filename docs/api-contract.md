@@ -365,6 +365,15 @@ ORM fall back to `.none()` (zero rows; never a 500). Filters are
 applied **after** search and **before** `date_hierarchy` /
 ordering.
 
+A `list_filter` entry may be a **related-field path** that spans
+relations (`"author__is_active"`, `"order__customer__country"`), not just
+a direct field (`#440`). The descriptor's `name` is the full path and the
+SPA round-trips `?<path>=<value>`; the leaf field's type picks the filter
+shape (boolean / choice / foreignkey / date), and a sensitive leaf
+(`author__password`) is dropped like any sensitive field. Transform
+lookups (`__year`, `__gte`, `__icontains`) are not yet supported and are
+silently skipped.
+
 ### 3.2 `GET /api/v1/{app_label}/{model_name}/autocomplete/`
 
 Typeahead endpoint for high-cardinality FK pickers

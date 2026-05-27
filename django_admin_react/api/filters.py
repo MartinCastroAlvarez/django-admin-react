@@ -92,6 +92,38 @@ def _safe_get_field(model: type[Model], name: str) -> Field | None:
     return field if isinstance(field, Field) else None
 
 
+def _resolve_field_path(model: type[Model], path: str) -> Field | None:
+    """Resolve a ``list_filter`` entry to its leaf model ``Field``.
+
+    Handles a plain field name (``"status"``) and a **related-field path**
+    that spans relations (``"author__is_active"`` / ``"order__customer__country"``):
+    each non-final segment must be a relation we can traverse, and the
+    final segment is the leaf field whose *type* drives the descriptor and
+    whose value the ORM filters on (Django applies ``filter(path=value)``
+    natively). Transform lookups (``__year`` / ``__gte`` / ``__icontains``)
+    are not fields and resolve to ``None`` — a separate follow-up (#440).
+    Reverse / generic relations collapse to ``None``, like ``_safe_get_field``.
+    """
+    parts = path.split("__")
+    current: type[Model] = model
+    field: Field | None = None
+    for index, part in enumerate(parts):
+        try:
+            candidate = current._meta.get_field(part)
+        except Exception:
+            return None
+        if not isinstance(candidate, Field):
+            return None
+        field = candidate
+        if index < len(parts) - 1:
+            # Non-final segment must be a relation we can step into.
+            related = getattr(candidate, "related_model", None)
+            if related is None or isinstance(related, str):
+                return None
+            current = related
+    return field
+
+
 def _spec_for_boolean(field_name: str, field: Any) -> dict[str, Any]:
     return {
         "name": field_name,
@@ -267,8 +299,16 @@ def filters_payload(
         if is_sensitive_field_name(field_name):
             continue
 
-        field = _safe_get_field(model, field_name)
+        # Resolve a plain field OR a related-field path (#440). The
+        # descriptor `name` stays the full path so the SPA round-trips
+        # `?<path>=<value>` and the ORM filters natively.
+        field = _resolve_field_path(model, field_name)
         if field is None:
+            continue
+        # Defense-in-depth: a path can end in a sensitive leaf
+        # (`author__password`) even when the path string itself didn't trip
+        # the denylist — drop it.
+        if is_sensitive_field_name(field.name):
             continue
         if isinstance(field, BooleanField):
             out.append(_spec_for_boolean(field_name, field))
@@ -327,8 +367,13 @@ def apply_filters(queryset: QuerySet, model_admin: ModelAdmin, request: HttpRequ
         if raw_value is None or raw_value == "":
             continue
 
-        field = _safe_get_field(model, field_name)
+        # Resolve a plain field OR a related-field path (#440); the leaf
+        # field's type picks the coercion below, while the full path is the
+        # lookup the ORM applies (`filter(author__is_active=True)`).
+        field = _resolve_field_path(model, field_name)
         if field is None:
+            continue
+        if is_sensitive_field_name(field.name):
             continue
 
         try:

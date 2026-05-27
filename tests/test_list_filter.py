@@ -30,6 +30,7 @@ from django.contrib.auth.models import Group
 from django.db.models import Q
 from django.test import Client
 
+from django_admin_react.api.filters import _resolve_field_path
 from django_admin_react.api.filters import _spec_for_fk
 
 LIST_USER_URL = "/admin-react/api/v1/auth/user/"
@@ -300,3 +301,85 @@ def test_fk_filter_choices_unlimited_when_no_limit(empty: object) -> None:
     spec = _spec_for_fk("grp", _fk_stub(empty), None, admin.site)
     assert spec is not None
     assert {c["value"] for c in spec["choices"]} == {alpha.pk, beta.pk}
+
+
+# --------------------------------------------------------------------------- #
+# Related-field-path list_filter resolution (#440)                            #
+# --------------------------------------------------------------------------- #
+def test_resolve_field_path_plain_field() -> None:
+    from django.db.models import BooleanField
+
+    User = get_user_model()
+    field = _resolve_field_path(User, "is_active")
+    assert isinstance(field, BooleanField)
+
+
+def test_resolve_field_path_spans_a_relation_to_the_leaf() -> None:
+    # LogEntry.user (FK → User); the leaf is User.is_active (boolean).
+    from django.contrib.admin.models import LogEntry
+    from django.db.models import BooleanField
+
+    field = _resolve_field_path(LogEntry, "user__is_active")
+    assert isinstance(field, BooleanField)
+    assert field.name == "is_active"
+
+
+def test_resolve_field_path_spans_a_m2m_relation() -> None:
+    # User.groups (M2M → Group); leaf Group.name.
+    User = get_user_model()
+    field = _resolve_field_path(User, "groups__name")
+    assert field is not None
+    assert field.name == "name"
+
+
+def test_resolve_field_path_rejects_transform_lookups() -> None:
+    # `is_active__exact` etc. — a transform after a non-relation isn't a
+    # field path; resolve to None (handled as a follow-up, not a crash).
+    User = get_user_model()
+    assert _resolve_field_path(User, "is_active__year") is None
+
+
+def test_resolve_field_path_rejects_unknown_segments() -> None:
+    User = get_user_model()
+    assert _resolve_field_path(User, "nope") is None
+    assert _resolve_field_path(User, "groups__nope") is None
+
+
+@pytest.mark.django_db
+def test_related_path_list_filter_applies_end_to_end(superuser_client: Client) -> None:
+    """A related-field-path list_filter (`user__is_active`) surfaces a
+    descriptor AND narrows the queryset over the relation (#440)."""
+    from django.contrib.admin import ModelAdmin
+    from django.contrib.admin.models import CHANGE
+    from django.contrib.admin.models import LogEntry
+    from django.contrib.contenttypes.models import ContentType
+
+    User = get_user_model()
+    active = User.objects.create_user(username="act", password="x", is_active=True)  # noqa: S106
+    inactive = User.objects.create_user(username="ina", password="x", is_active=False)  # noqa: S106
+    ct = ContentType.objects.get_for_model(Group)
+    LogEntry.objects.create(
+        user=active, content_type=ct, object_id="1", object_repr="a", action_flag=CHANGE
+    )
+    LogEntry.objects.create(
+        user=inactive, content_type=ct, object_id="2", object_repr="b", action_flag=CHANGE
+    )
+
+    log_url = "/admin-react/api/v1/admin/logentry/"
+    registered = LogEntry in admin.site._registry
+    if not registered:
+        admin.site.register(LogEntry, ModelAdmin)
+    log_admin = admin.site._registry[LogEntry]
+    log_admin.list_filter = ("user__is_active",)
+    try:
+        meta = superuser_client.get(log_url).json()
+        names = {f["name"] for f in meta["filters"]}
+        assert "user__is_active" in names  # path descriptor surfaced
+        body = superuser_client.get(log_url + "?user__is_active=true").json()
+        # Only the active user's LogEntry survives the path filter.
+        assert body["total"] == 1
+    finally:
+        with suppress(AttributeError):
+            del log_admin.list_filter
+        if not registered:
+            admin.site.unregister(LogEntry)
