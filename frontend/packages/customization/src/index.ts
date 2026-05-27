@@ -9,6 +9,7 @@ export {
   CUSTOMIZATION_NAMESPACE,
   THEME_KEY,
   NAV_COLLAPSE_KEY,
+  PINNED_MODELS_KEY,
   PRESERVED_ON_LOGOUT,
   columnsKey,
   columnWidthsKey,
