@@ -68,6 +68,9 @@ importers:
       '@dar/form':
         specifier: workspace:*
         version: link:../../packages/form
+      '@dar/history':
+        specifier: workspace:*
+        version: link:../../packages/history
       '@dar/settings':
         specifier: workspace:*
         version: link:../../packages/settings
@@ -163,6 +166,22 @@ importers:
       '@dar/details':
         specifier: workspace:*
         version: link:../details
+      '@dar/ui':
+        specifier: workspace:*
+        version: link:../ui
+    devDependencies:
+      '@types/react':
+        specifier: ^18.3.0
+        version: 18.3.29
+      react:
+        specifier: ^18.3.0
+        version: 18.3.1
+
+  packages/history:
+    dependencies:
+      '@dar/data':
+        specifier: workspace:*
+        version: link:../data
       '@dar/ui':
         specifier: workspace:*
         version: link:../ui
