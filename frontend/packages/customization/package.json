@@ -1,5 +1,5 @@
 {
-  "name": "@dar/sidebar",
+  "name": "@dar/customization",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -12,22 +12,13 @@
     "lint": "echo 'lint via root'",
     "typecheck": "tsc --noEmit -p .",
     "build": "echo 'no build step — TS consumed by @dar/web bundler'",
-    "test": "echo 'no tests yet'"
-  },
-  "dependencies": {
-    "@dar/customization": "workspace:*",
-    "@dar/data": "workspace:*",
-    "@dar/settings": "workspace:*"
+    "test": "echo 'tests run via the root vitest config'"
   },
   "peerDependencies": {
-    "lucide-react": "^1.16.0",
-    "react": "^18.3.0",
-    "react-router-dom": "^6.26.0"
+    "react": "^18.3.0"
   },
   "devDependencies": {
     "@types/react": "^18.3.0",
-    "lucide-react": "^1.16.0",
-    "react": "^18.3.0",
-    "react-router-dom": "^6.26.0"
+    "react": "^18.3.0"
   }
 }

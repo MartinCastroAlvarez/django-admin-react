@@ -6,10 +6,9 @@
 import { useState } from 'react';
 import { LogOut, Moon, Sun } from 'lucide-react';
 
+import { resolveTheme, setTheme, type Theme } from '@dar/customization';
 import { useApiClient, purgeLocalCache } from '@dar/data';
 import { Button, Modal } from '@dar/ui';
-
-import { resolveTheme, setTheme, type Theme } from './theme';
 
 export function SettingsModal({ onClose }: { onClose: () => void }) {
   const [theme, setThemeState] = useState<Theme>(() => resolveTheme());

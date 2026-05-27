@@ -15,6 +15,7 @@
     "test": "echo 'no tests yet'"
   },
   "dependencies": {
+    "@dar/customization": "workspace:*",
     "@dar/data": "workspace:*",
     "@dar/ui": "workspace:*"
   },

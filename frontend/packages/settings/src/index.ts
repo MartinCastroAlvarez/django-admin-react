@@ -3,6 +3,9 @@
 // surface without touching the app shell or the sidebar.
 
 export { SettingsModal } from './SettingsModal';
+// Theme state lives in @dar/customization (the home for all
+// localStorage-backed UI customization); re-exported here so the app
+// shell + Settings modal keep importing it from @dar/settings.
 export {
   applyTheme,
   getStoredTheme,
@@ -11,4 +14,4 @@ export {
   setTheme,
   systemTheme,
   type Theme,
-} from './theme';
+} from '@dar/customization';

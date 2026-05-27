@@ -30,6 +30,7 @@ import {
   type InlineWritePayload,
   type WriteValue,
 } from '@dar/data';
+import { detailCollapseKey, usePersistedState } from '@dar/customization';
 import { Breadcrumb, Button, Card, EmptyState, Modal, Table } from '@dar/ui';
 import { FieldValueView } from '@dar/details';
 import { FieldInput, InlineEditor } from '@dar/form';
@@ -92,26 +93,11 @@ function FieldsetSection({
   fields: Record<string, FieldDescriptor>;
   persistKey: string;
 }) {
+  // Default open unless Django's `collapse` class says otherwise; a saved
+  // preference wins. Persistence is centralized in @dar/customization.
   const startsCollapsed = (fieldset.classes ?? []).includes('collapse');
-  const [open, setOpen] = useState<boolean>(() => {
-    try {
-      const raw = localStorage.getItem(persistKey);
-      if (raw !== null) return raw === '1';
-    } catch {
-      /* localStorage unavailable — fall back to the default. */
-    }
-    return !startsCollapsed;
-  });
-  const toggle = (): void =>
-    setOpen((o) => {
-      const next = !o;
-      try {
-        localStorage.setItem(persistKey, next ? '1' : '0');
-      } catch {
-        /* best effort */
-      }
-      return next;
-    });
+  const [open, setOpen] = usePersistedState<boolean>(persistKey, !startsCollapsed);
+  const toggle = (): void => setOpen((o) => !o);
 
   return (
     <Card>
@@ -313,7 +299,7 @@ export function DetailPage() {
               key={`fs-${idx}-${fieldset.title ?? 'default'}`}
               fieldset={fieldset}
               fields={data.fields}
-              persistKey={`dar:detail-collapsed:${appLabel}:${modelName}:${idx}-${fieldset.title ?? 'default'}`}
+              persistKey={detailCollapseKey(appLabel, modelName, idx, fieldset.title ?? 'default')}
             />
           ))}
 
