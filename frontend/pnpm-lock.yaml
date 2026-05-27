@@ -159,6 +159,9 @@ importers:
 
   packages/settings:
     dependencies:
+      '@dar/data':
+        specifier: workspace:*
+        version: link:../data
       '@dar/ui':
         specifier: workspace:*
         version: link:../ui

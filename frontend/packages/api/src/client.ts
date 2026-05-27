@@ -179,6 +179,19 @@ export class ApiClient {
     return this.request<LoginResponse>('POST', 'login/', { username, password });
   }
 
+  /**
+   * End the current session (contract §7, Issue #167). A thin JSON shell
+   * over Django's own `logout` (`api/views/auth.py`) — flushes the
+   * session server-side and clears the auth cookie. Idempotent: logging
+   * out while already anonymous is a harmless `200`, and because POST is
+   * unsafe, CSRF is enforced (a forged cross-site logout can't drop a
+   * victim's session). The caller is responsible for purging any
+   * client-side cache (see `@dar/data` `purgeLocalCache`) and reloading.
+   */
+  logout(): Promise<{ detail: string }> {
+    return this.request<{ detail: string }>('POST', 'logout/', {});
+  }
+
   /** The create-form schema for a NEW object (GET <app>/<model>/add/). */
   addForm(appLabel: string, modelName: string): Promise<AddFormResponse> {
     return this.request<AddFormResponse>('GET', `${appLabel}/${modelName}/add/`);

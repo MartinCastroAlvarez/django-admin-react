@@ -15,6 +15,7 @@
     "test": "echo 'no tests yet'"
   },
   "dependencies": {
+    "@dar/data": "workspace:*",
     "@dar/ui": "workspace:*"
   },
   "peerDependencies": {

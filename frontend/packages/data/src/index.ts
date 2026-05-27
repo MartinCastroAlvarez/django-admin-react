@@ -71,3 +71,5 @@ export { renderValue, isHtmlValue, isForeignKeyValue, isFileValue } from './form
 
 export { useSwrCache } from './swr-cache';
 export type { SwrState, UseSwrCacheArgs } from './swr-cache';
+
+export { purgeLocalCache } from './cache-purge';
