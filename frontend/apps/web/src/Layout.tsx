@@ -193,33 +193,34 @@ export function Layout({ children }: PropsWithChildren) {
             )}
             <span>{BRAND_TITLE}</span>
           </Link>
-          {data?.user && (
-            <div className="mt-1 text-xs text-gray-400">
-              {data.user.display_name}
-              {data.user.is_superuser ? ' · superuser' : ''}
-            </div>
-          )}
-          <div className="mt-3 flex items-center gap-2">
+          <div className="mt-1 flex items-center gap-2">
+            {data?.user && (
+              <span
+                className="min-w-0 flex-1 truncate text-xs text-gray-400"
+                title={data.user.display_name}
+              >
+                {data.user.display_name}
+              </span>
+            )}
             <button
               type="button"
               onClick={() => setSettingsOpen(true)}
               aria-label="Settings"
-              className="inline-flex items-center gap-1.5 rounded border border-gray-700 px-2 py-1 text-xs text-gray-200 hover:bg-gray-800"
+              className="ml-auto inline-flex shrink-0 items-center justify-center rounded border border-gray-700 p-1.5 text-gray-200 hover:bg-gray-800"
             >
-              <Settings className="h-3.5 w-3.5" aria-hidden />
-              Settings
+              <Settings className="h-4 w-4" aria-hidden />
             </button>
-            {canInstall && (
-              <button
-                type="button"
-                onClick={promptInstall}
-                className="inline-flex items-center gap-1.5 rounded border border-gray-700 px-2 py-1 text-xs text-gray-200 hover:bg-gray-800"
-              >
-                <Download className="h-3.5 w-3.5" aria-hidden />
-                Install app
-              </button>
-            )}
           </div>
+          {canInstall && (
+            <button
+              type="button"
+              onClick={promptInstall}
+              className="mt-2 inline-flex items-center gap-1.5 rounded border border-gray-700 px-2 py-1 text-xs text-gray-200 hover:bg-gray-800"
+            >
+              <Download className="h-3.5 w-3.5" aria-hidden />
+              Install app
+            </button>
+          )}
         </div>
 
         {showFilter && (

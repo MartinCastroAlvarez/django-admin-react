@@ -176,6 +176,17 @@ export class ApiClient {
     return this.request<LoginResponse>('POST', 'login/', { username, password });
   }
 
+  /**
+   * End the current session via the package's logout endpoint
+   * (`POST /api/v1/logout/`, `api/views/auth.py`) — a thin JSON shell over
+   * Django's own `logout` that flushes the session server-side. Idempotent
+   * (logging out while already anonymous is a harmless 200). CSRF is
+   * enforced by the middleware, same as `login()`.
+   */
+  logout(): Promise<{ detail: string }> {
+    return this.request<{ detail: string }>('POST', 'logout/', {});
+  }
+
   /** The create-form schema for a NEW object (GET <app>/<model>/add/). */
   addForm(appLabel: string, modelName: string): Promise<AddFormResponse> {
     return this.request<AddFormResponse>('GET', `${appLabel}/${modelName}/add/`);
