@@ -176,13 +176,19 @@ Every endpoint added must include all of these tests before merging:
 
 ## 8. Static analysis (local + CI)
 
-The gate runs in two places, both required: locally for fast feedback
-(`./scripts/lint.sh` + the pre-commit hooks) **and** server-side in CI
-(`.github/workflows/ci.yml`) so a red suite cannot merge. The earlier
-"local-only, no CI in v0.x" posture was revisited and reversed (issue
-#452 — regressions were slipping onto `main` under CodeQL-only gating;
-see `docs/agents/decisions.md`). The CI backend job runs `scripts/lint.sh`
-directly, so the two stay in lockstep by construction.
+The earlier "local-only, no CI in v0.x" posture was revisited and
+reversed (issue #452 — regressions were slipping onto `main` under
+CodeQL-only gating; see `docs/agents/decisions.md`). **The test suites
+now run server-side in CI** (`.github/workflows/ci.yml`): backend
+`pytest` and the frontend `pnpm` gate (typecheck + lint + test + build),
+so a red suite cannot merge.
+
+Enforcing the **Python lint gate** in CI is a near-term follow-up:
+`scripts/lint.sh` currently runs two formatters (`ruff format` + `black`)
+whose output conflicts, so it isn't satisfiable on a clean tree yet. The
+local script below is still the authoritative lint gate; it gets
+de-conflicted and the small existing debt cleared first, then the lint
+step is added to CI.
 
 Run via `./scripts/lint.sh`:
 
@@ -198,9 +204,8 @@ Run via `./scripts/lint.sh`:
 - Frontend: `pnpm -r typecheck`, `pnpm lint` (eslint `--max-warnings 0`
   + stylelint + dark-mode coverage), `pnpm test` (vitest), `pnpm -r build`.
 
-CI additionally runs the pre-commit security hooks (bandit + the
-house-rule pygrep checks) on every PR. Making the CI checks **required**
-in branch protection is a separate owner action (#452 / #331).
+Making the CI checks **required** in branch protection is a separate
+owner action (#452 / #331).
 
 Dependency audit runs separately via `./scripts/audit-deps.sh`
 (see §6).

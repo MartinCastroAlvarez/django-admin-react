@@ -8,10 +8,10 @@
 # Anything below the [BLOCK] threshold in
 # `docs/agents/security-expert/REVIEW_CHECKLIST.md` §1 aborts the commit.
 #
-# This file is the commit-time half of the quality gate. The same hooks
-# run server-side in CI (`.github/workflows/ci.yml` invokes
-# `scripts/lint.sh`, which runs `pre-commit run --all-files`), so a
-# developer who disables this local hook still hits the gate on their PR.
+# This file is the commit-time half of the quality gate, run together
+# with `scripts/lint.sh` before a PR. CI (`.github/workflows/ci.yml`)
+# currently runs the test suites, not these hooks; wiring the lint/security
+# hooks into CI is a follow-up (#452).
 
 repos:
   # -------------------------------------------------------------------

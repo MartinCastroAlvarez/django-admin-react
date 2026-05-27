@@ -2,12 +2,12 @@
 #
 # Dataflow-based security analysis (Python + TypeScript), surfacing
 # findings in the repository's Security tab where external reporters and
-# maintainers both look. Free for public repos. It complements the lint +
-# test gate in `ci.yml` (and the local `scripts/lint.sh`): `bandit` /
+# maintainers both look. Free for public repos. It complements the test
+# gate in `ci.yml` and the local lint gate (`scripts/lint.sh`): `bandit` /
 # `ruff -S` (Python) and `eslint` (frontend) are rule-based; CodeQL adds
 # dataflow detection (injection, path traversal, unsafe deserialization)
 # those linters can miss. Added in #144 (post-public-flip hardening);
-# the lint/test CI gate followed in #452.
+# the test CI gate followed in #452.
 name: CodeQL
 
 on:
