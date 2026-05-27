@@ -774,7 +774,7 @@ function DateHierarchyBar({
     return { year: active.year, month: active.month, day: v };
   };
 
-  const crumb = 'rounded px-1.5 py-0.5 text-blue-600 hover:bg-blue-50 hover:underline';
+  const crumb = 'rounded px-1.5 py-0.5 text-primary hover:bg-blue-50 hover:underline';
 
   return (
     <nav aria-label="Date hierarchy" className="flex flex-wrap items-center gap-3 text-sm">

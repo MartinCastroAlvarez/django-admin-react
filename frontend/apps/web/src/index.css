@@ -115,7 +115,9 @@ body,
 .dark .bg-green-50 {
   background-color: #14321f !important;
 }
-.dark .text-green-700 {
+.dark .text-green-700,
+.dark .text-green-600 {
+  /* green-600 is the boolean "Yes" check icon; lighten it for dark. */
   color: #86efac !important;
 }
 /* Amber warning banners (delete-preview cautions, home-card hints) — same

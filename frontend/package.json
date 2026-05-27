@@ -8,9 +8,10 @@
     "pnpm": ">=9"
   },
   "scripts": {
-    "lint": "pnpm lint:js && pnpm lint:css",
+    "lint": "pnpm lint:js && pnpm lint:css && pnpm lint:darkmode",
     "lint:js": "eslint . --max-warnings 0",
     "lint:css": "stylelint \"apps/**/*.css\" \"packages/**/*.css\"",
+    "lint:darkmode": "node scripts/check-dark-mode-coverage.mjs",
     "lint:fix": "eslint . --fix && stylelint \"apps/**/*.css\" \"packages/**/*.css\" --fix",
     "typecheck": "pnpm -r typecheck",
     "build": "pnpm -r build",
