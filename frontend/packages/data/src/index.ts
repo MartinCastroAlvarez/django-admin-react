@@ -63,7 +63,7 @@ export type { DetailState } from './detail-context';
 export { createObject, updateObject, deleteObject, fetchDeletePreview } from './mutations';
 export type { CreateArgs, UpdateArgs, DeleteArgs, DeletePreviewArgs } from './mutations';
 
-export { renderValue, isHtmlValue, isForeignKeyValue } from './format';
+export { renderValue, isHtmlValue, isForeignKeyValue, isFileValue } from './format';
 
 export { useSwrCache } from './swr-cache';
 export type { SwrState, UseSwrCacheArgs } from './swr-cache';

@@ -307,4 +307,14 @@ def _serialize_list_value(obj: Model, name: str, value: Any, admin_site: Any = N
     model_field = safe_get_field(obj, name)
     if isinstance(model_field, ForeignKey):
         return serialize_fk_value(value, admin_site=admin_site)
+    # A field with ``choices`` displays its human label, not the stored
+    # value (Django's ``display_for_field`` parity — e.g. ``1`` → "High").
+    # The changelist is a read-only display surface; ``list_editable``
+    # carries the raw value through its own path, so mapping here is safe.
+    if model_field is not None:
+        flatchoices = getattr(model_field, "flatchoices", None)
+        if flatchoices:
+            label = dict(flatchoices).get(value)
+            if label is not None:
+                return str(label)
     return serialize_value(value, field=model_field)

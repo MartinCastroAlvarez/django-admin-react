@@ -265,3 +265,35 @@ def test_search_distinct_when_may_have_duplicates(superuser_client: Client) -> N
     ):
         response = superuser_client.get(LIST_URL + "?q=al")
     assert response.status_code == 200
+
+
+# --------------------------------------------------------------------------- #
+# Choice fields show the display label, not the raw stored value (#298)       #
+# --------------------------------------------------------------------------- #
+def test_list_cell_choice_field_shows_display_label(monkeypatch) -> None:  # noqa: ANN001
+    """A list cell for a field with ``choices`` renders the human label
+    (Django's ``display_for_field`` parity), e.g. ``"h"`` → "High". Unknown
+    values fall through to the normal serializer."""
+    from django.db import models
+
+    from django_admin_react.api.views import list as list_view
+
+    field = models.CharField(choices=[("h", "High"), ("l", "Low")])
+    monkeypatch.setattr(list_view, "safe_get_field", lambda obj, name: field)
+
+    assert list_view._serialize_list_value(object(), "priority", "h") == "High"
+    assert list_view._serialize_list_value(object(), "priority", "l") == "Low"
+    # A value not in the choice set is left to the default serializer.
+    assert list_view._serialize_list_value(object(), "priority", "x") == "x"
+
+
+def test_list_cell_non_choice_field_unaffected(monkeypatch) -> None:  # noqa: ANN001
+    """A plain field without choices still serializes its value as-is."""
+    from django.db import models
+
+    from django_admin_react.api.views import list as list_view
+
+    field = models.CharField()
+    monkeypatch.setattr(list_view, "safe_get_field", lambda obj, name: field)
+
+    assert list_view._serialize_list_value(object(), "name", "hello") == "hello"

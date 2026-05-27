@@ -108,6 +108,18 @@ export interface HtmlValue {
   html: string;
 }
 
+/**
+ * A `FileField` / `ImageField` value — the stored file's name, a URL
+ * resolved by the consumer's storage backend (`null` when unavailable),
+ * and a best-effort byte size (`null` when the backend doesn't expose it
+ * cheaply). The SPA renders it as a download link, not raw text.
+ */
+export interface FileValue {
+  name: string;
+  url: string | null;
+  size: number | null;
+}
+
 export type FieldValue =
   | string
   | number
@@ -115,7 +127,8 @@ export type FieldValue =
   | null
   | ForeignKeyValue
   | ForeignKeyValue[]
-  | HtmlValue;
+  | HtmlValue
+  | FileValue;
 
 export interface ListRow {
   pk: number | string;
