@@ -13,6 +13,7 @@ import pytest
 from django.contrib.auth.models import Group
 from django.test import Client
 
+from django_admin_react.api.views.create_form import _overlay_initial
 from django_admin_react.api.views.create_form import _prepopulated_payload
 from tests.helpers import admin_override
 
@@ -144,3 +145,109 @@ def test_add_form_includes_save_options_block(superuser_client: Client) -> None:
     assert so["show_save_and_add_another"] is True
     # "Save as new" is a change-view-only affordance — never on add.
     assert so["show_save_as_new"] is False
+
+
+# --------------------------------------------------------------------------- #
+# get_changeform_initial_data / GET-param prefill (#444)                       #
+# --------------------------------------------------------------------------- #
+@pytest.mark.django_db
+def test_get_param_prefills_scalar_field(superuser_client: Client) -> None:
+    """A link like ``/add/?name=Editors`` lands the add form pre-filled —
+    the default ``get_changeform_initial_data`` reflects ``request.GET``."""
+    body = superuser_client.get(f"{ADD_URL}?name=Editors").json()
+    assert body["fields"]["name"]["value"] == "Editors"
+
+
+@pytest.mark.django_db
+def test_changeform_initial_data_override_prefills(superuser_client: Client) -> None:
+    """A ModelAdmin that overrides get_changeform_initial_data seeds the
+    add form with its defaults."""
+    with admin_override(
+        Group, get_changeform_initial_data=lambda self, request: {"name": "Default Team"}
+    ):
+        body = superuser_client.get(ADD_URL).json()
+    assert body["fields"]["name"]["value"] == "Default Team"
+
+
+@pytest.mark.django_db
+def test_no_initial_leaves_default_value(superuser_client: Client) -> None:
+    """Without prefill, the field keeps its empty add-form default — the
+    overlay only touches fields named in the initial data."""
+    body = superuser_client.get(ADD_URL).json()
+    assert body["fields"]["name"]["value"] == ""
+
+
+@pytest.mark.django_db
+def test_m2m_initial_not_prefilled(superuser_client: Client) -> None:
+    """An M2M can't be set on the unsaved add instance, so an M2M initial
+    is ignored — the field keeps its empty default."""
+    body = superuser_client.get(f"{ADD_URL}?permissions=1").json()
+    assert body["fields"]["permissions"]["value"] == []
+
+
+@pytest.mark.django_db
+def test_unknown_initial_param_is_ignored(superuser_client: Client) -> None:
+    """An initial naming a field the form doesn't render is a no-op — no
+    crash and no stray key in the payload."""
+    r = superuser_client.get(f"{ADD_URL}?not_a_real_field=x")
+    assert r.status_code == 200
+    assert "not_a_real_field" not in r.json()["fields"]
+
+
+# --------------------------------------------------------------------------- #
+# _overlay_initial unit coverage (#444): FK resolution + skip/ignore branches #
+# --------------------------------------------------------------------------- #
+@pytest.mark.django_db
+def test_overlay_resolves_fk_initial_to_envelope() -> None:
+    """An FK initial is resolved through the form's (admin-scoped)
+    ModelChoiceField queryset and serialized as the {id, label} envelope."""
+    from django import forms
+    from django.contrib.auth.models import Permission
+    from django.contrib.contenttypes.models import ContentType
+
+    ct = ContentType.objects.get_for_model(Group)
+    form = forms.modelform_factory(Permission, fields=["name", "content_type", "codename"])()
+    fields = {"content_type": {"value": None}}
+
+    _overlay_initial(fields, Permission, form, {"content_type": str(ct.pk)}, None, None)
+
+    assert fields["content_type"]["value"]["id"] == ct.pk
+
+
+@pytest.mark.django_db
+def test_overlay_ignores_invalid_fk_pk() -> None:
+    """An FK initial pointing at a non-existent row is ignored (no 500),
+    leaving the field's default value."""
+    from django import forms
+    from django.contrib.auth.models import Permission
+
+    form = forms.modelform_factory(Permission, fields=["content_type"])()
+    fields = {"content_type": {"value": None}}
+
+    _overlay_initial(fields, Permission, form, {"content_type": "99999999"}, None, None)
+
+    assert fields["content_type"]["value"] is None
+
+
+@pytest.mark.django_db
+def test_overlay_skips_m2m_initial() -> None:
+    """An M2M initial is skipped — not settable on the unsaved add instance."""
+    from django import forms
+
+    form = forms.modelform_factory(Group, fields=["name", "permissions"])()
+    fields = {"permissions": {"value": []}}
+
+    _overlay_initial(fields, Group, form, {"permissions": ["1"]}, None, None)
+
+    assert fields["permissions"]["value"] == []
+
+
+def test_overlay_skips_field_absent_from_form() -> None:
+    """An initial for a field the form doesn't render leaves the descriptor
+    untouched (and never touches the DB)."""
+    form = SimpleNamespace(fields={})
+    fields = {"name": {"value": "orig"}}
+
+    _overlay_initial(fields, Group, form, {"name": "changed"}, None, None)
+
+    assert fields["name"]["value"] == "orig"
