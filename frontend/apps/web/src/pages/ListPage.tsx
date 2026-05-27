@@ -495,7 +495,14 @@ export function ListPage() {
               value={searchDraft}
               onChange={(e) => setSearchDraft(e.target.value)}
               onBlur={commitSearch}
+              aria-describedby={data.search_help_text ? 'dar-search-help' : undefined}
             />
+            {/* ModelAdmin.search_help_text under the box (Django parity, #445). */}
+            {data.search_help_text && (
+              <p id="dar-search-help" className="mt-1 text-xs text-gray-500">
+                {data.search_help_text}
+              </p>
+            )}
           </form>
         )}
         {hasFilters && (

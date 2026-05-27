@@ -185,6 +185,7 @@ Response 200:
     { "name": "is_active","label": "Active",   "sortable": false }
   ],
   "search_fields": ["name", "iban"],
+  "search_help_text": "Search by name or IBAN.",
   "page": 1,
   "page_size": 25,
   "total": 137,
@@ -212,6 +213,9 @@ Rules:
   list-display values are resolved using the admin's standard helpers.
 - `search_fields` is the literal list from the `ModelAdmin` (so the SPA
   can label the search box). Empty list means no search.
+- `search_help_text` is `ModelAdmin.search_help_text` (empty string when
+  unset) — the SPA renders it under the search box, matching Django's
+  changelist (`#445`).
 - `total` is the count *after* search / `list_filter` / `date_hierarchy`
   narrowing. `full_count` is the unfiltered base count
   (`ModelAdmin.get_queryset(request)`), so the SPA can show "<total> of
