@@ -211,6 +211,11 @@ Rules:
   first, never truncates it, and keeps it from being hidden.
 - `columns` is built from `ModelAdmin.get_list_display(request)`. Callable
   list-display values are resolved using the admin's standard helpers.
+- `list_display_links` (`#251`) is the column name(s) that link to the
+  detail page — `ModelAdmin.get_list_display_links` (defaults to the first
+  column; `[]` when the admin set `list_display_links = None` to disable
+  linking). The SPA links exactly these columns. Callable list_display
+  entries are dropped (only string column names round-trip).
 - `search_fields` is the literal list from the `ModelAdmin` (so the SPA
   can label the search box). Empty list means no search.
 - `search_help_text` is `ModelAdmin.search_help_text` (empty string when
