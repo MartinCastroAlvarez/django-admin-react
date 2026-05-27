@@ -50,8 +50,14 @@ from django_admin_react.api.writes import not_found_response
 # any *other* key is a list_filter or date_hierarchy lookup, i.e. the list
 # is narrowed. Used to decide whether the unfiltered ``full_count`` could
 # differ from ``total`` (#311) — and so whether the extra COUNT(*) is worth
-# running at all.
-_COUNT_RESERVED_PARAMS = frozenset({"page", "page_size", "ordering", "q"})
+# running at all. ``all`` is Django's ``ALL_VAR`` "Show all" flag, not a
+# filter lookup, so it must not flip the list into the narrowed branch.
+_COUNT_RESERVED_PARAMS = frozenset({"page", "page_size", "ordering", "q", "all"})
+
+# Django's ``ALL_VAR`` — the query param its changelist uses for the
+# "Show all N" link (#385). Its mere presence requests show-all; the value
+# is ignored, mirroring Django.
+_ALL_VAR = "all"
 
 
 class ListView(View):
@@ -134,8 +140,24 @@ class ListView(View):
         else:
             full_count = total
 
-        page_size = _clamp_page_size(request.GET.get("page_size"))
-        page = _clamp_page(request.GET.get("page"))
+        # "Show all N" parity (#385): Django's changelist drops pagination
+        # when the ``all`` param (its ``ALL_VAR``) is present AND the result
+        # count is at/below ``list_max_show_all`` (default 200). Above that
+        # cap the flag is ignored and the list paginates normally — the
+        # guard that stops a crawler forcing a huge unbounded materialise.
+        list_max_show_all = int(getattr(model_admin, "list_max_show_all", 200))
+        show_all = _ALL_VAR in request.GET and total <= list_max_show_all
+
+        if show_all:
+            # One page holding every row: page 1, page_size = total. The
+            # ``max(total, 1)`` keeps page_size positive for an empty list
+            # (a 0-size page would slice to nothing, but there's nothing to
+            # show anyway).
+            page = 1
+            page_size = max(total, 1)
+        else:
+            page_size = _clamp_page_size(request.GET.get("page_size"))
+            page = _clamp_page(request.GET.get("page"))
         start = (page - 1) * page_size
         end = start + page_size
 
@@ -179,6 +201,10 @@ class ListView(View):
             # ``null`` when ``show_full_result_count`` is False. The SPA shows
             # "<total> of <full_count>" when they differ (#311).
             "full_count": full_count,
+            # ``ModelAdmin.list_max_show_all`` (default 200): the SPA offers a
+            # "Show all N" control only when ``total`` is at/below this cap,
+            # matching Django's changelist (#385).
+            "list_max_show_all": list_max_show_all,
             "results": results,
         }
         date_hierarchy = date_hierarchy_payload(

@@ -24,8 +24,9 @@ import { FieldValueView } from '@dar/details';
 import { useToast } from '../toast';
 
 // Query params the page manages itself; everything else is a
-// `list_filter` key.
-const RESERVED_PARAMS = new Set(['q', 'page']);
+// `list_filter` key. `all` is Django's "Show all" flag (#385), not a
+// filter, so it never becomes a chip or a persisted saved-view entry.
+const RESERVED_PARAMS = new Set(['q', 'page', 'all']);
 
 // `date_hierarchy` drill-down params (Django's standard year/month/day).
 // They DO flow to the backend (as non-reserved params), but they're not
@@ -62,6 +63,9 @@ export function ListPage() {
   // query param, keyed by the descriptor `name`.
   const q = searchParams.get('q') ?? '';
   const page = Number(searchParams.get('page') ?? '1') || 1;
+  // "Show all" (#385): the URL is the source of truth — `?all` present
+  // means show-all is active. Like Django's ALL_VAR, only presence matters.
+  const showAll = searchParams.has('all');
 
   const activeFilters = useMemo(() => {
     const out: Record<string, string> = {};
@@ -77,6 +81,7 @@ export function ListPage() {
     modelName,
     q,
     page,
+    all: showAll,
     filters: activeFilters,
   });
 
@@ -251,6 +256,21 @@ export function ListPage() {
     setSearchParams(next);
   }
 
+  // "Show all N" / "Show paginated" (#385). Switching to show-all sets the
+  // bare `?all` flag and drops the page param (show-all has no pages);
+  // switching back removes it. Both keep the URL the source of truth so a
+  // reload / share preserves the chosen mode.
+  function setShowAll(enabled: boolean): void {
+    const next = new URLSearchParams(searchParams);
+    if (enabled) {
+      next.set('all', '');
+      next.delete('page');
+    } else {
+      next.delete('all');
+    }
+    setSearchParams(next);
+  }
+
   // Click-to-sort (#195): the URL `ordering` param is the source of
   // truth (single column in v1). `-name` = name DESC, `name` = ASC.
   // Clicking a header cycles asc → desc → unsorted.
@@ -388,6 +408,12 @@ export function ListPage() {
   const visibleColumnCount = columns.length;
 
   const totalPages = Math.max(1, Math.ceil(data.total / data.page_size));
+  // "Show all N" (#385): offer the control only when the list spans more
+  // than one page AND the total is at/below the admin's
+  // `list_max_show_all` cap — matching Django's changelist guard. When
+  // show-all is active the backend returns every row on a single page, so
+  // the Prev/Next pager is replaced by a "Show paginated" toggle.
+  const canShowAll = !showAll && data.total > data.page_size && data.total <= data.list_max_show_all;
   const filters = data.filters ?? [];
   const hasFilters = filters.length > 0;
   const chips = buildChips(filters, activeFilters);
@@ -614,7 +640,35 @@ export function ListPage() {
           />
         )}
       </Card>
-      <Pagination page={data.page} totalPages={totalPages} onChange={setPage} />
+      {showAll ? (
+        // Show-all mode: every row is on the page, so there's nothing to
+        // page through — offer a way back to the paginated view instead.
+        <nav className="flex items-center justify-between text-sm text-gray-600">
+          <span>Showing all {data.total.toLocaleString()}</span>
+          <button
+            type="button"
+            onClick={() => setShowAll(false)}
+            className="rounded border border-gray-300 px-3 py-1 hover:bg-gray-100"
+          >
+            Show paginated
+          </button>
+        </nav>
+      ) : (
+        <div className="space-y-2">
+          <Pagination page={data.page} totalPages={totalPages} onChange={setPage} />
+          {canShowAll && (
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowAll(true)}
+                className="text-sm text-blue-600 hover:underline"
+              >
+                Show all {data.total.toLocaleString()}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {filterOpen && (
         <FilterModal
