@@ -174,7 +174,21 @@ Every endpoint added must include all of these tests before merging:
 - TestPyPI may be used for verification by the maintainer with a
   separate token; same hygiene rules apply.
 
-## 8. Static analysis (local-only — no CI in v0.x)
+## 8. Static analysis (local + CI)
+
+The earlier "local-only, no CI in v0.x" posture was revisited and
+reversed (issue #452 — regressions were slipping onto `main` under
+CodeQL-only gating; see `docs/agents/decisions.md`). **The test suites
+now run server-side in CI** (`.github/workflows/ci.yml`): backend
+`pytest` and the frontend `pnpm` gate (typecheck + lint + test + build),
+so a red suite cannot merge.
+
+Enforcing the **Python lint gate** in CI is a near-term follow-up:
+`scripts/lint.sh` currently runs two formatters (`ruff format` + `black`)
+whose output conflicts, so it isn't satisfiable on a clean tree yet. The
+local script below is still the authoritative lint gate; it gets
+de-conflicted and the small existing debt cleared first, then the lint
+step is added to CI.
 
 Run via `./scripts/lint.sh`:
 
@@ -187,8 +201,11 @@ Run via `./scripts/lint.sh`:
 - `mypy` (best-effort; tightening planned for v1.x)
 - `bandit -r django_admin_react`
 - `pytest -q` (including `tests/test_security.py`)
-- Frontend: `prettier --check`, `pnpm -r typecheck`, `pnpm -r lint`
-  (`eslint` wires up in PR #6).
+- Frontend: `pnpm -r typecheck`, `pnpm lint` (eslint `--max-warnings 0`
+  + stylelint + dark-mode coverage), `pnpm test` (vitest), `pnpm -r build`.
+
+Making the CI checks **required** in branch protection is a separate
+owner action (#452 / #331).
 
 Dependency audit runs separately via `./scripts/audit-deps.sh`
 (see §6).

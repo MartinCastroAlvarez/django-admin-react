@@ -436,7 +436,7 @@ Merger runs the pipeline locally before squash-merge.
 | Q-1 | `./scripts/lint.sh` is the merge gate. A merge that bypassed it is a policy violation and a revert candidate. | Forum status / PR body. |
 | Q-2 | `./scripts/build.sh` is the release gate. Both the SPA build and `poetry build` must succeed. | Run output before tagging. |
 | Q-3 | A PR that touches `pyproject.toml` runtime deps, frontend root `package.json` deps, or `LICENSE` includes a locally-recorded `pip-audit` (Python) and `pnpm audit` (npm) clean run in the PR body. | PR-body inspection. |
-| Q-4 | The "no CI" decision is revisited before leaving pre-alpha and recorded in [`docs/agents/decisions.md`](docs/agents/decisions.md). | Decision-log entry. |
+| Q-4 | The "no CI" decision was revisited and reversed before leaving pre-alpha: the test suites now run in CI (`.github/workflows/ci.yml` — backend `pytest` + frontend gate), recorded in [`docs/agents/decisions.md`](docs/agents/decisions.md). Wiring the Python lint gate into CI and marking checks required in branch protection are the remaining follow-ups (#452). | Decision-log entry + `ci.yml`. |
 
 ### 3.8 Packaging
 

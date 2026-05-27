@@ -8,8 +8,11 @@
 #   LINT_PY_ONLY=1 bash scripts/lint.sh   # skip frontend
 #   LINT_FE_ONLY=1 bash scripts/lint.sh   # skip Python
 #
-# The project does not run CI for now (per repo-owner direction); every
-# contributor must run this locally before opening / merging a PR.
+# Run this locally before opening / merging a PR — it is the fast
+# feedback loop and the authoritative lint gate. CI
+# (.github/workflows/ci.yml) runs the test suites (backend `pytest` + the
+# frontend gate); adding this script's Python lint gate to CI is a
+# follow-up (it must be de-conflicted first — two formatters disagree, #452).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

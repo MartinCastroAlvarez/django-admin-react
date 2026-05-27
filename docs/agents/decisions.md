@@ -7,6 +7,28 @@ Newest decisions on top.
 
 ---
 
+## 2026-05-28 — Reverse "no CI": the test suites now run server-side
+
+The prior "no CI in pre-alpha (per repo-owner direction)" posture was
+revisited (the trigger named in OQ-A-001 / ACCEPTANCE Q-4) and reversed.
+Under CodeQL-only gating, test regressions were merging onto `main` green
+with many agents working in parallel (e.g. #401 broke
+`tests/test_logentry.py`, caught only on a later local run — #451).
+
+- **CI now runs the test suites on every PR + push to `main`**
+  (`.github/workflows/ci.yml`): backend `pytest` (with coverage) and the
+  frontend gate (`pnpm -r typecheck` / `pnpm lint` / `pnpm test` /
+  `pnpm -r build`). Actions SHA-pinned; least-privilege `contents: read`.
+  — issue #452, ci.yml. Owner-directed merge despite Tier 5 (workflows +
+  SECURITY.md §8).
+- **Follow-ups** (off #452 / #331): wire the Python *lint* gate into CI —
+  blocked first on de-conflicting `scripts/lint.sh`, which runs two
+  formatters (`ruff format` + `black`) whose output conflicts, plus a
+  little pylint/flake8 debt to clear; mark the CI checks **required** in
+  branch protection; optional Python/Django version matrix.
+
+---
+
 ## 2026-05-27 — Ship a concrete recommended CSP (QSEC-03 resolved)
 
 Security lane (`claude-security-opus47-2026-05-27`). The SPA shell loads

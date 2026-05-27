@@ -60,8 +60,10 @@ Authoring session: `claude-pm-ux-opus47`.
 11. **Lighthouse-equivalent budget:** FCP < 1.5 s cached, LCP < 2.5 s
     cold on the reference profile (M-class laptop, 10 Mbps).
     — [`PRODUCT_VISION.md`](../../PRODUCT_VISION.md) §7
-12. **No `--force` push to `main`. No CI/CD (per repo-owner direction).**
-    Local linters via `scripts/lint.sh` are the gate.
+12. **No `--force` push to `main`.** The test suites run in CI
+    (`.github/workflows/ci.yml`, added in #452 — the prior "no CI" stance
+    was reversed); the lint gate (`scripts/lint.sh`) runs locally, with
+    lint-in-CI a follow-up.
     — [`docs/agents/decisions.md`](../../docs/agents/decisions.md) (engineering)
 13. **`docs/agents/` handoff convention adopted** — durable role state
     survives session loss. — [`docs/agents/decisions.md`](../DECISIONS.md)

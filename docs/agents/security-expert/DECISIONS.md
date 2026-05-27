@@ -31,10 +31,13 @@ agents see it without reading this folder.
 - **CSRF is mandatory.** No view in the package is `@csrf_exempt`.
   Tests must assert that a missing or invalid `X-CSRFToken` header
   on `POST` / `PATCH` / `DELETE` returns `403`. — invariant
-- **No CI in v1.** The Merger runs `scripts/lint.sh` locally; security
-  scans (`ruff S`, `bandit`, `pip-audit`, secret grep) are part of
-  that script. Acceptance criteria below treat the local pipeline as
-  authoritative until CI is reintroduced. — repo-owner directive
+- **Tests run in CI; the lint gate stays local (for now).**
+  `.github/workflows/ci.yml` runs `pytest` + the frontend gate
+  server-side on every PR so a red suite can't merge (#452 — the earlier
+  "no CI" stance was reversed). The Python lint/security gate
+  (`scripts/lint.sh`: `ruff S`, `bandit`, the pre-commit secret/pygrep
+  hooks) plus `pip-audit` stay local pre-merge steps until the gate is
+  de-conflicted and wired into CI (follow-up off #452). — #452
 - **Frontend never holds permission state alone.** `@dar/data` may
   cache `permissions: {view, add, change, delete}` from the API for
   UI courtesy (hide buttons), but **every** write call re-verifies

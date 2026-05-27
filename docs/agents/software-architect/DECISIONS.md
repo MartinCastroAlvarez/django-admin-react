@@ -7,6 +7,19 @@
 
 ---
 
+## 2026-05-28
+
+- **OQ-A-001 resolved — "no CI" reversed.** The test suites now run
+  server-side on every PR (`.github/workflows/ci.yml`): backend `pytest`
+  + the frontend gate. Trigger: regressions slipping onto `main` under
+  CodeQL-only gating (#401 / #451). Cross-role record:
+  [`docs/agents/decisions.md`](../../docs/agents/decisions.md)
+  (2026-05-28). — #452. Follow-ups: wire the Python lint gate into CI
+  (de-conflict `ruff format`/`black` first), required-checks branch
+  protection.
+
+---
+
 ## 2026-05-25
 
 - **`ACCEPTANCE.md` §3 is the engineering bar.** Every criterion is
