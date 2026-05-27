@@ -14,6 +14,36 @@ version section at release.
 
 ## [Unreleased]
 
+## [0.2.0a8] — 2026-05-28
+[GitHub Release](https://github.com/MartinCastroAlvarez/django-admin-react/releases/tag/v0.2.0a8)
+
+### Added
+- `ModelAdmin.formfield_overrides` now takes effect: a field's descriptor
+  `type` is reconciled from the bound form widget, so a `CharField` switched
+  to a `Textarea` renders multi-line (and vice-versa) — no new wire type, the
+  form stays the source of truth (#446).
+- SPA: **drag-to-reorder columns** in the list customizer, persisted across
+  sessions (#218).
+- The list's default page size is derived from `ModelAdmin.list_per_page`
+  instead of a fixed constant (#281).
+- SPA branding (site header / title) is derived from the active `AdminSite`
+  (#281).
+- SPA: **dark mode applies with no flash** — the `.dark` class is set
+  server-side from a cookie before first paint (#84).
+- SPA: changelist filters are preserved across save / delete round-trips
+  (#441).
+
+### Changed
+- `DateHierarchyBar` extracted from `ListPage` into `@dar/list` for reuse and
+  testability (#428).
+- `docs/extensions.md` now flags the not-yet-wired extension points up front so
+  consumers aren't misled (#436).
+
+### Fixed
+- Inline tables no longer ellipsize the primary-key column (#418).
+- Inline kind (`tabular` / `stacked`) is classified by base class rather than a
+  subclass-name heuristic (#417).
+
 ## [0.2.0a7] — 2026-05-27
 [GitHub Release](https://github.com/MartinCastroAlvarez/django-admin-react/releases/tag/v0.2.0a7)
 
