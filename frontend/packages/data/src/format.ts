@@ -5,7 +5,7 @@
 // renders a cell or a field reads through one of these helpers, so
 // the formatting story stays consistent across the SPA.
 
-import type { FieldValue, ForeignKeyValue, HtmlValue } from '@dar/api';
+import type { FieldValue, FileValue, ForeignKeyValue, HtmlValue } from '@dar/api';
 
 const EMPTY_PLACEHOLDER = '—';
 
@@ -35,6 +35,21 @@ export function isHtmlValue(value: unknown): value is HtmlValue {
 }
 
 /**
+ * True when the value is a `FileField`/`ImageField` envelope
+ * (`{ name, url, size }`). The caller renders it as a download link /
+ * thumbnail rather than stringifying the object.
+ */
+export function isFileValue(value: unknown): value is FileValue {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'name' in value &&
+    'url' in value &&
+    typeof (value as FileValue).name === 'string'
+  );
+}
+
+/**
  * Render a wire-shape value as a display string.
  *
  * - ``null`` / ``undefined`` → em-dash placeholder.
@@ -60,6 +75,7 @@ export function renderValue(value: FieldValue | undefined): string {
   // caller's job via `isHtmlValue` + dangerouslySetInnerHTML.
   if (isHtmlValue(value)) return stripTags(value.html);
   if (isForeignKeyValue(value)) return value.label;
+  if (isFileValue(value)) return value.name;
   return String(value);
 }
 

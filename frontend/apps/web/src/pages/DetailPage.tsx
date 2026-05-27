@@ -59,6 +59,15 @@ function DetailValue({ field }: { field: FieldDescriptor }) {
       </Link>
     );
   }
+  // Choice field: show the human label for the stored value (Django's
+  // get_FOO_display parity). The editor still submits the raw value via
+  // `field.value`; this only changes the read-mode rendering. Scalar
+  // values only — FK / file / html envelopes are objects handled above
+  // or by FieldValueView.
+  if (field.choices && field.choices.length > 0 && v !== null && typeof v !== 'object') {
+    const match = field.choices.find((o) => String(o.value) === String(v));
+    if (match) return <>{match.label}</>;
+  }
   return <FieldValueView value={field.value} />;
 }
 
