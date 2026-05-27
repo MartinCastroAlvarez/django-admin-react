@@ -17,6 +17,8 @@ Public surface:
 
 - :func:`object_log_entries` — the ``LogEntry`` queryset for one object,
   newest-first, with the acting user pre-fetched.
+- :func:`recent_actions_for_user` — the most recent ``LogEntry`` rows for
+  one user (the index "Recent actions" panel), newest-first.
 """
 
 from __future__ import annotations
@@ -40,3 +42,17 @@ def object_log_entries(obj: Model) -> QuerySet[LogEntry]:
         .select_related("user")
         .order_by("-action_time")
     )
+
+
+def recent_actions_for_user(user_pk: str | int, limit: int) -> QuerySet[LogEntry]:
+    """Return the most recent ``LogEntry`` rows for one user, newest first.
+
+    The user-scoped counterpart of :func:`object_log_entries`: filtered by
+    the acting user and capped at ``limit`` — exactly how Django's admin
+    index "Recent actions" panel reads the log
+    (``LogEntry.objects.filter(user=...)``). Same get_queryset-rule
+    rationale as the module docstring: LogEntry is a framework audit
+    table, not a consumer model, so it is read directly here (outside
+    ``api/``) rather than via ``ModelAdmin.get_queryset``.
+    """
+    return LogEntry.objects.filter(user__pk=user_pk).order_by("-action_time")[:limit]
