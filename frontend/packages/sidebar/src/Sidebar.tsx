@@ -208,7 +208,7 @@ export function Sidebar() {
               type="button"
               onClick={() => setSettingsOpen(true)}
               aria-label="Settings"
-              className="inline-flex items-center gap-1.5 rounded border border-gray-700 px-2 py-1 text-xs text-gray-200 hover:bg-gray-800"
+              className="inline-flex items-center gap-1.5 rounded bg-gray-800 px-2 py-1 text-xs text-gray-200 hover:bg-gray-700"
             >
               <Settings className="h-3.5 w-3.5" aria-hidden />
               Settings
@@ -217,7 +217,7 @@ export function Sidebar() {
               <button
                 type="button"
                 onClick={promptInstall}
-                className="inline-flex items-center gap-1.5 rounded border border-gray-700 px-2 py-1 text-xs text-gray-200 hover:bg-gray-800"
+                className="inline-flex items-center gap-1.5 rounded bg-gray-800 px-2 py-1 text-xs text-gray-200 hover:bg-gray-700"
               >
                 <Download className="h-3.5 w-3.5" aria-hidden />
                 Install app
