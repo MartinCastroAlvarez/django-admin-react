@@ -12,6 +12,13 @@ export interface TableColumn<Row> {
   render: (row: Row) => ReactNode;
   sortable?: boolean;
   align?: 'left' | 'right' | 'center';
+  /**
+   * Opt out of the default per-cell truncation (max-width + ellipsis).
+   * The cell still stays on one line (the table scrolls horizontally),
+   * but its full value is shown — e.g. a primary-key column whose
+   * identity must never be clipped.
+   */
+  noTruncate?: boolean;
 }
 
 export interface TableProps<Row> {
@@ -153,12 +160,16 @@ export function Table<Row>({
                         key={col.key}
                         className={`px-4 py-2 ${ALIGN_CLASSES[col.align ?? 'left']}`}
                       >
-                        {/* Cap very wide cells (e.g. UUID `id` columns) and
-                        truncate with an ellipsis so one long column
-                        doesn't dominate the table; full value is on the
-                        detail page. `truncate` carries whitespace-nowrap
-                        so values still never split mid-word. */}
-                        <div className="max-w-[16rem] truncate">{col.render(row)}</div>
+                        {/* Cap very wide cells and truncate with an
+                        ellipsis so one long column doesn't dominate the
+                        table; full value is on the detail page.
+                        `truncate` carries whitespace-nowrap so values
+                        never split mid-word. A `noTruncate` column (e.g.
+                        the primary key) opts out: still one line, but the
+                        whole value shows and the table scrolls instead. */}
+                        <div className={col.noTruncate ? 'whitespace-nowrap' : 'max-w-[16rem] truncate'}>
+                          {col.render(row)}
+                        </div>
                       </td>
                     ))}
                   </tr>
