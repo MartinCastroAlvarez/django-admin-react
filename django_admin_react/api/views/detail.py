@@ -207,17 +207,26 @@ def _fieldsets_payload(
     except Exception:
         raw = ()
     if not raw:
-        return [{"title": None, "fields": visible_names}]
+        return [{"title": None, "fields": visible_names, "field_rows": [[n] for n in visible_names]}]
 
     visible_set = set(visible_names)
     payload: list[dict[str, Any]] = []
     for title, opts in raw:
-        fields = [
-            sub
-            for entry in opts.get("fields", ())
-            for sub in (entry if isinstance(entry, list | tuple) else (entry,))
-            if sub in visible_set
-        ]
+        # Preserve Django's multi-field-row grouping (#382): a fieldset
+        # ``fields`` entry that is a tuple/list — e.g. ``(("first", "last"),
+        # "email")`` — is one display row. ``field_rows`` keeps that shape
+        # (each inner list = one row, after the visibility filter); the flat
+        # ``fields`` is kept for back-compat as the row-flattened list.
+        field_rows: list[list[str]] = []
+        for entry in opts.get("fields", ()):
+            row = [
+                sub
+                for sub in (entry if isinstance(entry, list | tuple) else (entry,))
+                if sub in visible_set
+            ]
+            if row:
+                field_rows.append(row)
+        fields = [sub for row in field_rows for sub in row]
         if fields:
             # Carry the fieldset's ``classes`` (e.g. ``collapse`` / ``wide``)
             # and ``description`` so the SPA can render a collapsible section
@@ -228,11 +237,14 @@ def _fieldsets_payload(
                 {
                     "title": title,
                     "fields": fields,
+                    "field_rows": field_rows,
                     "classes": classes,
                     "description": str(description) if description else None,
                 }
             )
-    return payload or [{"title": None, "fields": visible_names}]
+    return payload or [
+        {"title": None, "fields": visible_names, "field_rows": [[n] for n in visible_names]}
+    ]
 
 
 def _fields_payload(

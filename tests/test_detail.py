@@ -461,6 +461,24 @@ def test_named_fieldsets_are_honoured(superuser_client: Client) -> None:
 
 
 @pytest.mark.django_db
+def test_fieldset_multi_field_rows_preserved(superuser_client: Client) -> None:
+    """Closes #382: a tuple-grouped fieldset row — ``(("name","permissions"),)``
+    — is preserved in ``field_rows`` (one inner list per display row) while the
+    flat ``fields`` stays for back-compat (the row-flattened list)."""
+    g = Group.objects.create(name="example")
+    with admin_override(
+        Group,
+        get_fieldsets=lambda self, request, obj=None: [
+            (None, {"fields": (("name", "permissions"),)}),
+        ],
+    ):
+        body = superuser_client.get(_url(g.pk)).json()
+    fs = body["fieldsets"][0]
+    assert fs["field_rows"] == [["name", "permissions"]]
+    assert fs["fields"] == ["name", "permissions"]
+
+
+@pytest.mark.django_db
 def test_fieldset_classes_and_description_are_surfaced(superuser_client: Client) -> None:
     """Closes #306: a fieldset's ``classes`` (e.g. ``collapse``) and
     ``description`` are carried on the descriptor so the SPA can render a
@@ -593,4 +611,6 @@ def test_fieldsets_payload_swallows_get_fieldsets_exception() -> None:
             raise RuntimeError("consumer get_fieldsets blew up")
 
     result = _fieldsets_payload(_RaisingAdmin(), None, None, ["name", "email"])
-    assert result == [{"title": None, "fields": ["name", "email"]}]
+    assert result == [
+        {"title": None, "fields": ["name", "email"], "field_rows": [["name"], ["email"]]}
+    ]
