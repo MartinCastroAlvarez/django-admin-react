@@ -109,6 +109,33 @@ def not_found_response() -> HttpResponse:
     return response
 
 
+_CONFLICT_MESSAGE = (
+    "This change conflicts with an existing record — a database uniqueness "
+    "or integrity constraint was violated."
+)
+
+
+def conflict_error() -> dict[str, str]:
+    """Canonical DB ``IntegrityError`` envelope body (#404).
+
+    Generic by design: the database driver's message can disclose
+    column / constraint / schema detail, so it is never echoed
+    (``SECURITY.md`` §3 rule 12). Reused both as a standalone 409
+    (create / update) and as a per-row error in the bulk envelope.
+    """
+    return {"code": "conflict", "message": _CONFLICT_MESSAGE}
+
+
+def conflict_response() -> HttpResponse:
+    """Return a clean 409 for a write that hit a DB ``IntegrityError`` the
+    form didn't catch — a uniqueness/constraint race, or a DB-level
+    constraint not mirrored in form validation — instead of letting it
+    surface as an uncaught 500 with a driver traceback (#404)."""
+    response = JsonResponse({"error": conflict_error()}, status=409)
+    response["Cache-Control"] = "no-store"
+    return response
+
+
 # --------------------------------------------------------------------------- #
 # Request / object lookup                                                     #
 # --------------------------------------------------------------------------- #

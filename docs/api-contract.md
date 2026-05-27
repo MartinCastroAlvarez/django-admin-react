@@ -933,7 +933,7 @@ v1 error codes:
 | 403  | `session_expired`       | Request carried a session cookie but the user resolved to anonymous. SPA should render a re-login modal and return the user to the same path after sign-in. See §6.1 (detection) and §10 (`?next=` + optional warning toast). |
 | 404  | `not_found`             | Model not in registry, or object not in queryset. |
 | 405  | `method_not_allowed`    | e.g., PUT or HEAD.                                |
-| 409  | `conflict`              | Reserved for optimistic concurrency in v1.x.      |
+| 409  | `conflict`              | A write hit a DB `IntegrityError` the form didn't catch — a uniqueness/constraint race, or a DB-level constraint not mirrored in form validation (`#404`). On the bulk endpoint it appears as a per-row error. The message is generic (never echoes the driver's text). Also reserved for optimistic concurrency in v1.x. |
 | 500  | `internal_error`        | Anything else. Body never includes a stack trace. |
 
 Permission-related `403`s do **not** leak whether the object exists.

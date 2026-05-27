@@ -33,6 +33,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from django.db import IntegrityError
 from django.db import transaction
 from django.http import HttpRequest
 from django.http import HttpResponse
@@ -44,6 +45,7 @@ from django_admin_react.api.permissions import is_admin_user
 from django_admin_react.api.registry import get_admin_site
 from django_admin_react.api.registry import resolve_model
 from django_admin_react.api.writes import bad_request
+from django_admin_react.api.writes import conflict_error
 from django_admin_react.api.writes import form_errors_to_envelope
 from django_admin_react.api.writes import load_object_or_none
 from django_admin_react.api.writes import log_change
@@ -228,8 +230,17 @@ def _apply_one(
             },
         }
 
-    instance = form.save(commit=False)
-    model_admin.save_model(request, instance, form, change=True)
-    form.save_m2m()
-    log_change(model_admin, request, instance, form)
+    # Per-row savepoint so a DB IntegrityError the form didn't catch (a
+    # uniqueness race, or a DB-level constraint) rolls back just this row
+    # and returns a clean per-row error — keeping the surrounding batch
+    # transaction usable instead of aborting it (and 500ing) (#404). The
+    # batch still rolls everything back when any row is rejected.
+    try:
+        with transaction.atomic():
+            instance = form.save(commit=False)
+            model_admin.save_model(request, instance, form, change=True)
+            form.save_m2m()
+            log_change(model_admin, request, instance, form)
+    except IntegrityError:
+        return {"pk": pk, "ok": False, "error": conflict_error()}
     return {"pk": pk, "ok": True}

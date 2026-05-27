@@ -11,6 +11,7 @@ import json
 
 import pytest
 from django.contrib.auth.models import Group
+from django.db import IntegrityError
 from django.test import Client
 
 from tests.helpers import admin_override
@@ -145,3 +146,23 @@ def test_sensitive_field_name_rejected(superuser_client: Client) -> None:
     response = _post(superuser_client, {"name": "alpha", "password_hash": "x"})
     assert response.status_code == 400
     assert response.json()["error"]["code"] == "bad_request"
+
+
+@pytest.mark.django_db
+def test_db_integrity_error_returns_clean_409(superuser_client: Client) -> None:
+    """A DB IntegrityError at save (a constraint the form didn't catch, or a
+    uniqueness race) returns a clean 409 conflict envelope — not an uncaught
+    500 with a driver traceback — and persists nothing (#404)."""
+
+    def raise_integrity(self, request, obj, form, change):  # noqa: ANN001
+        raise IntegrityError("simulated unique violation")
+
+    with admin_override(Group, save_model=raise_integrity):
+        response = _post(superuser_client, {"name": "fresh-name"})
+    assert response.status_code == 409
+    body = response.json()
+    assert body["error"]["code"] == "conflict"
+    assert "constraint" in body["error"]["message"].lower()
+    assert response["Cache-Control"] == "no-store"
+    # The atomic block rolled back — nothing persisted, no DB-detail leak.
+    assert not Group.objects.filter(name="fresh-name").exists()

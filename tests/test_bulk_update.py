@@ -25,6 +25,7 @@ from contextlib import suppress
 import pytest
 from django.contrib import admin
 from django.contrib.auth.models import Group
+from django.db import IntegrityError
 from django.test import Client
 
 from tests.helpers import admin_override
@@ -275,6 +276,33 @@ def test_bulk_accepts_only_the_list_editable_subset(superuser_client: Client) ->
     assert "permissions" in row["error"]["message"]
     g1.refresh_from_db()
     assert g1.name == "original"  # atomic: nothing written
+
+
+@pytest.mark.django_db
+def test_bulk_db_integrity_error_is_per_row_conflict(superuser_client: Client) -> None:
+    """A DB IntegrityError at save (constraint the form didn't catch / race)
+    becomes a clean per-row `conflict` — caught on a per-row savepoint so the
+    batch transaction stays usable, not an uncaught 500 — and the batch rolls
+    back (#404)."""
+    g1 = Group.objects.create(name="orig")
+
+    def raise_integrity(self, request, obj, form, change):  # noqa: ANN001
+        raise IntegrityError("simulated unique violation")
+
+    payload = {"updates": [{"pk": g1.pk, "fields": {"name": "new"}}]}
+    with (
+        admin_attr(Group, list_editable=("name",)),
+        admin_override(Group, save_model=raise_integrity),
+    ):
+        response = superuser_client.patch(
+            BULK_URL, data=json.dumps(payload), content_type="application/json"
+        )
+    assert response.status_code == 200
+    row = response.json()["results"][0]
+    assert row["ok"] is False
+    assert row["error"]["code"] == "conflict"
+    g1.refresh_from_db()
+    assert g1.name == "orig"  # rolled back
 
 
 # --------------------------------------------------------------------------- #

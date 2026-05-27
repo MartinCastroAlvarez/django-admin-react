@@ -11,6 +11,7 @@ import json
 
 import pytest
 from django.contrib.auth.models import Group
+from django.db import IntegrityError
 from django.test import Client
 
 from tests.helpers import admin_override
@@ -22,6 +23,25 @@ def _url(pk: object) -> str:
 
 def _patch(client: Client, pk: object, body: dict):
     return client.patch(_url(pk), data=json.dumps(body), content_type="application/json")
+
+
+@pytest.mark.django_db
+def test_db_integrity_error_returns_clean_409(superuser_client: Client) -> None:
+    """A DB IntegrityError at save (constraint the form didn't catch / race)
+    returns a clean 409 conflict envelope — not an uncaught 500 — and leaves
+    the row unchanged (#404)."""
+    g = Group.objects.create(name="orig")
+
+    def raise_integrity(self, request, obj, form, change):  # noqa: ANN001
+        raise IntegrityError("simulated unique violation")
+
+    with admin_override(Group, save_model=raise_integrity):
+        response = _patch(superuser_client, g.pk, {"name": "new"})
+    assert response.status_code == 409
+    body = response.json()
+    assert body["error"]["code"] == "conflict"
+    g.refresh_from_db()
+    assert g.name == "orig"  # rolled back
 
 
 # --------------------------------------------------------------------------- #

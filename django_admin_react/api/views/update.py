@@ -18,6 +18,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from django.db import IntegrityError
 from django.db import transaction
 from django.http import HttpRequest
 from django.http import HttpResponse
@@ -32,6 +33,7 @@ from django_admin_react.api.registry import get_admin_site
 from django_admin_react.api.registry import resolve_model
 from django_admin_react.api.views.detail import _build_payload
 from django_admin_react.api.writes import bad_request
+from django_admin_react.api.writes import conflict_response
 from django_admin_react.api.writes import form_errors_to_envelope
 from django_admin_react.api.writes import load_object_or_none
 from django_admin_react.api.writes import log_change
@@ -156,6 +158,10 @@ class UpdateView(View):
             return forbidden_response(request)
         except _InlineValidationError as exc:
             return validation_failed({"inlines": exc.errors})
+        except IntegrityError:
+            # A DB constraint the form didn't catch (race / DB-level
+            # constraint) → clean 409, not an uncaught 500 (#404).
+            return conflict_response()
         except ValueError:
             # Malformed ``inlines`` payload shape (not a 500). Return a
             # fixed, generic message — never echo the exception text into

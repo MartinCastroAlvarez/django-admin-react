@@ -17,6 +17,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from django.db import IntegrityError
 from django.db import transaction
 from django.http import HttpRequest
 from django.http import HttpResponse
@@ -29,6 +30,7 @@ from django_admin_react.api.registry import get_admin_site
 from django_admin_react.api.registry import resolve_model
 from django_admin_react.api.serializers import label_for
 from django_admin_react.api.writes import coerce_fk_values
+from django_admin_react.api.writes import conflict_response
 from django_admin_react.api.writes import form_errors_to_envelope
 from django_admin_react.api.writes import log_addition
 from django_admin_react.api.writes import not_found_response
@@ -101,11 +103,17 @@ class CreateView(View):
         if not form.is_valid():
             return validation_failed(form_errors_to_envelope(form))
 
-        with transaction.atomic():
-            instance = form.save(commit=False)
-            model_admin.save_model(request, instance, form, change=False)
-            form.save_m2m()
-            log_addition(model_admin, request, instance, form)
+        # A DB IntegrityError the form didn't catch (a uniqueness race, or a
+        # DB-level constraint not mirrored in form validation) must exit the
+        # atomic block before it's handled — catch outside (#404).
+        try:
+            with transaction.atomic():
+                instance = form.save(commit=False)
+                model_admin.save_model(request, instance, form, change=False)
+                form.save_m2m()
+                log_addition(model_admin, request, instance, form)
+        except IntegrityError:
+            return conflict_response()
 
         body = {
             "pk": instance.pk,
