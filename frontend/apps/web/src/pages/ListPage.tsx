@@ -429,22 +429,40 @@ export function ListPage() {
 
       {/* Table is always full-width now — filters live in the modal.
           Row checkboxes appear only when the model has bulk actions
-          the user can run (#182). */}
+          the user can run (#182). An empty list renders a proper
+          empty-state with a "+ Add" call-to-action (#293) instead of a
+          bare message, so a fresh model has an obvious next step. */}
       <Card>
-        <Table
-          columns={columns}
-          rows={data.results}
-          rowKey={(r) => r.pk}
-          onRowClick={(row) => navigate(`/${appLabel}/${modelName}/${row.pk}`)}
-          onSort={toggleSort}
-          sortKey={sortKey}
-          sortDirection={sortDirection}
-          emptyLabel={emptyLabel(Boolean(q), chips.length, hasFilters)}
-          selectable={canRunActions}
-          selectedKeys={selected}
-          onToggleRow={toggleRow}
-          onToggleAll={(checked) => toggleAll(checked, data.results)}
-        />
+        {data.results.length === 0 ? (
+          <EmptyState
+            title={q || chips.length > 0 ? 'No matches' : 'No objects yet'}
+            description={emptyLabel(Boolean(q), chips.length, hasFilters)}
+            action={
+              data.permissions.add ? (
+                <Link
+                  to={`/${appLabel}/${modelName}/add`}
+                  className="inline-flex shrink-0 rounded-md border border-blue-600 bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
+                >
+                  + Add {data.verbose_name ? capitalize(data.verbose_name) : modelName}
+                </Link>
+              ) : undefined
+            }
+          />
+        ) : (
+          <Table
+            columns={columns}
+            rows={data.results}
+            rowKey={(r) => r.pk}
+            onRowClick={(row) => navigate(`/${appLabel}/${modelName}/${row.pk}`)}
+            onSort={toggleSort}
+            sortKey={sortKey}
+            sortDirection={sortDirection}
+            selectable={canRunActions}
+            selectedKeys={selected}
+            onToggleRow={toggleRow}
+            onToggleAll={(checked) => toggleAll(checked, data.results)}
+          />
+        )}
       </Card>
       <Pagination page={data.page} totalPages={totalPages} onChange={setPage} />
 
