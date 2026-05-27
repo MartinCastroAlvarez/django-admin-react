@@ -118,6 +118,25 @@ body,
 .dark .text-green-700 {
   color: #86efac !important;
 }
+/* Amber warning banners (delete-preview cautions, home-card hints) — same
+   fix as the red/green banners: a dark warm tint with legible light text
+   instead of a near-white block (#433). */
+.dark .bg-amber-50 {
+  background-color: #3a2e12 !important;
+}
+.dark .border-amber-300 {
+  border-color: #92400e !important;
+}
+.dark .text-amber-800,
+.dark .text-amber-700 {
+  color: #fcd34d !important;
+}
+/* Static (non-hover) bg-gray-100 surfaces — the selected-FK chip, ghost
+   buttons, modal accents — only the `hover:` variant was remapped above,
+   so the resting state stayed light-gray on dark (#433). */
+.dark .bg-gray-100 {
+  background-color: #1f2937 !important;
+}
 
 /* Values rendered as *markup* — a <span> emitted by a list_display /
    readonly display method (badge, relative time, status pill, etc.) —
