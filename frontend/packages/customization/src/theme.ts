@@ -66,4 +66,10 @@ export function setTheme(theme: Theme): void {
 /** Apply the effective theme. Call once before first paint. */
 export function initTheme(): void {
   applyTheme(resolveTheme());
+  // Backfill the cookie for users who chose a theme before the server-side
+  // no-flash landed (localStorage set, cookie missing): mirror it now so
+  // their *next* load paints server-side without a flash (#84). Only an
+  // explicit choice is mirrored — a system default stays server-invisible.
+  const stored = getStoredTheme();
+  if (stored) writeThemeCookie(stored);
 }

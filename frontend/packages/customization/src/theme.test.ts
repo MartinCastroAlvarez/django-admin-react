@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { THEME_KEY } from './keys';
-import { getStoredTheme, setTheme, THEME_COOKIE } from './theme';
+import { getStoredTheme, initTheme, setTheme, THEME_COOKIE } from './theme';
 
 beforeEach(() => {
   window.localStorage.clear();
@@ -22,5 +22,22 @@ describe('setTheme', () => {
 
     setTheme('light');
     expect(document.cookie).toContain(`${THEME_COOKIE}=light`);
+  });
+});
+
+describe('initTheme', () => {
+  it('backfills the cookie for an existing localStorage choice (#84 migration)', () => {
+    // Simulate a user who picked dark before the cookie existed.
+    window.localStorage.setItem(THEME_KEY, 'dark');
+    expect(document.cookie).not.toContain(THEME_COOKIE);
+
+    initTheme();
+
+    expect(document.cookie).toContain(`${THEME_COOKIE}=dark`);
+  });
+
+  it('does not write a cookie when there is no explicit choice', () => {
+    initTheme();
+    expect(document.cookie).not.toContain(THEME_COOKIE);
   });
 });
