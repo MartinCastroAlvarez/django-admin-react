@@ -29,6 +29,7 @@ from django_admin_react.api.permissions import is_admin_user
 from django_admin_react.api.registry import get_admin_site
 from django_admin_react.api.registry import model_permissions
 from django_admin_react.api.registry import resolve_model
+from django_admin_react.api.registry import save_options
 from django_admin_react.api.views.detail import _descriptor_for
 from django_admin_react.api.views.detail import _fieldsets_payload
 from django_admin_react.api.views.detail import _visible_field_names
@@ -91,6 +92,9 @@ class AddFormView(View):
             "permissions": model_permissions(model_admin, request),
             "fieldsets": _fieldsets_payload(model_admin, request, None, visible_names),
             "fields": fields,
+            # Add-view save-flow buttons (#154): obj=None → add semantics
+            # (Save / Save-and-add-another / Save-and-continue editing).
+            "save_options": save_options(model_admin, request, None),
         }
         response = JsonResponse(payload, status=200)
         response["Cache-Control"] = "no-store"

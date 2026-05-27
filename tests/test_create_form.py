@@ -78,3 +78,19 @@ def test_add_form_uses_change_false_form(superuser_client: Client) -> None:
     assert r.status_code == 200
     assert seen.get("change") is False
     assert seen.get("obj_is_none") is True
+
+
+@pytest.mark.django_db
+def test_add_form_includes_save_options_block(superuser_client: Client) -> None:
+    """The create-form response carries the add-view save-flow flags (#154)
+    so the SPA can render Save / Save-and-add-another / Save-and-continue.
+    Computed with obj=None (add semantics): no "Save as new" on the add
+    view, and Save / Save-and-add-another available to a user who can add.
+    """
+    body = superuser_client.get(ADD_URL).json()
+    assert "save_options" in body
+    so = body["save_options"]
+    assert so["show_save"] is True
+    assert so["show_save_and_add_another"] is True
+    # "Save as new" is a change-view-only affordance — never on add.
+    assert so["show_save_as_new"] is False

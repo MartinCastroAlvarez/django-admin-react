@@ -10,10 +10,11 @@
 // Edit/Delete are gated by the `permissions` block the API returns.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import {
   ApiError,
+  createObject,
   deleteObject,
   fetchDeletePreview,
   updateObject,
@@ -68,9 +69,12 @@ export function DetailPage() {
   const pk = params.pk ?? '';
   const client = useApiClient();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { data, loading, error, refresh } = useDetail({ client, appLabel, modelName, pk });
 
-  const [editing, setEditing] = useState(false);
+  // Open straight in edit mode when arriving via "Save and continue
+  // editing" from the add form (`?edit=1`); otherwise start read-only.
+  const [editing, setEditing] = useState(() => searchParams.get('edit') === '1');
 
   if (loading && !data) return <Spinner label="Loading…" />;
   if (error && !data) {
@@ -118,10 +122,41 @@ export function DetailPage() {
         <EditForm
           data={data}
           onCancel={() => setEditing(false)}
-          onSave={async (payload) => {
+          onSave={async (payload, action) => {
+            // "Save as new" creates a fresh object from the current
+            // values (Django's save_as), then lands on the new object's
+            // change view or the changelist per save_as_continue.
+            if (action === 'saveAsNew') {
+              // Create from the field values only — inlines don't carry
+              // over to a brand-new object on "Save as new".
+              const createPayload: Record<string, WriteValue> = {};
+              for (const [key, value] of Object.entries(payload)) {
+                if (key !== 'inlines') createPayload[key] = value as WriteValue;
+              }
+              const created = await createObject({
+                client,
+                appLabel,
+                modelName,
+                payload: createPayload,
+              });
+              navigate(
+                data.save_options?.save_as_continue
+                  ? `/${appLabel}/${modelName}/${created.pk}?edit=1`
+                  : `/${appLabel}/${modelName}`,
+              );
+              return;
+            }
             await updateObject({ client, appLabel, modelName, pk, payload });
-            await refresh();
-            setEditing(false);
+            if (action === 'continue') {
+              await refresh(); // stay in edit mode with the saved values
+              return;
+            }
+            if (action === 'addAnother') {
+              navigate(`/${appLabel}/${modelName}/add`);
+              return;
+            }
+            // Plain "Save" → back to the changelist (Django parity).
+            navigate(`/${appLabel}/${modelName}`);
           }}
         />
       ) : (
@@ -163,10 +198,14 @@ export function DetailPage() {
   );
 }
 
+// Which save-flow button was pressed (Django parity, #154). The parent
+// routes navigation per action; the form only builds + submits.
+type SaveAction = 'save' | 'continue' | 'addAnother' | 'saveAsNew';
+
 interface EditFormProps {
   data: DetailResponse;
   onCancel: () => void;
-  onSave: (payload: import('@dar/data').UpdatePayload) => Promise<void>;
+  onSave: (payload: import('@dar/data').UpdatePayload, action: SaveAction) => Promise<void>;
 }
 
 function initialValueFor(field: DetailResponse['fields'][string]): WriteValue {
@@ -204,8 +243,7 @@ function EditForm({ data, onCancel, onSave }: EditFormProps) {
     (inline) => inline.can_add || inline.can_change || inline.can_delete,
   );
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function runSave(action: SaveAction) {
     setSaving(true);
     setErrors({});
     setNonFieldError(null);
@@ -219,7 +257,7 @@ function EditForm({ data, onCancel, onSave }: EditFormProps) {
     }
     if (Object.keys(inlines).length > 0) payload.inlines = inlines;
     try {
-      await onSave(payload);
+      await onSave(payload, action);
     } catch (err) {
       if (err instanceof ApiError && err.envelope?.error) {
         const fieldErrors = err.envelope.error.fields ?? {};
@@ -234,6 +272,13 @@ function EditForm({ data, onCancel, onSave }: EditFormProps) {
       setSaving(false);
     }
   }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    await runSave('save');
+  }
+
+  const so = data.save_options;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -276,11 +321,45 @@ function EditForm({ data, onCancel, onSave }: EditFormProps) {
         </Card>
       ))}
 
-      <div className="flex gap-2">
-        <Button type="submit" variant="primary" disabled={saving}>
-          {saving ? 'Saving…' : 'Save'}
-        </Button>
-        <Button type="button" variant="secondary" onClick={onCancel} disabled={saving}>
+      {/* Save-flow buttons (#154) — render only what `save_options`
+          allows; default to a plain Save for older backends. */}
+      <div className="flex flex-wrap gap-2">
+        {(so?.show_save ?? true) && (
+          <Button type="submit" variant="primary" disabled={saving}>
+            {saving ? 'Saving…' : 'Save'}
+          </Button>
+        )}
+        {so?.show_save_and_continue && (
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={saving}
+            onClick={() => void runSave('continue')}
+          >
+            Save and continue editing
+          </Button>
+        )}
+        {so?.show_save_and_add_another && (
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={saving}
+            onClick={() => void runSave('addAnother')}
+          >
+            Save and add another
+          </Button>
+        )}
+        {so?.show_save_as_new && (
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={saving}
+            onClick={() => void runSave('saveAsNew')}
+          >
+            Save as new
+          </Button>
+        )}
+        <Button type="button" variant="ghost" onClick={onCancel} disabled={saving}>
           Cancel
         </Button>
       </div>

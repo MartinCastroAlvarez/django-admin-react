@@ -29,6 +29,9 @@ export function CreatePage() {
 
   const [schema, setSchema] = useState<AddFormResponse | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  // Bumped to remount the form (clear all fields) after "Save and add
+  // another" so the operator gets a fresh blank form (#154).
+  const [formKey, setFormKey] = useState(0);
 
   useEffect(() => {
     let alive = true;
@@ -63,10 +66,21 @@ export function CreatePage() {
         </h1>
       </header>
       <CreateForm
+        key={formKey}
         schema={schema}
-        onCreate={async (payload) => {
+        onCreate={async (payload, action) => {
           const created = await createObject({ client, appLabel, modelName, payload });
-          navigate(`/${appLabel}/${modelName}/${created.pk}`);
+          if (action === 'addAnother') {
+            setFormKey((k) => k + 1); // fresh blank form, stay on add
+            return;
+          }
+          if (action === 'continue') {
+            // Land on the new object's change view, in edit mode.
+            navigate(`/${appLabel}/${modelName}/${created.pk}?edit=1`);
+            return;
+          }
+          // Plain "Save" → back to the changelist (Django parity).
+          navigate(`/${appLabel}/${modelName}`);
         }}
         onCancel={() => navigate(`/${appLabel}/${modelName}`)}
       />
@@ -74,9 +88,13 @@ export function CreatePage() {
   );
 }
 
+// Save-flow buttons available on the add view (#154). The parent routes
+// navigation per action; the form only builds + submits.
+type CreateSaveAction = 'save' | 'continue' | 'addAnother';
+
 interface CreateFormProps {
   schema: AddFormResponse;
-  onCreate: (payload: Record<string, WriteValue>) => Promise<void>;
+  onCreate: (payload: Record<string, WriteValue>, action: CreateSaveAction) => Promise<void>;
   onCancel: () => void;
 }
 
@@ -96,13 +114,12 @@ function CreateForm({ schema, onCreate, onCancel }: CreateFormProps) {
   const [nonFieldError, setNonFieldError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function runSave(action: CreateSaveAction) {
     setSaving(true);
     setErrors({});
     setNonFieldError(null);
     try {
-      await onCreate(values);
+      await onCreate(values, action);
     } catch (err) {
       if (err instanceof ApiError && err.envelope?.error) {
         const fieldErrors = err.envelope.error.fields ?? {};
@@ -117,6 +134,13 @@ function CreateForm({ schema, onCreate, onCancel }: CreateFormProps) {
       setSaving(false);
     }
   }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    await runSave('save');
+  }
+
+  const so = schema.save_options;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -145,11 +169,35 @@ function CreateForm({ schema, onCreate, onCancel }: CreateFormProps) {
           </div>
         </Card>
       ))}
-      <div className="flex gap-2">
-        <Button type="submit" variant="primary" disabled={saving}>
-          {saving ? 'Saving…' : 'Add'}
-        </Button>
-        <Button type="button" variant="secondary" onClick={onCancel} disabled={saving}>
+      {/* Save-flow buttons (#154) — render only what `save_options`
+          allows; default to a plain Add for older backends. */}
+      <div className="flex flex-wrap gap-2">
+        {(so?.show_save ?? true) && (
+          <Button type="submit" variant="primary" disabled={saving}>
+            {saving ? 'Saving…' : 'Add'}
+          </Button>
+        )}
+        {so?.show_save_and_add_another && (
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={saving}
+            onClick={() => void runSave('addAnother')}
+          >
+            Save and add another
+          </Button>
+        )}
+        {so?.show_save_and_continue && (
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={saving}
+            onClick={() => void runSave('continue')}
+          >
+            Save and continue editing
+          </Button>
+        )}
+        <Button type="button" variant="ghost" onClick={onCancel} disabled={saving}>
           Cancel
         </Button>
       </div>

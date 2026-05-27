@@ -46,6 +46,7 @@ export type {
   RegistryModelEntry,
   RegistryResponse,
   RegistryUser,
+  SaveOptions,
   UpdatePayload,
   WriteValue,
 } from '@dar/api';
