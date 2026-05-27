@@ -7,7 +7,7 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Settings2 } from 'lucide-react';
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useHref, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import {
   useApiClient,
@@ -63,6 +63,9 @@ export function ListPage() {
   const appLabel = params.appLabel ?? '';
   const modelName = params.modelName ?? '';
   const navigate = useNavigate();
+  // Router basename (the SPA mount) so row anchors carry a full, openable
+  // href for native open-in-new-tab (#253).
+  const hrefBase = useHref('/').replace(/\/$/, '');
   const client = useApiClient();
   const toast = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -568,6 +571,7 @@ export function ListPage() {
             rows={data.results}
             rowKey={(r) => r.pk}
             onRowClick={(row) => navigate(`/${appLabel}/${modelName}/${row.pk}`)}
+            rowHref={(row) => `${hrefBase}/${appLabel}/${modelName}/${row.pk}`}
             onSort={toggleSort}
             sortKey={sortKey}
             sortDirection={sortDirection}

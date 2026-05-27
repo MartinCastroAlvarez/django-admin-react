@@ -32,6 +32,14 @@ export interface TableProps<Row> {
   sortKey?: string;
   sortDirection?: 'asc' | 'desc';
   onRowClick?: (row: Row) => void;
+  /**
+   * When set, the first cell becomes a real `<a href>` so the browser's
+   * native open-in-new-tab (Cmd/Ctrl+click, middle-click, right-click →
+   * "Open in new tab") works. A plain left-click still navigates in-app
+   * via `onRowClick` (#253). The href should be the full app path
+   * including the router basename.
+   */
+  rowHref?: (row: Row) => string;
   emptyLabel?: string;
   /**
    * When set, a leading checkbox column is rendered. `selectedKeys`
@@ -86,6 +94,7 @@ export function Table<Row>({
   sortKey,
   sortDirection,
   onRowClick,
+  rowHref,
   emptyLabel = 'No results.',
   selectable = false,
   selectedKeys,
@@ -262,7 +271,7 @@ export function Table<Row>({
                         />
                       </td>
                     )}
-                    {columns.map((col) => (
+                    {columns.map((col, ci) => (
                       <td
                         key={col.key}
                         className={`px-4 py-2 ${ALIGN_CLASSES[col.align ?? 'left']}`}
@@ -283,7 +292,25 @@ export function Table<Row>({
                                 : 'max-w-[16rem] truncate'
                           }
                         >
-                          {col.render(row)}
+                          {ci === 0 && rowHref ? (
+                            // Real anchor on the first cell so the browser's
+                            // native open-in-new-tab works (#253); a plain
+                            // left-click is intercepted for in-app nav.
+                            <a
+                              href={rowHref(row)}
+                              className="text-inherit no-underline hover:underline"
+                              onClick={(e) => {
+                                if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+                                e.preventDefault();
+                                e.stopPropagation();
+                                onRowClick?.(row);
+                              }}
+                            >
+                              {col.render(row)}
+                            </a>
+                          ) : (
+                            col.render(row)
+                          )}
                         </div>
                       </td>
                     ))}
