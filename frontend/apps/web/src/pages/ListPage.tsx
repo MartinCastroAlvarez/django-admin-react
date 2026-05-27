@@ -114,7 +114,17 @@ export function ListPage() {
   // preference, like the column customizer) so a later bare visit can
   // restore them. Keyed outside the `dar:v1:*` data cache.
   const filtersStorageKey = `dar:filters:${appLabel}:${modelName}`;
+  // Tracks the model whose saved filters have already been restored. Used
+  // both to run restore once per model AND to gate the persist effect —
+  // declared before persist because persist reads it.
+  const restoredForModel = useRef<string>('');
   useEffect(() => {
+    // Don't persist (or clear) until restore has run for this model. On a
+    // bare-URL mount — e.g. returning from a detail page — activeFilters is
+    // empty, so an ungated persist would removeItem() the saved filters
+    // before the restore effect below could read them, wiping the view the
+    // user expected to return to.
+    if (restoredForModel.current !== `${appLabel}/${modelName}`) return;
     try {
       // Persist only real list_filter selections — never the
       // date_hierarchy drill (year/month/day), which shouldn't resurrect.
@@ -131,14 +141,13 @@ export function ListPage() {
     } catch {
       /* localStorage unavailable (private mode) — best effort. */
     }
-  }, [activeFilters, filtersStorageKey]);
+  }, [activeFilters, filtersStorageKey, appLabel, modelName]);
 
   // Restore filters from localStorage when arriving with a bare URL.
   // The URL is the source of truth at all times — this only hydrates
   // when there is nothing in the URL to honour, then writes the
   // restored filters straight back into the URL (replace) so refresh /
   // deep-link / share keep reflecting them. Runs once per model.
-  const restoredForModel = useRef<string>('');
   useEffect(() => {
     const modelKey = `${appLabel}/${modelName}`;
     if (restoredForModel.current === modelKey) return;
