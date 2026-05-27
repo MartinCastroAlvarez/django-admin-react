@@ -87,6 +87,21 @@ export function useSwrCache<T>({
   const [loading, setLoading] = useState<boolean>(cached === null);
   const [error, setError] = useState<Error | null>(null);
 
+  // When the cache key changes (e.g. navigating from one object's detail
+  // to a different object's), reset to the NEW key's cached value during
+  // render. Otherwise `data` keeps the previous key's value — `useState`
+  // initializers only run on mount — and the view shows stale content
+  // until the background fetch lands (#416: detail→detail nav flashed the
+  // prior record). Setting state during render is a supported React
+  // pattern: it re-renders immediately, before paint, so no flicker.
+  const keyRef = useRef(cacheKey);
+  if (keyRef.current !== cacheKey) {
+    keyRef.current = cacheKey;
+    setData(cached);
+    setLoading(cached === null);
+    setError(null);
+  }
+
   // Single fetch path. `showLoading` is true only for foreground
   // fetches (mount, deps change, explicit refresh) — background
   // re-validation passes false so it never flips the spinner on, and a
