@@ -30,7 +30,11 @@ export default defineConfig(({ command }) => ({
   build: {
     outDir: path.resolve(__dirname, '../../../django_admin_react/static/admin_react'),
     emptyOutDir: true,
-    sourcemap: true,
+    // No source maps in the published bundle: the wheel ships straight to
+    // PyPI, and a `.js.map` (~4x the JS itself) would bloat every install
+    // and let any consumer's production browser reconstruct the full TS
+    // source. The source is public on GitHub for anyone who wants it.
+    sourcemap: false,
     // Emit `.vite/manifest.json` so Django's SpaIndexView can map
     // the entry to its hashed JS / CSS filenames at render time.
     manifest: true,
