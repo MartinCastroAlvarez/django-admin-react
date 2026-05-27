@@ -180,9 +180,10 @@ Response 200:
   "pk_field": "id",
   "permissions": { "view": true, "add": true, "change": true, "delete": false },
   "columns": [
-    { "name": "name",     "label": "Name",     "sortable": true  },
-    { "name": "balance",  "label": "Balance",  "sortable": true  },
-    { "name": "is_active","label": "Active",   "sortable": false }
+    { "name": "name",      "label": "Name",    "sortable": true,  "type": "string"   },
+    { "name": "balance",   "label": "Balance", "sortable": true,  "type": "decimal"  },
+    { "name": "is_active", "label": "Active",  "sortable": false, "type": "boolean"  },
+    { "name": "created_at","label": "Created", "sortable": true,  "type": "datetime" }
   ],
   "search_fields": ["name", "iban"],
   "search_help_text": "Search by name or IBAN.",
@@ -216,6 +217,14 @@ Rules:
   column; `[]` when the admin set `list_display_links = None` to disable
   linking). The SPA links exactly these columns. Callable list_display
   entries are dropped (only string column names round-trip).
+- `columns[*].type` is the column's closed-vocabulary field type, present
+  **only** when the column maps to a concrete model field. It is absent for
+  `list_display` callables / display methods (which have no field). The SPA
+  uses it to format `datetime` / `date` / `time` cells as a localized
+  display string instead of raw ISO (`#413`); the wire value stays raw ISO
+  so the edit/write path round-trips unchanged. Display timezone is the
+  viewer's local zone (`toLocaleString`), with the instant taken from the
+  offset-aware ISO the backend emits under `USE_TZ=True`.
 - `search_fields` is the literal list from the `ModelAdmin` (so the SPA
   can label the search box). Empty list means no search.
 - `search_help_text` is `ModelAdmin.search_help_text` (empty string when

@@ -146,3 +146,32 @@ this.
 — `claude-pm-ux-opus47`
 
 **Resolved 2026-05-26 (A — request-derived).** `django_admin_react/views.py:109` reconstructs the mount from `request.path` and embeds it in the SPA template via the `dar-mount` meta tag; PR #120 hardened the SPA-side `detectMount()` to honour it. Consumers behind path-stripping proxies set `FORCE_SCRIPT_NAME` per the standard Django pattern. Moved to [`decisions.md`](decisions.md).
+
+---
+
+## Q: Datetime display timezone — viewer-local vs `settings.TIME_ZONE`? (#413)
+
+Roles involved: Architect / PM.
+Owner (asking): `claude` (this session).
+Context: #413 asks that datetimes stop rendering as raw UTC ISO. The
+SPA now formats `datetime`/`date`/`time` columns via the browser's
+`toLocaleString` (PR for #413), i.e. in the **viewer's local
+timezone**. The backend emits offset-aware ISO under `USE_TZ=True`, so
+the displayed instant is correct; only the *zone* differs from the HTML
+admin, which renders in `settings.TIME_ZONE`.
+
+Options:
+
+- **A (shipped).** Viewer-local zone. SPA-idiomatic, zero config,
+  correct instant. Differs from the HTML admin only when the operator's
+  browser zone ≠ `settings.TIME_ZONE` (uncommon — operators are usually
+  in the configured zone).
+- **B.** Honour `settings.TIME_ZONE` for strict HTML-admin parity:
+  backend `timezone.localtime()` + the SPA formats the ISO *components*
+  without re-converting the instant. More code; pins display to the
+  server's configured zone regardless of where the operator sits.
+
+Tentative direction: **A** for v1 (simpler, idiomatic). Revisit to **B**
+if a consumer reports a zone mismatch against the HTML admin.
+
+— `claude`

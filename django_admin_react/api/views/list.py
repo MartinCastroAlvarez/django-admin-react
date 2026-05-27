@@ -39,6 +39,7 @@ from django_admin_react.api.permissions import is_admin_user
 from django_admin_react.api.registry import get_admin_site
 from django_admin_react.api.registry import model_permissions
 from django_admin_react.api.registry import resolve_model
+from django_admin_react.api.serializers import field_type_for
 from django_admin_react.api.serializers import label_for
 from django_admin_react.api.serializers import safe_get_field
 from django_admin_react.api.serializers import serialize_fk_value
@@ -317,9 +318,15 @@ def _columns_payload(
 ) -> list[dict[str, Any]]:
     """Build the ``columns[]`` payload for the list response.
 
-    Each entry has ``{name, label, sortable, editable}``. Labels
-    resolve through Django's ``label_for_field`` so admin-customised
-    labels (verbose name, ``short_description``, etc.) are honored.
+    Each entry has ``{name, label, sortable, editable}`` plus a
+    ``type`` (the closed v1 field vocabulary) whenever the column maps
+    to a concrete model field — so the SPA can format ``datetime`` /
+    ``date`` / ``time`` cells for display instead of dumping raw ISO
+    (#413). ``list_display`` callables / display methods have no field
+    and so carry no ``type``; the SPA falls back to the plain string.
+    Labels resolve through Django's ``label_for_field`` so
+    admin-customised labels (verbose name, ``short_description``, etc.)
+    are honored.
     ``editable`` is derived from ``ModelAdmin.list_editable`` — the
     SPA renders the cell as an in-place editor when ``True`` and
     submits changes via the bulk PATCH endpoint (Issue #61). The
@@ -340,14 +347,19 @@ def _columns_payload(
             label = label_for_field(name, model_admin.model, model_admin)
         except Exception:  # pragma: no cover — defensive
             label = name
-        payload.append(
-            {
-                "name": name,
-                "label": str(label),
-                "sortable": name in sortable,
-                "editable": name in editable,
-            }
-        )
+        entry: dict[str, Any] = {
+            "name": name,
+            "label": str(label),
+            "sortable": name in sortable,
+            "editable": name in editable,
+        }
+        # Only concrete model fields carry a type; a ``list_display``
+        # callable / display method resolves to ``None`` and the key is
+        # omitted (the SPA then renders the value as a plain string).
+        field = safe_get_field(model_admin.model, name) if isinstance(name, str) else None
+        if field is not None:
+            entry["type"] = field_type_for(field)
+        payload.append(entry)
     return payload
 
 
