@@ -125,7 +125,10 @@ export function Sidebar() {
   // Settings dialog (cog) — appearance / dark-mode toggle (#84).
   const [settingsOpen, setSettingsOpen] = useState(false);
 
-  const apps = (data?.apps ?? []) as RegistryApp[];
+  // Memoised so the array identity is stable across renders — otherwise
+  // the dependent `useMemo`s below recompute on every render
+  // (react-hooks/exhaustive-deps).
+  const apps = useMemo<RegistryApp[]>(() => (data?.apps ?? []) as RegistryApp[], [data?.apps]);
   const totalModels = useMemo(() => apps.reduce((n, app) => n + app.models.length, 0), [apps]);
   const showFilter = totalModels >= FILTER_THRESHOLD;
   const visibleApps = useMemo(
