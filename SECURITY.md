@@ -174,7 +174,15 @@ Every endpoint added must include all of these tests before merging:
 - TestPyPI may be used for verification by the maintainer with a
   separate token; same hygiene rules apply.
 
-## 8. Static analysis (local-only — no CI in v0.x)
+## 8. Static analysis (local + CI)
+
+The gate runs in two places, both required: locally for fast feedback
+(`./scripts/lint.sh` + the pre-commit hooks) **and** server-side in CI
+(`.github/workflows/ci.yml`) so a red suite cannot merge. The earlier
+"local-only, no CI in v0.x" posture was revisited and reversed (issue
+#452 — regressions were slipping onto `main` under CodeQL-only gating;
+see `docs/agents/decisions.md`). The CI backend job runs `scripts/lint.sh`
+directly, so the two stay in lockstep by construction.
 
 Run via `./scripts/lint.sh`:
 
@@ -187,8 +195,12 @@ Run via `./scripts/lint.sh`:
 - `mypy` (best-effort; tightening planned for v1.x)
 - `bandit -r django_admin_react`
 - `pytest -q` (including `tests/test_security.py`)
-- Frontend: `prettier --check`, `pnpm -r typecheck`, `pnpm -r lint`
-  (`eslint` wires up in PR #6).
+- Frontend: `pnpm -r typecheck`, `pnpm lint` (eslint `--max-warnings 0`
+  + stylelint + dark-mode coverage), `pnpm test` (vitest), `pnpm -r build`.
+
+CI additionally runs the pre-commit security hooks (bandit + the
+house-rule pygrep checks) on every PR. Making the CI checks **required**
+in branch protection is a separate owner action (#452 / #331).
 
 Dependency audit runs separately via `./scripts/audit-deps.sh`
 (see §6).

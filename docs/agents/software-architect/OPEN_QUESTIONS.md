@@ -8,24 +8,6 @@
 
 ---
 
-## OQ-A-001 — When to revisit "no CI"
-
-- **Opened**: 2026-05-25.
-- **Owner**: Architect.
-- **Question**: The repo owner asked for no GitHub Actions in
-  pre-alpha. `scripts/lint.sh` is the local gate. At what point do we
-  flip CI on?
-- **Default assumption** (per [`ACCEPTANCE.md`](../../ACCEPTANCE.md)
-  §3.7 Q-4): revisit before leaving pre-alpha. The trigger is the
-  first `0.1.0rcN` candidate.
-- **Cost of waiting**: every PR depends on the Merger remembering to
-  run linters locally. Reasonable for a small repo; risky if the
-  contributor count grows beyond ~5.
-- **Cost of doing it now**: `workflow` scope is missing from the
-  current PAT, so a fresh token or `gh auth login` is required.
-- **Resolution path**: file a follow-up PR with `.github/workflows/`
-  re-introduced when the repo owner rotates the token.
-
 ## OQ-A-002 — `API_CONTRACT.md` location
 
 - **Opened**: 2026-05-25.

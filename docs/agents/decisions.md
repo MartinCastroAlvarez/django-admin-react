@@ -7,6 +7,27 @@ Newest decisions on top.
 
 ---
 
+## 2026-05-28 — Reverse "no CI": the lint + test gate now runs server-side
+
+The prior "no CI in pre-alpha (per repo-owner direction)" posture was
+revisited (the trigger named in OQ-A-001 / ACCEPTANCE Q-4) and reversed.
+Under CodeQL-only gating, test regressions were merging onto `main` green
+with many agents working in parallel (e.g. #401 broke
+`tests/test_logentry.py`, caught only on a later local run — #451).
+
+- **CI now runs the full gate on every PR + push to `main`**
+  (`.github/workflows/ci.yml`): backend job runs `scripts/lint.sh` itself
+  (so local ≡ CI, incl. the pre-commit security hooks + `pytest`),
+  frontend job runs `pnpm -r typecheck` / `pnpm lint` / `pnpm test` /
+  `pnpm -r build`. Actions SHA-pinned; least-privilege `contents: read`.
+  — issue #452, ci.yml. **Tier 5 (workflows + SECURITY.md §8) —
+  human-reviewed.**
+- Still outstanding (owner action, tracked in #452 / #331): mark the CI
+  checks **required** in branch protection; an optional Python/Django
+  version matrix.
+
+---
+
 ## 2026-05-27 — Ship a concrete recommended CSP (QSEC-03 resolved)
 
 Security lane (`claude-security-opus47-2026-05-27`). The SPA shell loads

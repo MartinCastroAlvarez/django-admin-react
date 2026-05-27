@@ -8,10 +8,10 @@
 # Anything below the [BLOCK] threshold in
 # `docs/agents/security-expert/REVIEW_CHECKLIST.md` §1 aborts the commit.
 #
-# This file is part of the local-only quality gate. There is no CI
-# in this repo by design (repo-owner direction); a developer who
-# disables this hook still has to clear `scripts/lint.sh` before the
-# Merger will pull their PR.
+# This file is the commit-time half of the quality gate. The same hooks
+# run server-side in CI (`.github/workflows/ci.yml` invokes
+# `scripts/lint.sh`, which runs `pre-commit run --all-files`), so a
+# developer who disables this local hook still hits the gate on their PR.
 
 repos:
   # -------------------------------------------------------------------

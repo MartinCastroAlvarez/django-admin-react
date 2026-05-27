@@ -204,7 +204,8 @@ human takes it from there.
 
 - "We'll add tests in a follow-up PR."
 - "It's only a refactor, no review needed."
-- "CI will catch it." (We have no CI.)
+- "CI will catch it." (CI runs the gate (#452), but a green pipeline is
+  the floor, not the review — dataflow/logic bugs still need human eyes.)
 - "The frontend handles it." (Defense in depth; backend must enforce.)
 - "It's behind staff auth." (Necessary, not sufficient — the
   backend still must obey `ModelAdmin`.)

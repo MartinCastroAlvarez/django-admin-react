@@ -8,8 +8,9 @@
 #   LINT_PY_ONLY=1 bash scripts/lint.sh   # skip frontend
 #   LINT_FE_ONLY=1 bash scripts/lint.sh   # skip Python
 #
-# The project does not run CI for now (per repo-owner direction); every
-# contributor must run this locally before opening / merging a PR.
+# Run this locally before opening / merging a PR — it is the fast
+# feedback loop. CI (.github/workflows/ci.yml) runs this same script for
+# the backend gate (`LINT_PY_ONLY=1`), so local and CI stay in lockstep.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

@@ -7,6 +7,18 @@
 
 ---
 
+## 2026-05-28
+
+- **OQ-A-001 resolved — "no CI" reversed.** The lint + test gate now
+  runs server-side on every PR (`.github/workflows/ci.yml`); the backend
+  job runs `scripts/lint.sh` so local ≡ CI. Trigger: regressions slipping
+  onto `main` under CodeQL-only gating (#401 / #451). Cross-role record:
+  [`docs/agents/decisions.md`](../../docs/agents/decisions.md)
+  (2026-05-28). — #452. Remaining owner action: required-checks branch
+  protection.
+
+---
+
 ## 2026-05-25
 
 - **`ACCEPTANCE.md` §3 is the engineering bar.** Every criterion is
