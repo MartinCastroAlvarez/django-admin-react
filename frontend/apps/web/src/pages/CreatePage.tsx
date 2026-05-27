@@ -199,6 +199,42 @@ function CreateForm({ schema, onCreate, onCancel }: CreateFormProps) {
 
   const so = schema.save_options;
 
+  // Save-flow buttons (#154) — render only what `save_options` allows;
+  // default to a plain Add for older backends. Built as a function so it
+  // can be rendered both at the top (when `save_on_top`, #251) and bottom.
+  const renderSaveActions = () => (
+    <div className="flex flex-wrap gap-2">
+      {(so?.show_save ?? true) && (
+        <Button type="submit" variant="primary" disabled={saving}>
+          {saving ? 'Saving…' : 'Add'}
+        </Button>
+      )}
+      {so?.show_save_and_add_another && (
+        <Button
+          type="button"
+          variant="secondary"
+          disabled={saving}
+          onClick={() => void runSave('addAnother')}
+        >
+          Save and add another
+        </Button>
+      )}
+      {so?.show_save_and_continue && (
+        <Button
+          type="button"
+          variant="secondary"
+          disabled={saving}
+          onClick={() => void runSave('continue')}
+        >
+          Save and continue editing
+        </Button>
+      )}
+      <Button type="button" variant="ghost" onClick={onCancel} disabled={saving}>
+        Cancel
+      </Button>
+    </div>
+  );
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {nonFieldError && (
@@ -206,6 +242,7 @@ function CreateForm({ schema, onCreate, onCancel }: CreateFormProps) {
           {nonFieldError}
         </div>
       )}
+      {so?.save_on_top && renderSaveActions()}
       {schema.fieldsets.map((fieldset, idx) => (
         <Card key={`cfs-${idx}-${fieldset.title ?? 'default'}`} title={fieldset.title ?? undefined}>
           <div className="divide-y divide-gray-100">
@@ -239,38 +276,7 @@ function CreateForm({ schema, onCreate, onCancel }: CreateFormProps) {
           </div>
         </Card>
       ))}
-      {/* Save-flow buttons (#154) — render only what `save_options`
-          allows; default to a plain Add for older backends. */}
-      <div className="flex flex-wrap gap-2">
-        {(so?.show_save ?? true) && (
-          <Button type="submit" variant="primary" disabled={saving}>
-            {saving ? 'Saving…' : 'Add'}
-          </Button>
-        )}
-        {so?.show_save_and_add_another && (
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={saving}
-            onClick={() => void runSave('addAnother')}
-          >
-            Save and add another
-          </Button>
-        )}
-        {so?.show_save_and_continue && (
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={saving}
-            onClick={() => void runSave('continue')}
-          >
-            Save and continue editing
-          </Button>
-        )}
-        <Button type="button" variant="ghost" onClick={onCancel} disabled={saving}>
-          Cancel
-        </Button>
-      </div>
+      {renderSaveActions()}
     </form>
   );
 }

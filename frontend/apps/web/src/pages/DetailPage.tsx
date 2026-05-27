@@ -428,6 +428,52 @@ function EditForm({ data, onCancel, onSave }: EditFormProps) {
 
   const so = data.save_options;
 
+  // Save-flow buttons (#154) — render only what `save_options` allows;
+  // default to a plain Save for older backends. Built as a function so it
+  // can be rendered both at the top (when `save_on_top`, #251) and bottom.
+  const renderSaveActions = () => (
+    <div className="flex flex-wrap gap-2">
+      {(so?.show_save ?? true) && (
+        <Button type="submit" variant="primary" disabled={saving}>
+          {saving ? 'Saving…' : 'Save'}
+        </Button>
+      )}
+      {so?.show_save_and_continue && (
+        <Button
+          type="button"
+          variant="secondary"
+          disabled={saving}
+          onClick={() => void runSave('continue')}
+        >
+          Save and continue editing
+        </Button>
+      )}
+      {so?.show_save_and_add_another && (
+        <Button
+          type="button"
+          variant="secondary"
+          disabled={saving}
+          onClick={() => void runSave('addAnother')}
+        >
+          Save and add another
+        </Button>
+      )}
+      {so?.show_save_as_new && (
+        <Button
+          type="button"
+          variant="secondary"
+          disabled={saving}
+          onClick={() => void runSave('saveAsNew')}
+        >
+          Save as new
+        </Button>
+      )}
+      <Button type="button" variant="ghost" onClick={onCancel} disabled={saving}>
+        Cancel
+      </Button>
+    </div>
+  );
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {nonFieldError && (
@@ -435,6 +481,7 @@ function EditForm({ data, onCancel, onSave }: EditFormProps) {
           {nonFieldError}
         </div>
       )}
+      {so?.save_on_top && renderSaveActions()}
       {data.fieldsets.map((fieldset, idx) => {
         // Edit mode shows only fields the operator can actually change:
         // drop readonly fields from each row, then drop now-empty rows.
@@ -494,48 +541,7 @@ function EditForm({ data, onCancel, onSave }: EditFormProps) {
         </Card>
       ))}
 
-      {/* Save-flow buttons (#154) — render only what `save_options`
-          allows; default to a plain Save for older backends. */}
-      <div className="flex flex-wrap gap-2">
-        {(so?.show_save ?? true) && (
-          <Button type="submit" variant="primary" disabled={saving}>
-            {saving ? 'Saving…' : 'Save'}
-          </Button>
-        )}
-        {so?.show_save_and_continue && (
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={saving}
-            onClick={() => void runSave('continue')}
-          >
-            Save and continue editing
-          </Button>
-        )}
-        {so?.show_save_and_add_another && (
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={saving}
-            onClick={() => void runSave('addAnother')}
-          >
-            Save and add another
-          </Button>
-        )}
-        {so?.show_save_as_new && (
-          <Button
-            type="button"
-            variant="secondary"
-            disabled={saving}
-            onClick={() => void runSave('saveAsNew')}
-          >
-            Save as new
-          </Button>
-        )}
-        <Button type="button" variant="ghost" onClick={onCancel} disabled={saving}>
-          Cancel
-        </Button>
-      </div>
+      {renderSaveActions()}
     </form>
   );
 }
