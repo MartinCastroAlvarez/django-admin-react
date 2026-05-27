@@ -41,7 +41,7 @@ export function FieldInput({ name, field, value, error, onChange }: FieldInputPr
     return (
       <Row id={id} field={field} error={error}>
         <div className="text-sm text-gray-700">
-          <FieldValueView value={field.value} />
+          <FieldValueView value={field.value} type={field.type} />
         </div>
       </Row>
     );
@@ -154,7 +154,7 @@ export function FieldInput({ name, field, value, error, onChange }: FieldInputPr
     } else {
       control = (
         <div className="text-sm text-gray-700">
-          <FieldValueView value={field.value} />
+          <FieldValueView value={field.value} type={field.type} />
         </div>
       );
     }
@@ -218,7 +218,7 @@ export function FieldInput({ name, field, value, error, onChange }: FieldInputPr
     // Fallback: render value read-only for any type without an editor.
     control = (
       <div className="text-sm text-gray-700">
-        <FieldValueView value={field.value} />
+        <FieldValueView value={field.value} type={field.type} />
       </div>
     );
   }

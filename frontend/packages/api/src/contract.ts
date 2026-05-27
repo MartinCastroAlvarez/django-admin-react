@@ -84,6 +84,11 @@ export interface ColumnDescriptor {
   /** True when the column is in `ModelAdmin.list_editable` — the SPA
    *  renders an inline-editable cell and submits via the bulk endpoint. */
   editable?: boolean;
+  /** The column's field type, present only when the column maps to a
+   *  concrete model field (absent for `list_display` callables / display
+   *  methods). Drives display formatting — e.g. `datetime`/`date`/`time`
+   *  cells render localized instead of raw ISO (#413). */
+  type?: FieldType;
 }
 
 /** One row in a bulk PATCH (`{pk, fields}`) — `PATCH <app>/<model>/bulk/`. */

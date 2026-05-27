@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { isForeignKeyValue, isHtmlValue, renderValue } from './format';
+import { formatTemporal, isForeignKeyValue, isHtmlValue, renderValue } from './format';
 
 describe('renderValue', () => {
   it('renders null / undefined as the em-dash placeholder', () => {
@@ -40,6 +40,50 @@ describe('renderValue', () => {
     // `<<b>script>` would survive a single naive `replace(/<[^>]*>/g,'')`
     // pass; the looped stripper must leave no angle-bracketed tag behind.
     expect(renderValue({ html: '<<b>script>alert(1)<</b>/script>' })).toBe('alert(1)');
+  });
+});
+
+describe('renderValue — temporal types (#413)', () => {
+  // Assertions are locale/timezone-robust: they check that the raw ISO is
+  // *replaced* by a localized rendering (no `T` separator, no ISO dashes),
+  // not the exact string (which varies by the runner's locale + TZ).
+  it('formats a datetime away from raw ISO (localized)', () => {
+    const out = renderValue('2026-05-27T12:00:00Z', 'datetime');
+    expect(out).not.toBe('2026-05-27T12:00:00Z');
+    expect(out).not.toContain('T'); // ISO separator gone
+    expect(out).toContain('2026'); // year survives any TZ shift mid-year
+  });
+
+  it('formats a date from its Y-M-D parts (no UTC day-shift)', () => {
+    const out = renderValue('2026-05-27', 'date');
+    expect(out).not.toBe('2026-05-27');
+    expect(out).toContain('2026');
+    expect(out).toContain('27'); // day is preserved (not shifted by TZ)
+  });
+
+  it('formats a time away from raw ISO', () => {
+    const out = renderValue('14:30:00', 'time');
+    expect(out).not.toBe('14:30:00');
+    expect(out).toContain('30'); // minutes preserved
+    expect(out).toContain(':');
+  });
+
+  it('does NOT reformat a string-typed value that merely looks like a date', () => {
+    // Type-keyed, not heuristic: a CharField holding an ISO-looking value
+    // stays verbatim.
+    expect(renderValue('2026-05-27', 'string')).toBe('2026-05-27');
+  });
+
+  it('falls back to the raw value when a temporal string is unparseable', () => {
+    expect(renderValue('not-a-date', 'datetime')).toBe('not-a-date');
+    expect(renderValue('nope', 'date')).toBe('nope');
+  });
+
+  it('formatTemporal returns null for non-strings, empty, and non-temporal types', () => {
+    expect(formatTemporal(null, 'datetime')).toBeNull();
+    expect(formatTemporal(42, 'datetime')).toBeNull();
+    expect(formatTemporal('', 'date')).toBeNull();
+    expect(formatTemporal('2026-05-27', 'string')).toBeNull();
   });
 });
 

@@ -340,6 +340,30 @@ def test_columns_payload_passes_request_to_get_sortable_by(
 
 
 # --------------------------------------------------------------------------- #
+# Column field `type` metadata (#413 — localized datetime rendering)          #
+# --------------------------------------------------------------------------- #
+@pytest.mark.django_db
+def test_column_type_present_for_concrete_fields(superuser_client: Client) -> None:
+    """Each ``list_display`` column that maps to a concrete model field
+    carries its closed-vocabulary ``type`` so the SPA can format
+    datetime/date/time cells for display instead of dumping raw ISO
+    (#413). A non-field display entry (``__str__``) carries no ``type``."""
+    from django.contrib.auth import get_user_model
+
+    user_model = get_user_model()
+    with _admin_attrs(user_model, list_display=("username", "date_joined", "__str__")):
+        response = superuser_client.get("/admin-react/api/v1/auth/user/")
+
+    assert response.status_code == 200
+    cols = {c["name"]: c for c in response.json()["columns"]}
+    assert cols["date_joined"]["type"] == "datetime"
+    assert cols["username"]["type"] == "string"
+    # A display callable / `__str__` has no concrete field → no `type` key,
+    # and the SPA falls back to the plain string rendering.
+    assert "type" not in cols["__str__"]
+
+
+# --------------------------------------------------------------------------- #
 # Pagination / ordering / search query-param handling (T-2 coverage)          #
 # --------------------------------------------------------------------------- #
 @pytest.mark.django_db

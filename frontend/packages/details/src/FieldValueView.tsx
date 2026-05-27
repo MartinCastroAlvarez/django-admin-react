@@ -16,14 +16,20 @@ import {
   isForeignKeyValue,
   isHtmlValue,
   renderValue,
+  type FieldType,
   type FieldValue,
 } from '@dar/data';
 
 interface FieldValueViewProps {
   value: FieldValue | undefined;
+  /** The field's wire type — when `datetime`/`date`/`time`, the value is
+   *  rendered as a localized display string instead of raw ISO (#413).
+   *  Explicitly allows `undefined` so callers can forward a possibly-absent
+   *  column/field type under `exactOptionalPropertyTypes`. */
+  type?: FieldType | undefined;
 }
 
-export function FieldValueView({ value }: FieldValueViewProps) {
+export function FieldValueView({ value, type }: FieldValueViewProps) {
   // BooleanField / @admin.display(boolean=True): render Django's
   // green-check / red-X icon instead of "Yes"/"No" text. A null boolean is
   // indistinguishable from any other null here, so it falls through to the
@@ -74,5 +80,5 @@ export function FieldValueView({ value }: FieldValueViewProps) {
       </a>
     );
   }
-  return <>{renderValue(value)}</>;
+  return <>{renderValue(value, type)}</>;
 }

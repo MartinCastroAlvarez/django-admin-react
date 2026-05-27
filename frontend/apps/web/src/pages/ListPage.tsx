@@ -398,7 +398,7 @@ export function ListPage() {
             />
           );
         }
-        return <FieldValueView value={row.fields[c.name]} />;
+        return <FieldValueView value={row.fields[c.name]} type={c.type} />;
       },
     }));
   const visibleColumnCount = columns.length;

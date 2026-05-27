@@ -75,7 +75,7 @@ function DetailValue({ field }: { field: FieldDescriptor }) {
     const match = field.choices.find((o) => String(o.value) === String(v));
     if (match) return <>{match.label}</>;
   }
-  return <FieldValueView value={field.value} />;
+  return <FieldValueView value={field.value} type={field.type} />;
 }
 
 // Render one fieldset in the read view. Every section is collapsible
@@ -704,7 +704,7 @@ function InlineSection({ inline }: { inline: InlineDescriptor }) {
         key: f.name,
         header: f.label,
         render: (row: (typeof inline.rows)[number]) => (
-          <FieldValueView value={row.fields[f.name]} />
+          <FieldValueView value={row.fields[f.name]} type={f.type} />
         ),
       })),
       ...(inline.show_change_link
@@ -739,7 +739,7 @@ function InlineSection({ inline }: { inline: InlineDescriptor }) {
                 <div key={f.name} className="contents">
                   <dt className="text-gray-500">{f.label}</dt>
                   <dd className="col-span-2 min-w-0 whitespace-pre-wrap break-words text-gray-900">
-                    <FieldValueView value={row.fields[f.name]} />
+                    <FieldValueView value={row.fields[f.name]} type={f.type} />
                   </dd>
                 </div>
               ))}
