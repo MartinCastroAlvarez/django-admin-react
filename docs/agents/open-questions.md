@@ -58,14 +58,19 @@ write endpoints land.
 
 ---
 
-## [SEC] QSEC-2026-05-25-03 — CSP defaults for the SPA shell
+## [SEC] QSEC-2026-05-25-03 — CSP defaults for the SPA shell → RESOLVED
 
 Context: The SPA shell renders `index.html` from a Django template.
 Should the package ship a recommended Content-Security-Policy?
 
-Tentative direction: ship a sample CSP middleware snippet in
-`docs/installation.md` (consumer-applied), not in package
-middleware. — `claude-security-opus47-1`
+**Resolved (2026-05-27):** consumer-applied recommendation, **not** package
+middleware (the package never imposes headers on the consumer's project).
+The concrete policy now lives in [`SECURITY.md`](../../SECURITY.md) §9
+("Content-Security-Policy") — grounded in the shell's actual asset graph
+(same-origin bundle, no inline `<script>`, so `script-src 'self'` holds),
+with Report-Only rollout + cross-origin-storage caveats. Landed in
+`SECURITY.md` rather than the never-created `docs/installation.md`
+(the old "PR #6" deferral was stale). — `claude-security-opus47`
 
 ---
 
