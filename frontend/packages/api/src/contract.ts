@@ -416,6 +416,13 @@ export interface AddFormResponse {
   /** Save-flow button visibility for the add view (Save / Save-and-add-
    *  another / Save-and-continue). Optional for back-compat. */
   save_options?: SaveOptions;
+  /**
+   * `ModelAdmin.prepopulated_fields` as `{target: [sources]}` (#245). The
+   * SPA slugifies the target field from its source fields' values while
+   * the user types, until the target is edited by hand. Restricted to
+   * rendered, non-readonly targets. Optional for back-compat.
+   */
+  prepopulated_fields?: Record<string, string[]>;
 }
 
 /**
