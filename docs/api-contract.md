@@ -330,6 +330,7 @@ declared) so the SPA branches on `filters.length` without a
     "choices": [{"value": 1, "label": "alice"}] },
   { "name": "created_at",    "label": "Created",       "type": "date" },
   { "name": "active_state",  "label": "Active state",  "type": "custom",
+    "selected": "exclude",
     "lookups": [{"value": "yes", "label": "Active"}, {"value": "no", "label": "Inactive"}] }
 ]
 ```
@@ -346,7 +347,13 @@ Supported v1 filter types:
   `date_hierarchy` for the heavy date-drill case — §3.1).
 - **`custom`** — `SimpleListFilter` subclass. The filter's own
   `parameter_name` is the query string key; `lookups()` is the
-  choice list; `queryset()` does the narrowing.
+  choice list; `queryset()` does the narrowing. `selected` carries the
+  filter's currently-applied lookup (`filter.value()`), **including a
+  default it applies when no querystring param is present** — so the SPA
+  reflects that default as selected rather than showing "All" while the
+  backend silently narrows the rows. `null` when nothing is selected.
+  (Field-based filters have no server-side default; their selection is
+  the URL param, so they omit `selected`.)
 
 Each filter's value comes from `?<param_name>=<value>`. Unknown
 filter params are silently ignored. Garbage values that break the

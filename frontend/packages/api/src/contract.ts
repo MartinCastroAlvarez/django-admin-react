@@ -176,6 +176,13 @@ export interface FilterDescriptor {
   /** `custom` (SimpleListFilter) carries its options here. */
   lookups?: FilterOption[];
   to?: { app_label: string; model_name: string };
+  /**
+   * The lookup a `custom` (SimpleListFilter) filter is currently
+   * applying — `filter.value()`. Includes a default the filter applies
+   * when no querystring param is present, so the SPA reflects it as
+   * selected instead of "All" (#283). `null` / absent means no selection.
+   */
+  selected?: string | null;
 }
 
 /** One bulk action surfaced from `ModelAdmin.actions`. */

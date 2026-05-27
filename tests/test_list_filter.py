@@ -148,6 +148,55 @@ def test_simple_list_filter_narrows_queryset(superuser_client: Client) -> None:
     assert "alice" not in usernames
 
 
+class _DefaultTenantFilter(SimpleListFilter):
+    """Applies a default ('exclude') when no querystring param is present —
+    the pattern #283 targets: the SPA must reflect the default, not 'All'."""
+
+    title = "Tenants"
+    parameter_name = "tenants"
+
+    def lookups(self, request, model_admin):
+        return [("all", "All tenants"), ("exclude", "Exclude test tenants")]
+
+    def value(self):
+        return super().value() or "exclude"
+
+    def queryset(self, request, queryset):
+        return queryset
+
+
+@pytest.mark.django_db
+def test_simple_list_filter_reports_selected_from_param(superuser_client: Client) -> None:
+    """The descriptor echoes the explicitly-selected lookup (#283)."""
+    User = get_user_model()
+    with admin_attr(User, list_filter=(_ActiveFilter,)):
+        body = superuser_client.get(LIST_USER_URL + "?active_state=no").json()
+    assert body["filters"][0]["selected"] == "no"
+
+
+@pytest.mark.django_db
+def test_simple_list_filter_reports_applied_default_as_selected(superuser_client: Client) -> None:
+    """A filter that applies a default via ``value()`` reports that default
+    as ``selected`` even with no querystring param, so the SPA shows it
+    instead of 'All' (#283)."""
+    User = get_user_model()
+    with admin_attr(User, list_filter=(_DefaultTenantFilter,)):
+        body = superuser_client.get(LIST_USER_URL).json()  # no param
+    f = body["filters"][0]
+    assert f["name"] == "tenants"
+    assert f["selected"] == "exclude"  # the default, not None / All
+
+
+@pytest.mark.django_db
+def test_simple_list_filter_selected_is_null_without_default(superuser_client: Client) -> None:
+    """A filter with no default + no param reports ``selected: null`` so the
+    SPA correctly shows 'All' (#283)."""
+    User = get_user_model()
+    with admin_attr(User, list_filter=(_ActiveFilter,)):
+        body = superuser_client.get(LIST_USER_URL).json()
+    assert body["filters"][0]["selected"] is None
+
+
 # --------------------------------------------------------------------------- #
 # Choice field                                                                #
 # --------------------------------------------------------------------------- #
