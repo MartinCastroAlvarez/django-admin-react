@@ -301,6 +301,34 @@ ACL either). The SPA does not change the posture; it does make the
 URLs trivially scriptable against `/api/v1/<app>/<model>/<pk>/`,
 which raises the operational stakes of `MEDIA_URL` configuration.
 
+#### Uploads (write side)
+
+`FileField` / `ImageField` are now **writable** over `multipart/form-data`
+(create + update). The package stores the file through the field's own
+form + configured `Storage` — it never builds a path from the
+client-supplied filename (`Storage.get_valid_name` / `get_available_name`
+sanitise it, so path traversal can't escape `upload_to`), and an upload
+addressed to a `readonly` / `exclude` / unknown field is rejected `400`.
+Three things remain the **consumer's** responsibility:
+
+- **Size / count limits — keep Django's defaults on.** The multipart parse
+  enforces `DATA_UPLOAD_MAX_MEMORY_SIZE`, `FILE_UPLOAD_MAX_MEMORY_SIZE`, and
+  `DATA_UPLOAD_MAX_NUMBER_FIELDS`; the package never raises or disables them
+  (an over-limit upload returns a clean `400`). Do **not** set these to
+  unbounded values, and tune them for the largest legitimate upload — they
+  are your DoS guard against a worker streaming a multi-GB body.
+- **Content validation is yours, by design.** The package stores whatever
+  the field's validators accept; it does **not** sniff content (that would
+  be a parallel system — `ModelAdmin` stays the source of truth). For
+  untrusted uploads add field validators / extension allowlists / an AV
+  scan, and prefer a storage location that can't execute what it holds.
+- **Stored-file XSS.** A file served from the admin's own origin with a
+  guessable URL and a dangerous content-type (HTML, SVG) is a stored-XSS
+  vector. Serve media from a **separate origin** or with
+  `Content-Disposition: attachment`, and keep `SECURE_CONTENT_TYPE_NOSNIFF`
+  on (above). `ImageField` validation (Pillow) rejects non-images including
+  SVG; plain `FileField` accepts anything its validators allow.
+
 ## 10. Cross-references
 
 - [`ACCEPTANCE.md`](ACCEPTANCE.md) §4 — measurable security criteria.
