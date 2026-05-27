@@ -17,6 +17,7 @@
     "@dar/details": "workspace:*",
     "@dar/form": "workspace:*",
     "@dar/history": "workspace:*",
+    "@dar/list": "workspace:*",
     "@dar/search": "workspace:*",
     "@dar/settings": "workspace:*",
     "@dar/sidebar": "workspace:*",
