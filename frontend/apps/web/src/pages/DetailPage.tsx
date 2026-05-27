@@ -345,6 +345,13 @@ interface EditFormProps {
 function initialValueFor(field: DetailResponse['fields'][string]): WriteValue {
   const v = field.value;
   if (v === null || v === undefined) return null;
+  if (field.type === 'json') {
+    // JSON editor (#242): seed the textarea with the pretty-printed value
+    // (a string) so an untouched field round-trips its existing JSON
+    // intact instead of being wiped. Checked before the array branch so
+    // a JSON array isn't mistaken for an M2M id list.
+    return JSON.stringify(v, null, 2);
+  }
   if (Array.isArray(v)) {
     // M2M (#240): [{id,label}, ...] → [id, ...] (bare pks for the write).
     return v.map((item) =>

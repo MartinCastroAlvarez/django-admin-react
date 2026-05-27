@@ -222,6 +222,36 @@ export function FieldInput({ name, field, value, error, onChange }: FieldInputPr
         className={base}
       />
     );
+  } else if (field.type === 'json') {
+    // JSON editor (#242): a monospace textarea holding the serialized
+    // value (the form seeds it as a pretty-printed string). The raw text
+    // is sent as-is; Django's JSONField form field parses + validates it,
+    // so malformed JSON surfaces as an ordinary field error — no parallel
+    // client-side validation.
+    control = (
+      <textarea
+        id={id}
+        value={value == null ? '' : String(value)}
+        onChange={(e) => onChange(e.target.value)}
+        rows={6}
+        spellCheck={false}
+        className={`${base} font-mono`}
+      />
+    );
+  } else if (field.type === 'duration') {
+    // DurationField editor (#242): a text input. Django's DurationField
+    // form field parses the standard "[DD] [HH:[MM:]]ss[.uuuuuu]" form,
+    // so we pass the string straight through and let it validate.
+    control = (
+      <input
+        id={id}
+        type="text"
+        value={value == null ? '' : String(value)}
+        placeholder="HH:MM:SS"
+        onChange={(e) => onChange(e.target.value)}
+        className={base}
+      />
+    );
   } else {
     // Fallback: render value read-only for any type without an editor.
     control = (
