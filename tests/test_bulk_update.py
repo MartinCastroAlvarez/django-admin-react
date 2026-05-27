@@ -130,9 +130,10 @@ def test_successful_batch_updates_all_rows(superuser_client: Client) -> None:
             {"pk": g2.pk, "fields": {"name": "g2-renamed"}},
         ]
     }
-    response = superuser_client.patch(
-        BULK_URL, data=json.dumps(payload), content_type="application/json"
-    )
+    with admin_attr(Group, list_editable=("name",)):
+        response = superuser_client.patch(
+            BULK_URL, data=json.dumps(payload), content_type="application/json"
+        )
     assert response.status_code == 200
     body = response.json()
     assert body["summary"] == {"accepted": 2, "rejected": 0}
@@ -158,9 +159,10 @@ def test_failure_rolls_back_the_whole_batch(superuser_client: Client) -> None:
             {"pk": 999999, "fields": {"name": "ghost"}},
         ]
     }
-    response = superuser_client.patch(
-        BULK_URL, data=json.dumps(payload), content_type="application/json"
-    )
+    with admin_attr(Group, list_editable=("name",)):
+        response = superuser_client.patch(
+            BULK_URL, data=json.dumps(payload), content_type="application/json"
+        )
     assert response.status_code == 200
     body = response.json()
     assert body["summary"] == {"accepted": 0, "rejected": 2}
@@ -182,9 +184,10 @@ def test_invalid_field_value_rolls_back(superuser_client: Client) -> None:
             {"pk": g1.pk, "fields": {"name": ""}},
         ]
     }
-    response = superuser_client.patch(
-        BULK_URL, data=json.dumps(payload), content_type="application/json"
-    )
+    with admin_attr(Group, list_editable=("name",)):
+        response = superuser_client.patch(
+            BULK_URL, data=json.dumps(payload), content_type="application/json"
+        )
     body = response.json()
     assert body["summary"] == {"accepted": 0, "rejected": 1}
     row = body["results"][0]
@@ -202,7 +205,10 @@ def test_invalid_field_value_rolls_back(superuser_client: Client) -> None:
 def test_write_to_readonly_field_per_row_error(superuser_client: Client) -> None:
     g1 = Group.objects.create(name="g1")
 
-    with admin_attr(Group, readonly_fields=("name",)):
+    # A list_editable field that's ALSO readonly is still rejected as
+    # read-only (the readonly/excluded guard runs after the list_editable
+    # scope check) — both protections compose.
+    with admin_attr(Group, list_editable=("name",), readonly_fields=("name",)):
         payload = {"updates": [{"pk": g1.pk, "fields": {"name": "x"}}]}
         response = superuser_client.patch(
             BULK_URL, data=json.dumps(payload), content_type="application/json"
@@ -221,10 +227,54 @@ def test_write_to_readonly_field_per_row_error(superuser_client: Client) -> None
 def test_bulk_response_has_no_store(superuser_client: Client) -> None:
     g1 = Group.objects.create(name="g1")
     payload = {"updates": [{"pk": g1.pk, "fields": {"name": "g1-renamed"}}]}
+    with admin_attr(Group, list_editable=("name",)):
+        response = superuser_client.patch(
+            BULK_URL, data=json.dumps(payload), content_type="application/json"
+        )
+    assert response["Cache-Control"] == "no-store"
+
+
+# --------------------------------------------------------------------------- #
+# list_editable scope guard (#401): bulk PATCH may only write list_editable   #
+# fields — never a field that's merely writable on the change form            #
+# --------------------------------------------------------------------------- #
+@pytest.mark.django_db
+def test_bulk_rejects_field_not_in_list_editable(superuser_client: Client) -> None:
+    """A field that is writable on the change form but NOT in list_editable is
+    rejected (bad_request), and the row is left unchanged (#401)."""
+    g1 = Group.objects.create(name="original")
+    # list_editable is empty here, so `name` — though writable on the change
+    # form — is not editable from the list.
+    payload = {"updates": [{"pk": g1.pk, "fields": {"name": "hacked"}}]}
     response = superuser_client.patch(
         BULK_URL, data=json.dumps(payload), content_type="application/json"
     )
-    assert response["Cache-Control"] == "no-store"
+    assert response.status_code == 200
+    row = response.json()["results"][0]
+    assert row["ok"] is False
+    assert row["error"]["code"] == "bad_request"
+    assert "not editable in the list view" in row["error"]["message"]
+    g1.refresh_from_db()
+    assert g1.name == "original"  # value unchanged
+
+
+@pytest.mark.django_db
+def test_bulk_accepts_only_the_list_editable_subset(superuser_client: Client) -> None:
+    """With list_editable=('name',), `name` is accepted; a sibling writable
+    field outside list_editable in the same payload is rejected (#401)."""
+    g1 = Group.objects.create(name="original")
+    # `permissions` is writable on the change form but not list_editable.
+    payload = {"updates": [{"pk": g1.pk, "fields": {"name": "ok", "permissions": []}}]}
+    with admin_attr(Group, list_editable=("name",)):
+        response = superuser_client.patch(
+            BULK_URL, data=json.dumps(payload), content_type="application/json"
+        )
+    row = response.json()["results"][0]
+    assert row["ok"] is False
+    assert row["error"]["code"] == "bad_request"
+    assert "permissions" in row["error"]["message"]
+    g1.refresh_from_db()
+    assert g1.name == "original"  # atomic: nothing written
 
 
 # --------------------------------------------------------------------------- #
