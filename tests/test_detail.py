@@ -388,3 +388,40 @@ def test_detail_fk_value_omits_target_when_unregistered(
 
     assert ct_value is not None
     assert "to" not in ct_value
+
+
+# --------------------------------------------------------------------------- #
+# Readonly callable that RAISES must degrade, not 500 (Issue #275)            #
+# --------------------------------------------------------------------------- #
+@pytest.mark.django_db
+def test_readonly_callable_that_raises_degrades_to_none() -> None:
+    """Closes #275: a readonly callable / property that *raises* must
+    resolve to a null value, not 500 the detail / create-form endpoint.
+
+    Observed on the add-form (create, unsaved instance): a model property
+    listed as a readonly field assumed a saved row and raised when read on
+    the blank object. The fallback used ``getattr(obj, name, None)``, whose
+    default only swallows ``AttributeError`` — any other exception from the
+    property getter propagated and 500'd the endpoint. The fallback must
+    guard against *any* exception.
+    """
+    from django.contrib import admin as _admin
+
+    from django_admin_react.api.views.detail import _readonly_callable_descriptor
+
+    group_admin = _admin.site._registry[Group]
+
+    class _Unsaved:
+        # Mirror a real model behind the add-form: has _meta, no pk yet,
+        # and a readonly property that blows up on the unsaved instance.
+        _meta = Group._meta
+        pk = None
+
+        @property
+        def boom(self) -> str:
+            raise ValueError("instance is not saved yet")
+
+    desc = _readonly_callable_descriptor(group_admin, Group, _Unsaved(), "boom")
+    assert desc["value"] is None
+    assert desc["readonly"] is True
+    assert desc["type"] == "unsupported"

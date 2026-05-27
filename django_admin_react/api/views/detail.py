@@ -307,12 +307,19 @@ def _readonly_callable_descriptor(
         _f, _attr, value = lookup_field(name, obj, model_admin)
     except Exception:
         # Fallback: a plain attribute / method on the model instance.
-        value = getattr(obj, name, None)
-        if callable(value):
-            try:
+        # The whole resolution is guarded because a readonly property
+        # can *raise* (not merely be missing) — e.g. a model property
+        # that assumes a saved instance and blows up on the unsaved
+        # object behind the add-form. ``getattr(obj, name, None)`` only
+        # swallows ``AttributeError``, so any other exception from the
+        # property getter would otherwise propagate and 500 the endpoint
+        # (Issue #275).
+        try:
+            value = getattr(obj, name, None)
+            if callable(value):
                 value = value()
-            except Exception:
-                value = None
+        except Exception:
+            value = None
     return {
         "type": "unsupported",
         "label": _field_label(model_admin, model, name),
