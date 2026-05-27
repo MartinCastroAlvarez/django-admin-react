@@ -32,6 +32,7 @@ from django.http import JsonResponse
 from django.views.generic import View
 
 from django_admin_react.api.inlines import inlines_payload
+from django_admin_react.api.object_actions import object_actions_payload
 from django_admin_react.api.permissions import forbidden_response
 from django_admin_react.api.permissions import is_admin_user
 from django_admin_react.api.registry import get_admin_site
@@ -119,7 +120,7 @@ def _build_payload(
 ) -> dict[str, Any]:
     """Compose the full detail response body (contract §4)."""
     visible_names = _visible_field_names(model_admin, request, obj)
-    return {
+    payload: dict[str, Any] = {
         "app_label": model._meta.app_label,
         "model_name": model._meta.model_name,
         "pk": obj.pk,
@@ -132,6 +133,15 @@ def _build_payload(
         "inlines": inlines_payload(model_admin, obj, request, admin_site),
         "view_on_site_url": _view_on_site_url(model_admin, obj),
     }
+    # Object-level change-page actions (Issue #236) — opt-in via the
+    # django-object-actions ``get_change_actions`` / ``change_actions``
+    # contract, duck-typed (no hard dependency). ``None`` means a plain
+    # Django admin without that affordance: omit the key entirely so the
+    # SPA renders no action buttons (graceful no-op).
+    object_actions = object_actions_payload(model_admin, request, obj)
+    if object_actions is not None:
+        payload["object_actions"] = object_actions
+    return payload
 
 
 def _view_on_site_url(model_admin: ModelAdmin, obj: Model) -> str | None:

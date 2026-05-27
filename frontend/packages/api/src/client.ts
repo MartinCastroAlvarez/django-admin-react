@@ -18,6 +18,7 @@ import type {
   HistoryResponse,
   ListResponse,
   LoginResponse,
+  ObjectActionRunResponse,
   RegistryResponse,
   UpdatePayload,
 } from './contract';
@@ -278,6 +279,26 @@ export class ApiClient {
       'POST',
       `${appLabel}/${modelName}/actions/${actionName}/`,
       { pks, confirmed },
+    );
+  }
+
+  /**
+   * Run one object-level change-page action (#236) against a single
+   * object (`POST <app>/<model>/<pk>/action/<name>/`). The backend
+   * re-resolves `name` through the admin's permitted `get_change_actions`
+   * set — the SPA name is never trusted as a callable lookup. CSRF is
+   * sent like other unsafe calls. Returns `{ok, message?, redirect?}`.
+   */
+  runObjectAction(
+    appLabel: string,
+    modelName: string,
+    pk: string | number,
+    name: string,
+  ): Promise<ObjectActionRunResponse> {
+    return this.request<ObjectActionRunResponse>(
+      'POST',
+      `${appLabel}/${modelName}/${pk}/action/${name}/`,
+      {},
     );
   }
 

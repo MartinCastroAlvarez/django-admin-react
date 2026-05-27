@@ -202,6 +202,31 @@ export interface ActionRunResponse {
   redirect?: string;
 }
 
+/**
+ * One object-level change-page action (#236) — the django-object-actions
+ * `change_actions` affordance, surfaced on the detail response only when
+ * the admin opts in (duck-typed; no hard dependency). The SPA renders a
+ * button per entry next to Edit/Delete.
+ */
+export interface ObjectActionDescriptor {
+  name: string;
+  label: string;
+  description?: string;
+}
+
+/**
+ * Result of running one object action
+ * (`POST <app>/<model>/<pk>/action/<name>/`, #236). `ok` is false when the
+ * action callable raised (the API returns 400, never a 500). `redirect`
+ * carries the target URL when the callable returned a redirect response —
+ * the SPA navigates client-side rather than following a 302.
+ */
+export interface ObjectActionRunResponse {
+  ok: boolean;
+  message?: string;
+  redirect?: string;
+}
+
 /** One cascading model in a delete preview: `{model, count}`. */
 export interface DeleteCascadeEntry {
   /** `verbose_name_plural` of the cascading model. */
@@ -420,6 +445,14 @@ export interface DetailResponse {
    *  object's get_absolute_url). `null` when not applicable. Optional for
    *  back-compat with older backends. */
   view_on_site_url?: string | null;
+  /**
+   * Object-level change-page actions (#236) — the django-object-actions
+   * `change_actions` affordance. Present (possibly `[]`) only when the
+   * admin exposes object actions; absent for a plain-Django admin. The
+   * SPA renders a button per entry; clicking runs
+   * `POST <app>/<model>/<pk>/action/<name>/`.
+   */
+  object_actions?: ObjectActionDescriptor[];
 }
 
 /**
