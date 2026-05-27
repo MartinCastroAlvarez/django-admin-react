@@ -15,6 +15,8 @@ export type {
   AddFormResponse,
   ActionRunResponse,
   ApiClientConfig,
+  BulkUpdateEntry,
+  BulkUpdateResponse,
   ColumnDescriptor,
   CreatePayload,
   CreateResponse,

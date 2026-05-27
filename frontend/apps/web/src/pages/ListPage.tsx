@@ -92,6 +92,10 @@ export function ListPage() {
   // The action awaiting confirmation (#206) — drives the styled
   // confirm modal instead of the native window.confirm.
   const [pendingAction, setPendingAction] = useState<ActionDescriptor | null>(null);
+  // Inline list_editable edits (#243): pending cell changes keyed by
+  // pk → field → string value, submitted together via the bulk PATCH.
+  const [edits, setEdits] = useState<Record<string, Record<string, string>>>({});
+  const [savingEdits, setSavingEdits] = useState(false);
   // Column customizer (#196): hidden columns persist per app/model in
   // localStorage so the operator's layout survives reloads. UI-only
   // preference (not data) — keyed outside the `dar:v1:*` cache.
@@ -306,13 +310,58 @@ export function ListPage() {
   }
   if (!data) return null;
 
+  // Inline list_editable (#243): editable columns render a text input
+  // bound to the pending-edits map; all edits submit together via the
+  // bulk PATCH. The backend rolls the whole batch back if any row fails.
+  const canEdit = data.permissions.change;
+  const scalarStr = (v: ListRow['fields'][string] | undefined): string =>
+    v == null || typeof v === 'object' ? '' : String(v);
+  const setCell = (pk: string, field: string, value: string): void =>
+    setEdits((prev) => ({ ...prev, [pk]: { ...prev[pk], [field]: value } }));
+  const editCount = Object.keys(edits).length;
+
+  async function saveEdits(): Promise<void> {
+    const updates = Object.entries(edits).map(([pk, fields]) => ({ pk, fields }));
+    if (updates.length === 0) return;
+    setSavingEdits(true);
+    try {
+      const res = await client.bulkUpdate(appLabel, modelName, updates);
+      if (res.summary.rejected > 0) {
+        toast.error(`${res.summary.rejected} row(s) failed — nothing was saved.`);
+      } else {
+        toast.success(`Saved ${res.summary.accepted} row${res.summary.accepted === 1 ? '' : 's'}.`);
+        setEdits({});
+        await refresh();
+      }
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Bulk save failed.');
+    } finally {
+      setSavingEdits(false);
+    }
+  }
+
   const columns = data.columns
     .filter((c) => !hiddenCols.has(c.name))
     .map((c) => ({
       key: c.name,
       header: c.label,
       sortable: c.sortable,
-      render: (row: ListRow) => <FieldValueView value={row.fields[c.name]} />,
+      render: (row: ListRow) => {
+        if (c.editable && canEdit) {
+          const pk = String(row.pk);
+          const value = edits[pk]?.[c.name] ?? scalarStr(row.fields[c.name]);
+          return (
+            <input
+              value={value}
+              onChange={(e) => setCell(pk, c.name, e.target.value)}
+              onClick={(e) => e.stopPropagation()}
+              className="w-full rounded border border-gray-300 px-1.5 py-0.5 text-sm"
+              aria-label={`${c.label} for row ${pk}`}
+            />
+          );
+        }
+        return <FieldValueView value={row.fields[c.name]} />;
+      },
     }));
   const visibleColumnCount = data.columns.length - hiddenCols.size;
 
@@ -468,6 +517,22 @@ export function ListPage() {
               Clear all
             </button>
           )}
+        </div>
+      )}
+
+      {editCount > 0 && (
+        <div className="flex items-center justify-between rounded-md border border-blue-300 bg-blue-50 px-3 py-2 text-sm text-blue-700">
+          <span>
+            {editCount} row{editCount === 1 ? '' : 's'} with unsaved edits.
+          </span>
+          <div className="flex gap-2">
+            <Button variant="secondary" disabled={savingEdits} onClick={() => setEdits({})}>
+              Discard
+            </Button>
+            <Button variant="primary" disabled={savingEdits} onClick={() => void saveEdits()}>
+              {savingEdits ? 'Saving…' : 'Save changes'}
+            </Button>
+          </div>
         </div>
       )}
 

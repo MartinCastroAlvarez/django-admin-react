@@ -81,6 +81,26 @@ export interface ColumnDescriptor {
   name: string;
   label: string;
   sortable: boolean;
+  /** True when the column is in `ModelAdmin.list_editable` — the SPA
+   *  renders an inline-editable cell and submits via the bulk endpoint. */
+  editable?: boolean;
+}
+
+/** One row in a bulk PATCH (`{pk, fields}`) — `PATCH <app>/<model>/bulk/`. */
+export interface BulkUpdateEntry {
+  pk: string | number;
+  fields: Record<string, WriteValue>;
+}
+
+/** Bulk PATCH result envelope (#61 / list_editable #243). */
+export interface BulkUpdateResponse {
+  results: Array<{
+    pk: string | number | null;
+    ok: boolean;
+    error?: { code?: string; message?: string; fields?: Record<string, string[]> };
+    rolled_back?: boolean;
+  }>;
+  summary: { accepted: number; rejected: number };
 }
 
 export interface ForeignKeyValue {
