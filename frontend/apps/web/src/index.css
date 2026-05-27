@@ -60,10 +60,20 @@ body,
    #374151, so an input's border didn't match the button/card next to it.
    Internal row dividers (divide-gray-*) stay subtler at #1f2937 — that's
    a within-table line, not an element outline. */
+/* Unified element border (buttons, inputs, cards, tables), softened.
+   gray-300 (#d1d5db) read too heavy in light; soften to gray-200-ish
+   (#e5e7eb) — present, minimal, modern. (Source-order overrides the
+   Tailwind utility; no !important needed in light.) */
+.border-gray-200,
+.border-gray-300 {
+  border-color: #e5e7eb;
+}
+/* Dark: #374151 (gray-700) read too heavy, #1f2937 (gray-800) nearly
+   vanished — settle on a soft slate in between. */
 .dark .border-gray-200,
 .dark .border-gray-300,
 .dark .border-gray-100 {
-  border-color: #374151 !important;
+  border-color: #2b3544 !important;
 }
 .dark .divide-gray-100 > :not([hidden]) ~ :not([hidden]),
 .dark .divide-gray-200 > :not([hidden]) ~ :not([hidden]) {
@@ -82,7 +92,7 @@ body,
 .dark textarea {
   background-color: #111827 !important;
   color: #e5e7eb !important;
-  border-color: #374151 !important;
+  border-color: #2b3544 !important; /* match the softened unified border */
 }
 .dark input::placeholder,
 .dark textarea::placeholder {

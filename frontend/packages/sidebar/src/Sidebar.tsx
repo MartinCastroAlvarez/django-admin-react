@@ -257,26 +257,29 @@ export function Sidebar() {
           </div>
         )}
 
-        <nav className="space-y-4">
+        {/* App-group sections separated by a subtle divider line, each with
+            a right-aligned caret toggle — matching the Vanta sidebar's
+            grouped-nav style. */}
+        <nav className="divide-y divide-gray-800">
           {visibleApps.map((app) => {
             // While a filter query is active, force every group open so
             // matches are never hidden behind a collapsed section.
             const isCollapsed = !query.trim() && collapsed.has(app.app_label);
             return (
-              <div key={app.app_label}>
+              <div key={app.app_label} className="py-3 first:pt-0">
                 <button
                   type="button"
                   onClick={() => toggleApp(app.app_label)}
                   aria-expanded={!isCollapsed}
-                  className="mb-1 flex w-full items-center gap-1 text-xs uppercase tracking-wide text-gray-400 hover:text-gray-200"
+                  className="mb-1 flex w-full items-center justify-between gap-1 text-xs uppercase tracking-wide text-gray-400 hover:text-gray-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
                 >
+                  <span className="truncate">{app.verbose_name}</span>
                   <ChevronDown
                     className={`h-3 w-3 shrink-0 transition-transform ${
                       isCollapsed ? '-rotate-90' : ''
                     }`}
                     aria-hidden
                   />
-                  <span className="truncate">{app.verbose_name}</span>
                 </button>
                 {!isCollapsed && (
                   <ul className="space-y-1">
