@@ -25,7 +25,7 @@ import { useToast } from '../toast';
 
 // Query params the page manages itself; everything else is a
 // `list_filter` key.
-const RESERVED_PARAMS = new Set(['q', 'page']);
+const RESERVED_PARAMS = new Set(['q', 'page', 'page_size']);
 
 // `date_hierarchy` drill-down params (Django's standard year/month/day).
 // They DO flow to the backend (as non-reserved params), but they're not
@@ -62,6 +62,11 @@ export function ListPage() {
   // query param, keyed by the descriptor `name`.
   const q = searchParams.get('q') ?? '';
   const page = Number(searchParams.get('page') ?? '1') || 1;
+  // "Show all" (#385): an explicit page_size in the URL overrides the
+  // backend default and renders every row on one page (the SPA only
+  // offers it up to list_max_show_all, so it stays bounded).
+  const pageSize = Number(searchParams.get('page_size')) || undefined;
+  const showingAll = searchParams.has('page_size');
 
   const activeFilters = useMemo(() => {
     const out: Record<string, string> = {};
@@ -77,6 +82,8 @@ export function ListPage() {
     modelName,
     q,
     page,
+    // Omit (not pass undefined) under exactOptionalPropertyTypes.
+    ...(pageSize !== undefined ? { pageSize } : {}),
     filters: activeFilters,
   });
 
@@ -388,6 +395,20 @@ export function ListPage() {
   const visibleColumnCount = columns.length;
 
   const totalPages = Math.max(1, Math.ceil(data.total / data.page_size));
+  // Offer "Show all N" when the result set spills past one page but stays
+  // within list_max_show_all (#385). `?? 0` keeps it off for any stale
+  // payload that predates the field.
+  const totalCount = data.total;
+  const canShowAll =
+    !showingAll && totalCount > data.page_size && totalCount <= (data.list_max_show_all ?? 0);
+
+  function toggleShowAll(): void {
+    const next = new URLSearchParams(searchParams);
+    next.delete('page'); // either view starts at the top
+    if (showingAll) next.delete('page_size');
+    else next.set('page_size', String(totalCount));
+    setSearchParams(next);
+  }
   const filters = data.filters ?? [];
   const hasFilters = filters.length > 0;
   const chips = buildChips(filters, activeFilters);
@@ -615,6 +636,13 @@ export function ListPage() {
         )}
       </Card>
       <Pagination page={data.page} totalPages={totalPages} onChange={setPage} />
+      {(canShowAll || showingAll) && (
+        <div className="text-center">
+          <button type="button" onClick={toggleShowAll} className="text-sm text-blue-600 hover:underline">
+            {showingAll ? 'Show paginated' : `Show all ${data.total.toLocaleString()}`}
+          </button>
+        </div>
+      )}
 
       {filterOpen && (
         <FilterModal

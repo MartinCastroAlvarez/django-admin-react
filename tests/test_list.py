@@ -89,6 +89,15 @@ def test_list_response_reports_pk_field(superuser_client: Client) -> None:
     assert response.json()["pk_field"] == "id"
 
 
+@pytest.mark.django_db
+def test_list_response_reports_list_max_show_all(superuser_client: Client) -> None:
+    """The list response carries `list_max_show_all` (ModelAdmin default
+    200, capped to the page-size limit) for the SPA's "Show all" link (#385)."""
+    response = superuser_client.get(LIST_URL)
+    assert response.status_code == 200
+    assert response.json()["list_max_show_all"] == 200
+
+
 # --------------------------------------------------------------------------- #
 # show_full_result_count parity (#311): full_count reports the unfiltered     #
 # base total when the list is narrowed                                        #

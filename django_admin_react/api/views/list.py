@@ -167,6 +167,14 @@ class ListView(View):
             # full. May or may not appear in ``list_display``; when it
             # doesn't, the SPA simply has nothing to pin.
             "pk_field": model._meta.pk.name,
+            # Upper bound for a "Show all" view (#385) — Django's
+            # ``ModelAdmin.list_max_show_all`` (default 200), capped to the
+            # package's page-size clamp so the SPA never asks for a page
+            # the backend would truncate. The SPA offers "Show all N" when
+            # ``total`` is at or below this.
+            "list_max_show_all": min(
+                int(getattr(model_admin, "list_max_show_all", 200)), conf.MAX_PAGE_SIZE
+            ),
             "permissions": model_permissions(model_admin, request),
             "columns": columns,
             "search_fields": list(model_admin.search_fields or ()),

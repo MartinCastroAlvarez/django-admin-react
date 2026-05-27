@@ -261,6 +261,12 @@ export interface ListResponse {
    * identity and must stay fully readable.
    */
   pk_field: string;
+  /**
+   * Upper bound for a "Show all" view (`ModelAdmin.list_max_show_all`,
+   * default 200, capped to the page-size limit). The SPA offers a
+   * "Show all N" link when `total` ≤ this.
+   */
+  list_max_show_all: number;
   permissions: Permissions;
   columns: ColumnDescriptor[];
   search_fields: string[];
