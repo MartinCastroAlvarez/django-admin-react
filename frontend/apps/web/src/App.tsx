@@ -2,6 +2,7 @@ import { Route, Routes } from 'react-router-dom';
 
 import { ApiError, useRegistry } from '@dar/data';
 
+import { ErrorBoundary } from './ErrorBoundary';
 import { Layout } from './Layout';
 import { HomePage } from './pages/HomePage';
 import { ListPage } from './pages/ListPage';
@@ -30,19 +31,23 @@ export function App() {
   return (
     <ToastProvider>
       <Layout>
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path=":appLabel/:modelName" element={<ListPage />} />
-          {/* Literal `add` is ranked above the `:pk` route by React
+        {/* Catch a render throw in any page so it shows a recoverable
+            fallback instead of white-screening the whole app (#415). */}
+        <ErrorBoundary>
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path=":appLabel/:modelName" element={<ListPage />} />
+            {/* Literal `add` is ranked above the `:pk` route by React
               Router, so /app/model/add opens the create form, not a
               detail with pk="add". */}
-          <Route path=":appLabel/:modelName/add" element={<CreatePage />} />
-          <Route path=":appLabel/:modelName/:pk" element={<DetailPage />} />
-          <Route
-            path="*"
-            element={<div className="p-6 text-sm text-gray-500">Page not found.</div>}
-          />
-        </Routes>
+            <Route path=":appLabel/:modelName/add" element={<CreatePage />} />
+            <Route path=":appLabel/:modelName/:pk" element={<DetailPage />} />
+            <Route
+              path="*"
+              element={<div className="p-6 text-sm text-gray-500">Page not found.</div>}
+            />
+          </Routes>
+        </ErrorBoundary>
       </Layout>
     </ToastProvider>
   );
