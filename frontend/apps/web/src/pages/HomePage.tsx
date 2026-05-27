@@ -2,14 +2,9 @@ import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Star } from 'lucide-react';
 
+import { PINNED_MODELS_KEY, usePersistedSet } from '@dar/customization';
 import { Card, EmptyState, Skeleton } from '@dar/ui';
 import { useRegistry, type RegistryAppEntry, type RegistryModelEntry } from '@dar/data';
-import { usePersistedSet } from '@dar/customization';
-
-// Pinned models (#407) persist per device, like the other UI prefs.
-// Keyed by the routing pair `<real_app_label>/<model_name>` so it's
-// stable regardless of get_app_list grouping.
-const PINNED_KEY = 'dar:pinned-models';
 
 function routeAppFor(app: RegistryAppEntry, model: RegistryModelEntry): string {
   // Route by real_app_label (see Layout.tsx) — app.app_label may be a
@@ -23,7 +18,7 @@ function pinKey(app: RegistryAppEntry, model: RegistryModelEntry): string {
 
 export function HomePage() {
   const { data, loading, error } = useRegistry();
-  const [pinned, setPinned] = usePersistedSet(PINNED_KEY);
+  const [pinned, setPinned] = usePersistedSet(PINNED_MODELS_KEY);
 
   // Flatten registry models keyed for pinning, then pull out the pinned
   // ones (in registry order) for the top "Pinned" section.

@@ -17,6 +17,9 @@ export const THEME_KEY = 'dar:theme';
 /** Collapsed sidebar app-group labels (a Set of app labels). */
 export const NAV_COLLAPSE_KEY = 'dar:nav-collapsed';
 
+/** Pinned/favourited models on the home page (a Set of `app/model` keys). */
+export const PINNED_MODELS_KEY = 'dar:pinned-models';
+
 /** Hidden list columns for one model (a Set of column names). */
 export function columnsKey(appLabel: string, modelName: string): string {
   return `dar:cols:${appLabel}:${modelName}`;
