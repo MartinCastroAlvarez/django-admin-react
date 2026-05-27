@@ -658,6 +658,7 @@ inlines declared).
     "label": "comments",
     "kind": "tabular",
     "fk_name": "post",
+    "pk_field": "id",
     "child": { "app_label": "blog", "model_name": "comment" },
     "extra": 1,
     "min_num": 0,
@@ -685,6 +686,9 @@ inlines declared).
 - **`fk_name`** is the FK on the child that points back at the
   parent (declared via `InlineModelAdmin.fk_name` or auto-detected
   by scanning the child's FKs).
+- **`pk_field`** is the child model's primary-key field name. When a
+  tabular inline surfaces that column, the SPA never truncates it —
+  matching the list view's pk column (`#418`).
 - **`can_view` / `can_add` / `can_change` / `can_delete`** come from
   the child's `has_*_permission(request, obj=parent)` — when the
   child's `has_view_permission` is false, `rows` is `[]` (no

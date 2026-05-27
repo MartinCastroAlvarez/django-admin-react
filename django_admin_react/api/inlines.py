@@ -176,6 +176,10 @@ def _spec_for_inline(
         "label": str(meta.verbose_name_plural),
         "kind": kind,
         "fk_name": fk_name,
+        # The child's primary-key field name — lets the SPA never-truncate
+        # the pk/ID column when an inline surfaces it, matching the list
+        # view's pk column (#418 / #360).
+        "pk_field": meta.pk.name,
         "child": {"app_label": meta.app_label, "model_name": meta.model_name},
         "extra": int(getattr(inline, "extra", 0)),
         "min_num": getattr(inline, "min_num", None),

@@ -380,6 +380,10 @@ export interface InlineDescriptor {
   label: string;
   kind: 'tabular' | 'stacked';
   fk_name: string;
+  /** The child model's primary-key field name — when a tabular inline
+   *  surfaces this column, the SPA never truncates it (matches the list
+   *  view's pk column, #418). Optional for back-compat. */
+  pk_field?: string;
   child: { app_label: string; model_name: string };
   extra: number;
   min_num: number | null;

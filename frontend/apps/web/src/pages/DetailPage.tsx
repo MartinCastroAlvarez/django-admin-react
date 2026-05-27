@@ -717,6 +717,9 @@ function InlineSection({ inline }: { inline: InlineDescriptor }) {
       ...inline.fields.map((f) => ({
         key: f.name,
         header: f.label,
+        // The pk/ID column never truncates — it's the row's identity and
+        // must stay fully readable, matching the list view (#418 / #360).
+        noTruncate: f.name === inline.pk_field,
         render: (row: (typeof inline.rows)[number]) => (
           <FieldValueView value={row.fields[f.name]} type={f.type} />
         ),

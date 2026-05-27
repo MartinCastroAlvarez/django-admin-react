@@ -95,6 +95,33 @@ def test_inline_kind_classified_by_base_class_not_name() -> None:
     assert _inline_kind(NotesInline(Permission, admin.site)) == "stacked"
 
 
+@pytest.mark.django_db
+def test_inline_spec_carries_child_pk_field() -> None:
+    """The inline descriptor names the child model's pk field so the SPA
+    never truncates the pk/ID column when an inline surfaces it (#418)."""
+    from django.contrib.auth import get_user_model
+    from django.contrib.auth.models import Permission
+    from django.contrib.contenttypes.models import ContentType
+    from django.test import RequestFactory
+
+    from django_admin_react.api.inlines import _spec_for_inline
+
+    ct = ContentType.objects.create(app_label="dar_test", model="pkwidget")
+
+    class _PkInline(TabularInline):
+        model = Permission
+        fk_name = "content_type"
+
+    inline = _PkInline(ContentType, admin.site)
+    request = RequestFactory().get("/")
+    request.user = get_user_model().objects.create_superuser(
+        username="inline-pk-su", email="pk@example.com", password="x"  # noqa: S106
+    )
+    spec = _spec_for_inline(inline, ct, request, admin.site)
+    assert spec is not None
+    assert spec["pk_field"] == Permission._meta.pk.name  # "id"
+
+
 # --------------------------------------------------------------------------- #
 # _fields_meta carries type + required (Issue #54 — unblocks inline editing)  #
 # --------------------------------------------------------------------------- #
