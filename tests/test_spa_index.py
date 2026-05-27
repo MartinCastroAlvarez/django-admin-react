@@ -199,6 +199,37 @@ def test_brand_title_explicit_override_wins(superuser_client: Client) -> None:
 
 
 @pytest.mark.django_db
+def test_primary_color_default_injected(superuser_client: Client) -> None:
+    """The accent color is injected as the `--dar-primary` CSS variable;
+    the default is blue-600 (#437)."""
+    with override_settings(DJANGO_ADMIN_REACT={}):
+        _reload_conf()
+        html = superuser_client.get(ROOT_URL).content.decode("utf-8")
+        assert "--dar-primary: #2563eb;" in html
+
+
+@pytest.mark.django_db
+def test_primary_color_valid_hex_override(superuser_client: Client) -> None:
+    """A valid hex `PRIMARY_COLOR` is reflected in `--dar-primary` (#437)."""
+    with override_settings(DJANGO_ADMIN_REACT={"PRIMARY_COLOR": "#ff8800"}):
+        _reload_conf()
+        html = superuser_client.get(ROOT_URL).content.decode("utf-8")
+        assert "--dar-primary: #ff8800;" in html
+
+
+@pytest.mark.django_db
+def test_primary_color_non_hex_value_cannot_inject_css(superuser_client: Client) -> None:
+    """A non-hex `PRIMARY_COLOR` can't break out of the `<style>` block —
+    it's rejected and the default is used, so no CSS injection (#437)."""
+    evil = "red; } body { display: none } :root {"
+    with override_settings(DJANGO_ADMIN_REACT={"PRIMARY_COLOR": evil}):
+        _reload_conf()
+        html = superuser_client.get(ROOT_URL).content.decode("utf-8")
+        assert "display: none" not in html
+        assert "--dar-primary: #2563eb;" in html
+
+
+@pytest.mark.django_db
 def test_brand_logo_url_renders_favicon_and_meta(superuser_client: Client) -> None:
     """`BRAND_LOGO_URL` populates both the `<link rel="icon">` and the
     `dar-brand-logo` meta tag the SPA reads at boot.

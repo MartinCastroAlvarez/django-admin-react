@@ -21,6 +21,14 @@
     {% endcomment %}
     <link rel="manifest" href="{{ mount_point }}web.manifest" />
     <meta name="theme-color" content="#ffffff" />
+    {% comment %}
+      Accent color (#437): the SPA reads --dar-primary for primary buttons,
+      links, and active states, so a consumer can rebrand with no React
+      rebuild. `primary_color` is validated server-side to a strict hex
+      color (see views._resolve_primary_color) — it must not be able to
+      inject CSS through this <style> block.
+    {% endcomment %}
+    <style>:root { --dar-primary: {{ primary_color }}; }</style>
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="{{ brand_title }}" />
     {% csrf_token %}
