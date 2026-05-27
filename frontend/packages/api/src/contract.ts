@@ -281,6 +281,13 @@ export interface ListResponse {
    * <full_count>" when they differ (`show_full_result_count` parity).
    */
   full_count: number | null;
+  /**
+   * `ModelAdmin.list_max_show_all` (default 200). The SPA offers a
+   * "Show all N" control only when `total` is at/below this cap; sending
+   * `?all` then drops pagination and returns every row (Django changelist
+   * parity, #385). Above the cap the backend ignores `?all`.
+   */
+  list_max_show_all: number;
   results: ListRow[];
 }
 

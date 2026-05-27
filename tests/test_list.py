@@ -127,6 +127,59 @@ def test_full_count_null_when_show_full_result_count_disabled(superuser_client: 
     assert body["full_count"] is None
 
 
+# --------------------------------------------------------------------------- #
+# "Show all N" parity (#385): list_max_show_all + the ``all`` (ALL_VAR) flag  #
+# --------------------------------------------------------------------------- #
+@pytest.mark.django_db
+def test_list_response_exposes_list_max_show_all(superuser_client: Client) -> None:
+    """The list payload carries ``list_max_show_all`` (Django default 200)
+    so the SPA knows when to offer the "Show all N" control (#385)."""
+    body = superuser_client.get(LIST_URL).json()
+    assert body["list_max_show_all"] == 200
+
+
+@pytest.mark.django_db
+def test_all_param_returns_every_row_when_under_limit(superuser_client: Client) -> None:
+    """``?all`` drops pagination and returns all rows on one page when the
+    count is at/below ``list_max_show_all`` (#385)."""
+    for i in range(5):
+        Group.objects.create(name=f"g{i}")
+    body = superuser_client.get(LIST_URL, {"page_size": "2", "all": ""}).json()
+    assert body["page"] == 1
+    assert body["total"] == 5
+    # Pagination is dropped: every row comes back despite page_size=2.
+    assert len(body["results"]) == 5
+    assert body["page_size"] == 5
+
+
+@pytest.mark.django_db
+def test_all_param_ignored_when_over_limit(superuser_client: Client) -> None:
+    """When ``total`` exceeds ``list_max_show_all``, ``?all`` is ignored and
+    the list paginates normally — Django's guard against an unbounded
+    materialise (#385). Shrink the cap via the admin attr to keep the test
+    cheap."""
+    for i in range(5):
+        Group.objects.create(name=f"g{i}")
+    with _admin_attrs(Group, list_max_show_all=3):
+        body = superuser_client.get(LIST_URL, {"page_size": "2", "all": ""}).json()
+    assert body["total"] == 5
+    assert body["list_max_show_all"] == 3
+    # Over the cap → ?all ignored → normal page slice of page_size=2.
+    assert body["page_size"] == 2
+    assert len(body["results"]) == 2
+
+
+@pytest.mark.django_db
+def test_all_param_does_not_narrow_full_count(superuser_client: Client) -> None:
+    """``all`` is a page-management flag, not a filter: it must not flip the
+    list into the narrowed ``full_count`` branch (#385/#311)."""
+    Group.objects.create(name="alpha")
+    Group.objects.create(name="beta")
+    body = superuser_client.get(LIST_URL, {"all": ""}).json()
+    assert body["total"] == 2
+    assert body["full_count"] == 2
+
+
 @pytest.mark.django_db
 def test_user_without_view_permission_forbidden(superuser_client: Client) -> None:
     with admin_override(Group, has_view_permission=lambda self, request, obj=None: False):

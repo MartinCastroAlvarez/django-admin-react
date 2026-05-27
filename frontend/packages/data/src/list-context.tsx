@@ -18,6 +18,9 @@ export interface UseListParams {
   page?: number;
   pageSize?: number;
   ordering?: string;
+  /** "Show all N" flag (Django `ALL_VAR`, #385): drop pagination and
+   *  fetch every row when `total <= list_max_show_all`. */
+  all?: boolean;
   /** `list_filter` query params keyed by descriptor name. */
   filters?: Record<string, string>;
 }
@@ -44,6 +47,7 @@ function cacheKeyFor(p: UseListParams): string {
     p.page ?? 1,
     p.pageSize ?? 0,
     p.ordering ?? '',
+    p.all ? 'all' : '',
     serializeFilters(p.filters),
   ].join('|');
 }
@@ -58,6 +62,7 @@ export function useList(params: UseListParams): ListState {
       if (params.page !== undefined) query.page = params.page;
       if (params.pageSize !== undefined) query.page_size = params.pageSize;
       if (params.ordering !== undefined) query.ordering = params.ordering;
+      if (params.all !== undefined) query.all = params.all;
       if (params.filters !== undefined) query.filters = params.filters;
       return params.client.list(params.appLabel, params.modelName, query);
     },
@@ -72,6 +77,7 @@ export function useList(params: UseListParams): ListState {
       params.page,
       params.pageSize,
       params.ordering,
+      params.all,
       filtersKey,
     ],
   );

@@ -141,6 +141,12 @@ export class ApiClient {
       page_size?: number;
       ordering?: string;
       /**
+       * "Show all" flag (Django's `ALL_VAR`, #385). When true the request
+       * sends `?all` and the backend drops pagination — returning every
+       * row — provided `total <= list_max_show_all`.
+       */
+      all?: boolean;
+      /**
        * Arbitrary `list_filter` query params keyed by the descriptor's
        * `name` (e.g. `{ created_at_filter: '7_days' }`). Empty-string /
        * null values are omitted so clearing a filter drops it.
@@ -153,6 +159,8 @@ export class ApiClient {
     if (params.page) search.set('page', String(params.page));
     if (params.page_size) search.set('page_size', String(params.page_size));
     if (params.ordering) search.set('ordering', params.ordering);
+    // Bare `?all` (no value), matching Django's changelist ALL_VAR.
+    if (params.all) search.set('all', '');
     for (const [key, value] of Object.entries(params.filters ?? {})) {
       if (value !== undefined && value !== null && value !== '') {
         search.set(key, value);
