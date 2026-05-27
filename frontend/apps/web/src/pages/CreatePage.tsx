@@ -19,6 +19,7 @@ import {
 import { Button, Card, EmptyState, Spinner } from '@dar/ui';
 
 import { FieldInput } from '../components/FieldInput';
+import { useToast } from '../toast';
 
 export function CreatePage() {
   const params = useParams<{ appLabel: string; modelName: string }>();
@@ -26,6 +27,7 @@ export function CreatePage() {
   const modelName = params.modelName ?? '';
   const client = useApiClient();
   const navigate = useNavigate();
+  const toast = useToast();
 
   const [schema, setSchema] = useState<AddFormResponse | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -70,6 +72,7 @@ export function CreatePage() {
         schema={schema}
         onCreate={async (payload, action) => {
           const created = await createObject({ client, appLabel, modelName, payload });
+          toast.success('Added.');
           if (action === 'addAnother') {
             setFormKey((k) => k + 1); // fresh blank form, stay on add
             return;

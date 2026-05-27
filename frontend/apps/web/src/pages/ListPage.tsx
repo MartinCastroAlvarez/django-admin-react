@@ -20,6 +20,7 @@ import {
 import { Button, Card, EmptyState, Input, Modal, Spinner, Table } from '@dar/ui';
 
 import { FieldValueView } from '../components/FieldValueView';
+import { useToast } from '../toast';
 
 // Query params the page manages itself; everything else is a
 // `list_filter` key.
@@ -31,6 +32,7 @@ export function ListPage() {
   const modelName = params.modelName ?? '';
   const navigate = useNavigate();
   const client = useApiClient();
+  const toast = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
 
   // Search, page, and filters all live in the URL so a reload restores
@@ -240,6 +242,7 @@ export function ListPage() {
     if (pks.length === 0 || runningAction) return;
     setRunningAction(true);
     setPendingAction(null);
+    const count = pks.length;
     try {
       // Run the action over the wire and stay in the SPA: the styled
       // confirm modal already replaced Django's intermediate
@@ -249,6 +252,9 @@ export function ListPage() {
       await client.runAction(appLabel, modelName, action.name, pks);
       setSelected(new Set());
       await refresh();
+      toast.success(`${action.label} — ${count} item${count === 1 ? '' : 's'}.`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Action failed.');
     } finally {
       setRunningAction(false);
     }

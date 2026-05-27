@@ -33,6 +33,7 @@ import { Button, Card, EmptyState, Modal, Spinner, Table } from '@dar/ui';
 import { FieldInput } from '../components/FieldInput';
 import { FieldValueView } from '../components/FieldValueView';
 import { InlineEditor } from '../components/InlineEditor';
+import { useToast } from '../toast';
 
 // Render a detail field's value. ForeignKey values become a navigable
 // link to the related object's detail page (#184 — Django-admin
@@ -78,6 +79,7 @@ export function DetailPage() {
   const pk = params.pk ?? '';
   const client = useApiClient();
   const navigate = useNavigate();
+  const toast = useToast();
   const [searchParams] = useSearchParams();
   const { data, loading, error, refresh } = useDetail({ client, appLabel, modelName, pk });
 
@@ -119,6 +121,7 @@ export function DetailPage() {
                 loadPreview={() => fetchDeletePreview({ client, appLabel, modelName, pk })}
                 onConfirm={async () => {
                   await deleteObject({ client, appLabel, modelName, pk });
+                  toast.success(`Deleted “${data.label}”.`);
                   navigate(`/${appLabel}/${modelName}`);
                 }}
               />
@@ -148,6 +151,7 @@ export function DetailPage() {
                 modelName,
                 payload: createPayload,
               });
+              toast.success('Created a new object.');
               navigate(
                 data.save_options?.save_as_continue
                   ? `/${appLabel}/${modelName}/${created.pk}?edit=1`
@@ -156,6 +160,7 @@ export function DetailPage() {
               return;
             }
             await updateObject({ client, appLabel, modelName, pk, payload });
+            toast.success('Saved.');
             if (action === 'continue') {
               await refresh(); // stay in edit mode with the saved values
               return;
