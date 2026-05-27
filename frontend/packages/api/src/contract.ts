@@ -356,6 +356,12 @@ export interface InlineDescriptor {
   can_add: boolean;
   can_change: boolean;
   can_delete: boolean;
+  /**
+   * `InlineModelAdmin.show_change_link` — when true, the SPA renders a
+   * per-row link to the child's own change page. Only ever true when the
+   * child model is admin-registered (so the link can't 404).
+   */
+  show_change_link: boolean;
   fields: InlineFieldMeta[];
   rows: InlineRow[];
 }
