@@ -18,6 +18,20 @@ The point of the contract is that **`ModelAdmin` stays the only
 source of truth**: a consumer extension layers on top of the
 metadata-driven SPA, it doesn't replace it.
 
+> **Implementation status (read before you build, #436).** Not all three
+> points are wired end-to-end yet — this doc specifies the *contract*, and
+> some of it is still aspirational:
+>
+> | Extension point | Status |
+> | --- | --- |
+> | 1. `register_field_type` (backend) | **Shipped** — usable today. |
+> | 2. Panel endpoints (`…/<pk>/panel/<name>/`, backend) | **Backend shipped** — the endpoint serves data, but **the SPA does not render panels yet**, so a registered panel is not visible in the UI. |
+> | 3. `registerFieldWidget` / `registerModelPanel` / `registerModelAction` (frontend) | **Not yet implemented** — the `@django-admin-react/extensions` package and these functions **do not exist yet**. The shape below is a draft for design feedback only; importing it will fail. |
+>
+> Tracking: [#436](https://github.com/MartinCastroAlvarez/django-admin-react/issues/436).
+> Don't rely on §2's UI rendering or §3 for a production integration until
+> this banner says otherwise.
+
 ---
 
 ## 1. Backend: `register_field_type` (already shipped)
@@ -45,6 +59,12 @@ Builtin types in the closed vocabulary cannot be overridden.
 ---
 
 ## 2. Backend: per-model panel endpoints
+
+> **Status: backend shipped; SPA rendering not wired yet (#436).** The
+> endpoint below serves panel data today, but no SPA component fetches
+> `…/panel/<name>/` yet — so a registered panel is not visible in the UI
+> until the frontend half lands. You can build + test the endpoint now;
+> just don't expect it on screen.
 
 Some custom UIs need data the standard detail endpoint doesn't
 return: an audit trail, related-records mini-grid, derived stats,
@@ -106,9 +126,13 @@ auth + name-resolution gate.
 ## 3. Frontend: `registerFieldWidget` / `registerModelPanel` /
    `registerModelAction`
 
-> **Status: contract drafted; implementation lands with the SPA
-> shell (frontend PR).** This section documents the shape so
-> consumers can begin designing their custom widgets.
+> **Status: NOT YET IMPLEMENTED — contract drafted only (#436).** The
+> `@django-admin-react/extensions` package and the `registerFieldWidget` /
+> `registerModelPanel` / `registerModelAction` functions **do not exist
+> yet**; the imports below will fail. This section documents the intended
+> shape so consumers can design their custom widgets and give feedback —
+> it is not a working API. Implementation lands with the SPA extension
+> work; until then, treat everything in §3 as a proposal.
 
 The frontend exposes three extension points. All registrations
 happen at module load time (typically in your SPA bundle's entry).
