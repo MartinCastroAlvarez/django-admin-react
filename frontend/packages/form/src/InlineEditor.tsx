@@ -226,7 +226,7 @@ export function InlineEditor({ inline, onItems }: InlineEditorProps) {
       <div className="overflow-x-auto">
         <table className="min-w-full text-sm">
           <thead>
-            <tr className="border-b text-left text-gray-500">
+            <tr className="border-b border-gray-200 text-left text-gray-500">
               {editableFields.map((f) => (
                 <th key={f.name} className="py-1 pr-3 font-medium">
                   {f.label}
@@ -238,7 +238,10 @@ export function InlineEditor({ inline, onItems }: InlineEditorProps) {
           </thead>
           <tbody>
             {rows.map((row) => (
-              <tr key={row.key} className={`border-b ${row.deleted ? 'opacity-40' : ''}`}>
+              <tr
+                key={row.key}
+                className={`border-b border-gray-200 ${row.deleted ? 'opacity-40' : ''}`}
+              >
                 {editableFields.map((f) => (
                   <td key={f.name} className="py-1 pr-3 align-top">
                     <InlineCellInput
