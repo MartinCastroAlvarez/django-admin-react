@@ -530,6 +530,10 @@ Rules:
   the choice / FK as radio buttons instead of a select. Optional (absent
   when the field isn't in `radio_fields`); it changes no value, type, or
   permission gate.
+- `empty_value_display` (top-level, also on the **list** response §3) is the
+  admin's placeholder for empty/null values — `ModelAdmin.empty_value_display`
+  if set, else the `AdminSite` default (`"-"`) (`#251`). The SPA renders this
+  instead of a hardcoded em-dash. Always present.
 - Field `type` is a closed v1 vocabulary:
   - `string`, `text`, `email`, `url`, `slug`, `ip`, `filepath`
   - `integer`, `float`, `decimal`, `duration`

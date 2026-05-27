@@ -131,6 +131,11 @@ def _build_payload(
         "fields": _fields_payload(model, model_admin, obj, request, visible_names, admin_site),
         "inlines": inlines_payload(model_admin, obj, request, admin_site),
         "view_on_site_url": _view_on_site_url(model_admin, obj),
+        # empty_value_display (#251): the admin's configured placeholder for
+        # empty/null values (ModelAdmin override → AdminSite default "-"), so
+        # the SPA renders it instead of a hardcoded em-dash. ``str()`` keeps
+        # it a plain string on the wire (it's a SafeString in Django).
+        "empty_value_display": str(model_admin.get_empty_value_display()),
     }
 
 

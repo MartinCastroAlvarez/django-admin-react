@@ -208,6 +208,10 @@ class ListView(View):
             # "Show all N" control only when ``total`` is at/below this cap,
             # matching Django's changelist (#385).
             "list_max_show_all": list_max_show_all,
+            # empty_value_display (#251): the admin's placeholder for empty
+            # cells (ModelAdmin override → AdminSite default "-"), so the SPA
+            # renders it instead of a hardcoded em-dash.
+            "empty_value_display": str(model_admin.get_empty_value_display()),
             "results": results,
         }
         date_hierarchy = date_hierarchy_payload(

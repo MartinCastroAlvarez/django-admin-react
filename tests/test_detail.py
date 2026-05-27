@@ -654,3 +654,11 @@ def test_radio_fields_surface_widget_hint() -> None:
 
     other_desc = _descriptor_for(name="codename", **common)
     assert "widget" not in other_desc  # not in radio_fields → no hint
+
+
+@pytest.mark.django_db
+def test_detail_surfaces_empty_value_display(superuser_client: Client) -> None:
+    """The detail response carries ``empty_value_display`` (#251) — the
+    admin's placeholder for empty values (site default ``"-"``)."""
+    g = Group.objects.create(name="evd")
+    assert superuser_client.get(_url(g.pk)).json()["empty_value_display"] == "-"
