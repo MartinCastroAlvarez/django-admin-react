@@ -672,8 +672,14 @@ function Pagination({ page, totalPages, onChange }: PaginationProps) {
   const prevDisabled = page <= 1;
   const nextDisabled = page >= totalPages;
   const buttonClass = (disabled: boolean): string =>
+    // Give the enabled button an explicit border-gray-300 (matching the
+    // Filter/Customize buttons): a bare `border` falls back to Tailwind's
+    // light-gray default, which the dark-mode utility remap can't catch
+    // and shows as a white border in dark mode.
     `px-3 py-1 rounded border ${
-      disabled ? 'text-gray-300 border-gray-200 cursor-not-allowed' : 'hover:bg-gray-100'
+      disabled
+        ? 'text-gray-300 border-gray-200 cursor-not-allowed'
+        : 'border-gray-300 hover:bg-gray-100'
     }`;
   return (
     <nav className="flex items-center justify-between text-sm text-gray-600">
