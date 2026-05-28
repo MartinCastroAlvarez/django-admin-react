@@ -5,8 +5,8 @@
 // controlled state local to this page; cache/network management is
 // the data layer's job.
 
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { GripVertical, Settings2, X } from 'lucide-react';
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
+import { Settings2, X } from 'lucide-react';
 import { Link, useHref, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import { useApiClient, useList, type ActionDescriptor, type ListRow } from '@dar/data';
@@ -24,7 +24,6 @@ import {
   Breadcrumb,
   Button,
   Card,
-  Checkbox,
   EmptyState,
   Modal,
   Pagination,
@@ -39,6 +38,11 @@ import { FilterBar } from '@dar/search';
 
 import { useToast } from '../toast';
 import { CHANGELIST_FILTERS_PARAM, withPreservedFilters } from '../changelistFilters';
+
+// Lazy-loaded so the @dnd-kit suite (the heaviest dep in this modal)
+// only lands in the bundle of users who open the Customize modal
+// (#586). Pages that never click "Customize" pay zero extra weight.
+const ColumnLayoutModal = lazy(() => import('../ColumnLayoutModal'));
 
 // Query params the page manages itself; everything else is a
 // `list_filter` key. `all` is Django's "Show all" flag (#385), not a
@@ -134,7 +138,6 @@ export function ListPage() {
     `dar:colorder:v1:${appLabel}:${modelName}`,
     [],
   );
-  const [dragCol, setDragCol] = useState<string | null>(null);
 
   // Persist the applied list_filter selections per model (a UI
   // preference, like the column customizer) so a later bare visit can
@@ -406,18 +409,11 @@ export function ListPage() {
     ...nonPkDescriptors.filter((c) => !colOrder.includes(c.name)),
   ];
   const orderedDescriptors = pkCol ? [pkCol, ...orderedNonPk] : orderedNonPk;
-
-  // Reorder a non-pk column before `target`, persisting the full order.
-  const moveColumn = (dragged: string, target: string): void => {
-    const names = orderedNonPk.map((c) => c.name);
-    const from = names.indexOf(dragged);
-    const to = names.indexOf(target);
-    if (from === -1 || to === -1 || from === to) return;
-    const next = [...names];
-    next.splice(from, 1);
-    next.splice(to, 0, dragged);
-    setColOrder(next);
-  };
+  // ColumnLayoutModal commits a reordered non-pk name array directly
+  // via `setColOrder` — `arrayMove` from @dnd-kit/sortable handles the
+  // splice logic. The hand-rolled `moveColumn` helper that used to
+  // live here was retired in v1.3.0 along with the HTML5-DnD modal
+  // it served (#586).
 
   const columns = orderedDescriptors
     // The pk column is never hidden, even if a stale preference lists it.
@@ -787,57 +783,17 @@ export function ListPage() {
       )}
 
       {colsOpen && (
-        <Modal title="Layout" onClose={() => setColsOpen(false)}>
-          <p className="mb-2 text-xs text-gray-500">Drag to reorder; toggle to show or hide.</p>
-          <ul className="space-y-1">
-            {orderedDescriptors.map((c) => {
-              const pk = isPkCol(c.name);
-              const visible = pk || !hiddenCols.has(c.name);
-              // The pk column is always shown and can't be toggled; the
-              // last remaining visible column also can't be hidden.
-              const locked = pk || (visible && visibleColumnCount <= 1);
-              return (
-                <li
-                  key={c.name}
-                  draggable={!pk}
-                  onDragStart={pk ? undefined : () => setDragCol(c.name)}
-                  onDragEnd={() => setDragCol(null)}
-                  onDragOver={pk ? undefined : (e) => e.preventDefault()}
-                  onDrop={
-                    pk
-                      ? undefined
-                      : (e) => {
-                          e.preventDefault();
-                          if (dragCol) moveColumn(dragCol, c.name);
-                          setDragCol(null);
-                        }
-                  }
-                  className={`flex items-center gap-2 rounded border border-transparent px-1 py-1 ${
-                    pk ? '' : 'cursor-grab hover:border-gray-200'
-                  } ${dragCol === c.name ? 'opacity-50' : ''}`}
-                >
-                  {pk ? (
-                    <span className="w-4 shrink-0" aria-hidden />
-                  ) : (
-                    <GripVertical className="h-4 w-4 shrink-0 text-gray-400" aria-hidden />
-                  )}
-                  <label
-                    className={`flex flex-1 items-center gap-2 text-sm ${
-                      locked && !pk ? 'text-gray-400' : 'text-gray-800'
-                    }`}
-                  >
-                    <Checkbox
-                      checked={visible}
-                      disabled={locked}
-                      onChange={() => toggleColumn(c.name, visibleColumnCount)}
-                    />
-                    {c.label}
-                  </label>
-                </li>
-              );
-            })}
-          </ul>
-        </Modal>
+        <Suspense fallback={null}>
+          <ColumnLayoutModal
+            onClose={() => setColsOpen(false)}
+            orderedDescriptors={orderedDescriptors}
+            isPk={isPkCol}
+            hiddenCols={hiddenCols}
+            visibleColumnCount={visibleColumnCount}
+            onToggle={toggleColumn}
+            onReorder={setColOrder}
+          />
+        </Suspense>
       )}
     </div>
   );
