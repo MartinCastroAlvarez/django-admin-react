@@ -352,6 +352,12 @@ function initialValueFor(field: DetailResponse['fields'][string]): WriteValue {
     // a JSON array isn't mistaken for an M2M id list.
     return JSON.stringify(v, null, 2);
   }
+  if (field.type === 'array') {
+    // ArrayField editor (#242): seed the comma-joined value (string),
+    // matching Django's SimpleArrayField widget. Checked before the M2M
+    // array branch so the scalar list isn't mapped to {id} envelopes.
+    return Array.isArray(v) ? v.join(',') : null;
+  }
   if (Array.isArray(v)) {
     // M2M (#240): [{id,label}, ...] → [id, ...] (bare pks for the write).
     return v.map((item) =>

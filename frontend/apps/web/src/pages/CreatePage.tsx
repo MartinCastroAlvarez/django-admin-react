@@ -140,6 +140,11 @@ function CreateForm({ schema, onCreate, onCancel }: CreateFormProps) {
         init[name] = v === null || v === undefined ? null : JSON.stringify(v, null, 2);
         continue;
       }
+      if (field.type === 'array') {
+        // ArrayField editor (#242): seed the comma-joined default (string).
+        init[name] = Array.isArray(v) ? v.join(',') : null;
+        continue;
+      }
       // Seed with the model default where the wire carries a scalar;
       // FK envelopes / html start empty for a new object.
       init[name] = v !== null && typeof v !== 'object' ? v : null;
