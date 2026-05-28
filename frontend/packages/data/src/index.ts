@@ -46,6 +46,8 @@ export type {
   ListResponse,
   ListRow,
   LoginResponse,
+  ObjectActionDescriptor,
+  ObjectActionRunResponse,
   Permissions,
   RecentAction,
   RecentActionKind,
@@ -71,8 +73,20 @@ export type { RecentActionsState } from './recent-actions-context';
 export { useDetail } from './detail-context';
 export type { DetailState } from './detail-context';
 
-export { createObject, updateObject, deleteObject, fetchDeletePreview } from './mutations';
-export type { CreateArgs, UpdateArgs, DeleteArgs, DeletePreviewArgs } from './mutations';
+export {
+  createObject,
+  updateObject,
+  deleteObject,
+  fetchDeletePreview,
+  runObjectAction,
+} from './mutations';
+export type {
+  CreateArgs,
+  UpdateArgs,
+  DeleteArgs,
+  DeletePreviewArgs,
+  RunObjectActionArgs,
+} from './mutations';
 
 export { renderValue, formatTemporal, isHtmlValue, isForeignKeyValue, isFileValue } from './format';
 
