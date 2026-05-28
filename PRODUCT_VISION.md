@@ -14,6 +14,33 @@ design, roadmap — must be reconcilable with it. When in conflict,
 this file wins for product decisions; [`ARCHITECTURE.md`](ARCHITECTURE.md)
 wins for technical contracts.
 
+## What's in this repo vs the API repo vs the MCP repo
+
+The project is **three repos** with separate-but-aligned scopes (#544):
+
+- **`django-admin-rest-api`** — the JSON REST API for the Django admin
+  ([PyPI](https://pypi.org/project/django-admin-rest-api/) ·
+  [GitHub](https://github.com/MartinCastroAlvarez/django-admin-api)).
+  The wire surface, the permission gates, the serializer denylist, the
+  contract document. **The API repo owns the API.**
+- **`django-admin-react`** *(this repo)* — the **React SPA**
+  super-layer on top of that API. Frontend, build pipeline, pre-built
+  assets, SPA mount, PWA, screenshots. This product vision is about the
+  **user-facing UX**, not the wire surface — for anything about wire
+  shapes, look in the API repo.
+- **[`django-admin-mcp-api`](https://pypi.org/project/django-admin-mcp-api/)**
+  ([`MartinCastroAlvarez/django-admin-mcp`](https://github.com/MartinCastroAlvarez/django-admin-mcp))
+  — a wire-protocol-only MCP adapter over `django-admin-rest-api`.
+  Lets agents reach the same `ModelAdmin`-driven REST surface, no new
+  functionality / permissions / validation. Different protocol, same
+  source of truth.
+
+If you're a Django developer reading this, you don't need to think about
+the split: `pip install django-admin-react` brings in **both** sibling
+packages (`django-admin-rest-api` *and* `django-admin-mcp-api`) as
+dependencies, and a couple of `INSTALLED_APPS` lines + one URL include
+give you the SPA — the MCP server is opt-in on top of the same wire.
+
 ---
 
 ## 1. Who this is for

@@ -14,6 +14,17 @@ version section at release.
 
 ## [Unreleased]
 
+### Architecture
+- Project scope split into three independently-published, cross-referenced
+  repos: **`django-admin-rest-api`** owns the JSON API surface (on PyPI),
+  **`django-admin-react`** *(this repo)* becomes the **React SPA
+  super-layer** that depends on it, and **`django-admin-mcp-api`** (also
+  PyPI, `0.1.0a0`) exposes the same `ModelAdmin`-driven REST surface
+  over MCP — both sibling packages ship as dependencies of this one.
+  Migration tracked in META #544; Phase 1 added `django-admin-rest-api ^0.1.0a0`
+  and `django-admin-mcp-api ^0.1.0a0` as dependencies. Root `.md` files
+  realigned to the new scope in the same release window.
+
 ### Security
 - A `CharField` the admin masks with `forms.PasswordInput` (e.g. via
   `formfield_overrides`) no longer leaks its stored value in the detail

@@ -1,43 +1,66 @@
 # Testing
 
-This file is the **test strategy** for `django-admin-react`. It tells
-contributors where tests live, what each layer is responsible for,
-and how to run them. Owned by the Software Architect role.
+This file is the **test strategy** for the **`django-admin-react` SPA
+super-layer**. It tells contributors where tests live, what each layer
+is responsible for, and how to run them. Owned by the Software
+Architect role.
 
 Acceptance criteria for tests live in
 [`ACCEPTANCE.md`](ACCEPTANCE.md) §3.5. This file does not duplicate
 them — it tells you how to satisfy them.
 
+> ### Scope (post-#544)
+>
+> The **API endpoint tests** (every list / detail / create / update /
+> delete / action / history / autocomplete request/response shape,
+> every permission gate, every queryset rule, every CSRF check) live
+> in the **`django-admin-rest-api`** repo's `tests/` suite — that's
+> where the API itself lives. **Do not duplicate API tests here.** If
+> you find an API-test gap, file it in the API repo.
+>
+> This repo's `tests/` keeps:
+>
+> - **Frontend unit tests** (Vitest under `frontend/packages/**/*.test.tsx`
+>   + `frontend/apps/web/**/*.test.tsx`) — for `@dar/ui`, `@dar/list`,
+>   `@dar/details`, `@dar/form`, hooks like `useMediaQuery`, etc.
+> - **SPA-side backend tests** — the SPA mount (`views.py`), the PWA
+>   (`pwa.py`), the `AppConfig`, the URL include wiring, and any
+>   future SPA-specific helpers. Currently the bulk of `tests/test_*.py`
+>   still tests API behaviour because the local `django_admin_react/api/`
+>   tree is still on `main`; **those tests move out with the code** in
+>   Phase 3 of [META #544](https://github.com/MartinCastroAlvarez/django-admin-react/issues/544).
+>
+> **No Playwright / Cypress / e2e tooling.** Owner preference: unit
+> tests (Vitest) + backend integration tests (pytest) are the entire
+> matrix. Screenshots are captured manually against a dev server, not
+> driven by a browser-automation framework.
+
 ---
 
 ## 1. Test layers
 
-We use five layers. Each has a single responsibility; tests that span
-layers are split.
+We use these layers; each has a single responsibility:
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│ tests/e2e/        end-to-end (Playwright)                       │
-│ tests/perf/       performance budgets (pytest-benchmark)        │
+│ frontend (vitest)   React component + hook unit tests           │
 │ tests/regressions/  bug-fix regression tests, one per issue      │
-│ tests/             integration tests against the example apps    │
-│ django_admin_react/  unit tests inline (when a helper has unit-  │
-│                      level behavior that is easier to test out   │
-│                      of the request cycle)                       │
+│ tests/              SPA-side backend tests (mount, PWA, URLs);   │
+│                     while #544 is in flight, also the legacy    │
+│                     API tests until they move to the API repo   │
+│ django_admin_react/ unit tests inline (rare; for pure helpers)   │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
 | Layer | Lives at | Speed budget | Hits the DB? | Hits the network? |
 | ----- | -------- | ------------ | ------------ | ----------------- |
-| Unit | inline `_test.py` modules next to helpers (rare; we prefer integration) | < 50 ms each | no | no |
-| Integration | `tests/test_*.py` using `tests/test_project/` + `examples/` apps | < 1 s each | yes (sqlite, in-memory) | no |
+| Frontend unit | `frontend/**/*.test.tsx` (vitest) | < 50 ms each | no | no |
+| Backend unit | inline `_test.py` next to pure helpers (rare; we prefer integration) | < 50 ms each | no | no |
+| Backend integration | `tests/test_*.py` using `tests/test_project/` + `examples/` apps | < 1 s each | yes (sqlite, in-memory) | no |
 | Regression | `tests/regressions/test_issue_<N>.py` | same as integration | yes | no |
-| Performance | `tests/perf/test_*.py` (pytest-benchmark) | budget per `ACCEPTANCE.md` §3.5 T-7 | yes | no |
-| E2E | `tests/e2e/` (Playwright against `examples/project/`) | < 30 s total run | yes | yes (localhost only) |
 
-Anything that imports a model from `examples/*` is an integration or
-E2E test; never a unit test. Unit tests live next to the pure helper
-they exercise.
+Anything that imports a model from `examples/*` is an integration test,
+never a unit test.
 
 ## 2. Folder layout
 

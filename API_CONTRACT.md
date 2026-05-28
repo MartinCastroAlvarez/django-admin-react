@@ -1,50 +1,53 @@
 # API_CONTRACT.md
 
-This file is a **pointer** to the canonical API contract document. The
-long-form contract lives under [`docs/api-contract.md`](docs/api-contract.md)
-so it can sit next to the rest of the long-form docs.
+> ### The canonical API contract lives in the API repo (post-#544)
+>
+> The JSON REST API surface — every endpoint shape, the field-type
+> vocabulary, the uniform error envelope, pagination / ordering / search
+> rules, and the additive-only forward-compatibility promise — is the
+> **`django-admin-rest-api`** package's contract. The canonical document
+> is therefore in the API repo, not here.
+>
+> **Read it at:** [`MartinCastroAlvarez/django-admin-api → docs/api-contract.md`](https://github.com/MartinCastroAlvarez/django-admin-api/blob/main/docs/api-contract.md)
+>
+> Any change to the wire shape must land in that repo's PR. This SPA
+> repo consumes the contract; it does not own it.
 
-This top-level pointer exists so that a contributor scanning the repo
-root finds the contract without having to dig.
+## Why this pointer still exists
 
-> If you are an AI agent: the canonical contract is
-> [`docs/api-contract.md`](docs/api-contract.md). Any change to the
-> wire shape **must** update that file in the same PR, per
-> [`ACCEPTANCE.md`](ACCEPTANCE.md) §3.4 C-1.
+A contributor or AI agent scanning this repo's root might still expect
+an `API_CONTRACT.md` here. This file stays as a one-click hop to the
+real document so nobody is confused about where to look.
 
-## What the contract covers
+## During the #544 migration
 
-- HTTP endpoints under the consumer-chosen mount (default examples
-  use `/admin-react/api/v1/`).
-- Request and response JSON shapes.
-- The closed v1 field-type vocabulary (`string`, `integer`,
-  `decimal`, `boolean`, `date`, `datetime`, `uuid`, `choice`,
-  `foreignkey`, `unsupported`).
-- The uniform error envelope.
-- Pagination, ordering, search rules.
-- Forwards-compatibility rules (additive only within `api/v1/`).
+While [META #544](https://github.com/MartinCastroAlvarez/django-admin-react/issues/544)
+is in flight, a copy of the contract still lives temporarily at
+[`docs/api-contract.md`](docs/api-contract.md). That copy is being
+retired phase-by-phase as the local `django_admin_react/api/` tree is
+removed. **Treat the API repo's copy as authoritative** from this point
+forward — any drift between the two is a bug in the migration, not a
+license to fork the contract.
 
-## Stability promise
+## What stays in this repo (SPA side)
 
-- Within `api/v1/`: **additive only**. New optional response fields
-  and query params are fine; renames / removes / type changes are
-  not — they require a new namespace (`api/v2/`).
-- Breaking changes are documented in the top-level `CHANGELOG.md`
-  (added with the first release) and require a major version bump
-  from `1.0.0` onward.
+- The TypeScript mirror of the contract under
+  [`frontend/packages/api/src/contract.ts`](frontend/packages/api/src/contract.ts).
+  It must match the canonical API-repo document; the codebase enforces
+  this via the boundary lint and typecheck gates.
+- The SPA's consumer of each endpoint (React Query hooks, `@dar/data`,
+  `@dar/api`). These call the wire shape, they don't define it.
 
-## Who owns this
+## Stability promise (unchanged)
 
-- **Specification** — Software Architect agent
-  ([`docs/agents/software-architect/`](docs/agents/software-architect/)).
-- **Implementation** — Architect, with Security review for
-  permission and serialization paths.
-- **Consumer expectations** — Product Manager agent verifies the
-  contract supports the documented user flows
-  ([`docs/ux/primary-flows.md`](docs/ux/primary-flows.md)).
+- Within `api/v1/`: **additive only.** New optional response fields and
+  query params are fine; renames / removes / type changes are not — they
+  require a new namespace (`api/v2/`).
+- Breaking changes appear in the API repo's `CHANGELOG.md` and require a
+  major version bump from `1.0.0` onward.
 
 ## Tests asserting the contract
 
-See [`TESTING.md`](TESTING.md) §3 (mandatory test matrix). Integration
-tests under `tests/test_*.py` assert each endpoint's request/response
-shape against the contract.
+The API repo owns the request/response shape tests. This repo's tests
+exercise the SPA's behaviour against the contract (via the same wire,
+read by the TS mirror). See [`TESTING.md`](TESTING.md) §3.

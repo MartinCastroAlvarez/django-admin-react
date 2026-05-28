@@ -1,13 +1,42 @@
 # Architecture
 
-`django-admin-react` is a Django package that exposes a stable, conservative
-REST API on top of `django.contrib.admin` and ships a pre-built React
-single-page application that consumes it. The Django ModelAdmin is the **only
-source of truth** for permissions, querysets, forms, and field configuration.
+`django-admin-react` is a Django package that ships a pre-built React
+single-page application against the **stable, conservative JSON REST API**
+exposed by the sibling package
+[`django-admin-rest-api`](https://github.com/MartinCastroAlvarez/django-admin-api)
+(its own PyPI release). The Django `ModelAdmin` is the **only source of
+truth** for permissions, querysets, forms, and field configuration — both
+packages honour that contract.
 
-> This document is the architectural contract. Any change that conflicts with
-> it must update this file in the same PR and be recorded in
-> [`docs/agents/decisions.md`](docs/agents/decisions.md).
+> This document is the architectural contract for the **SPA super-layer**.
+> Any change that conflicts with it must update this file in the same PR
+> and be recorded in [`docs/agents/decisions.md`](docs/agents/decisions.md).
+> The wire-contract document (what the API actually emits / accepts) lives
+> in the **API repo** — this file refers to it but does not duplicate it.
+
+> ### Scope (after #544)
+>
+> The codebase split into **three repos** so each layer can be reasoned about
+> and consumed independently:
+>
+> - **[`django-admin-rest-api`](https://github.com/MartinCastroAlvarez/django-admin-api)**
+>   — every JSON endpoint, the serializer denylist, the permission gates,
+>   the wire contract. Same `ModelAdmin`, same permissions, no new features.
+> - **`django-admin-react`** *(this repo)* — the **React SPA super-layer**
+>   on top of that API. Frontend, build pipeline, pre-built assets, the SPA
+>   mount + PWA glue. **Depends on** `django-admin-rest-api`.
+> - **[`django-admin-mcp-api`](https://github.com/MartinCastroAlvarez/django-admin-mcp)**
+>   ([PyPI](https://pypi.org/project/django-admin-mcp-api/)) — a
+>   wire-protocol-only MCP adapter over `django-admin-rest-api` (call,
+>   manifest, …). Reuses the same API classes, adds no new
+>   functionality / permissions / validation. Installed as a sibling
+>   dependency of this package.
+>
+> Migration of the API code out of this repo (Phases 1–7) is tracked in
+> [META #544](https://github.com/MartinCastroAlvarez/django-admin-react/issues/544).
+> Sections of this document that describe `django_admin_react/api/`
+> internals describe **transient** state during that migration; the
+> long-term home for those details is the API repo.
 
 ---
 

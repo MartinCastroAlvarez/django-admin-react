@@ -47,13 +47,22 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "django_admin_react",   # ← add this
+    "django_admin_rest_api",   # ← the JSON REST API (sibling package, auto-installed as a dependency)
+    "django_admin_react",      # ← this package — the React SPA
     # ... your own apps
 ]
 ```
 
 That's the whole settings change. No `MIDDLEWARE` change required —
 we rely on the same session and CSRF middleware Django's admin uses.
+
+> **Why two apps?** `pip install django-admin-react` pulls in
+> [`django-admin-rest-api`](https://pypi.org/project/django-admin-rest-api/)
+> automatically (it's a declared dependency). The two `INSTALLED_APPS`
+> entries are the **only** thing you do differently — the API and the
+> SPA are otherwise transparent to your project. See
+> [`PRODUCT_VISION.md`](PRODUCT_VISION.md) for why we ship as two
+> packages.
 
 ### Step 3 — Mount the URLs wherever you want (15 seconds)
 

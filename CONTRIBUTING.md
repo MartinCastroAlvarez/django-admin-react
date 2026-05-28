@@ -4,6 +4,26 @@ Thank you for considering a contribution! This file explains the workflow
 for humans. The companion file [`CLAUDE.md`](CLAUDE.md) lays out the same
 contract for AI coding agents working in this repository.
 
+> ### Where does my contribution belong? (post-#544)
+>
+> The project is three repos with separate scopes — please open the PR
+> in the right one:
+>
+> - **API behaviour, wire shape, permission gates, serializer denylist,
+>   any `/api/v1/...` endpoint** → [`MartinCastroAlvarez/django-admin-api`](https://github.com/MartinCastroAlvarez/django-admin-api)
+>   ([PyPI `django-admin-rest-api`](https://pypi.org/project/django-admin-rest-api/)).
+> - **React SPA, components, hooks, pre-built assets, PWA, the SPA
+>   mount, screenshots, this repo's docs** → here.
+> - **MCP exposure of the same `ModelAdmin`-driven functionality** →
+>   [`MartinCastroAlvarez/django-admin-mcp`](https://github.com/MartinCastroAlvarez/django-admin-mcp)
+>   ([PyPI `django-admin-mcp-api`](https://pypi.org/project/django-admin-mcp-api/)).
+>
+> If you're not sure, open an [Issue](https://github.com/MartinCastroAlvarez/django-admin-react/issues/new)
+> first and we'll route it. While [META #544](https://github.com/MartinCastroAlvarez/django-admin-react/issues/544)
+> is in flight, a copy of the API code still lives in
+> `django_admin_react/api/` here — please don't add new API features
+> to that copy; raise them in the API repo.
+
 ## 1. Before you start
 
 Read, in order:
