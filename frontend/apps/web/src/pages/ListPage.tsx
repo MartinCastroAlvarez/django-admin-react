@@ -503,24 +503,12 @@ export function ListPage() {
           />
           <h1 className="text-2xl font-semibold">{listTitle}</h1>
         </div>
-        {/* Customize sits to the LEFT of the + Add button (#94). */}
+        {/* Header right-side: only the +Add primary action lives here.
+            Customize moved to the FilterBar trailing slot in #554 so the
+            filter row is one self-contained unit (… filter chips |
+            Clear all | Customize) — no second toolbar row, no dangling
+            chrome. */}
         <div className="flex shrink-0 items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setColsOpen(true)}
-            aria-haspopup="dialog"
-            aria-label="Customize columns"
-            title="Customize columns"
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-gray-300 px-3 py-2 text-sm hover:bg-gray-100"
-          >
-            <Settings2 className="h-4 w-4" aria-hidden />
-            Customize
-            {hiddenCols.size > 0 && (
-              <span className="ml-0.5 rounded-full bg-gray-500 px-1.5 py-0.5 text-xs text-white">
-                {hiddenCols.size} hidden
-              </span>
-            )}
-          </button>
           {data.permissions.add && (
             <Link
               to={withPreservedFilters(`/${appLabel}/${modelName}/add`, searchParams.toString())}
@@ -582,17 +570,40 @@ export function ListPage() {
           ) : null
         }
         trailing={
-          activeFilterCount > 0 ? (
+          // Filter-row trailing slot (#554): "Clear all" (only when at
+          // least one filter is selected — nothing to clear, no button)
+          // and "Customize" (always visible — it's the column-customizer
+          // affordance, independent of filter state) as the last two
+          // buttons on the row, in that order.
+          <>
+            {activeFilterCount > 0 && (
+              <button
+                type="button"
+                onClick={() => patchParams((next) => filters.forEach((f) => next.delete(f.name)))}
+                title="Clear all filters"
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-100"
+              >
+                <X className="h-4 w-4" aria-hidden />
+                Clear all
+              </button>
+            )}
             <button
               type="button"
-              onClick={() => patchParams((next) => filters.forEach((f) => next.delete(f.name)))}
-              title="Clear all filters"
+              onClick={() => setColsOpen(true)}
+              aria-haspopup="dialog"
+              aria-label="Customize columns"
+              title="Customize columns"
               className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-100"
             >
-              <X className="h-4 w-4" aria-hidden />
-              Clear all
+              <Settings2 className="h-4 w-4" aria-hidden />
+              Customize
+              {hiddenCols.size > 0 && (
+                <span className="ml-0.5 rounded-full bg-gray-500 px-1.5 py-0.5 text-xs text-white">
+                  {hiddenCols.size} hidden
+                </span>
+              )}
             </button>
-          ) : null
+          </>
         }
       />
 
