@@ -48,3 +48,6 @@ export type { PopoverProps } from './Popover';
 
 export { ResetButton } from './ResetButton';
 export type { ResetButtonProps } from './ResetButton';
+
+export { RefreshButton } from './RefreshButton';
+export type { RefreshButtonProps } from './RefreshButton';

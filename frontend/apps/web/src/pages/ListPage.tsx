@@ -6,7 +6,7 @@
 // the data layer's job.
 
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
-import { Settings2, X } from 'lucide-react';
+import { RefreshCw, Settings2, X } from 'lucide-react';
 import { Link, useHref, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import { useApiClient, useList, type ActionDescriptor, type ListRow } from '@dar/data';
@@ -29,6 +29,7 @@ import {
   Pagination,
   Popover,
   RecordCardList,
+  RefreshButton,
   ResetButton,
   Table,
   useMediaQuery,
@@ -596,6 +597,15 @@ export function ListPage() {
               disabledHint="No filters applied"
               icon={<X className="h-4 w-4" aria-hidden />}
               title="Clear all filters"
+            />
+            {/* Refresh (#592): refetch the changelist + filter counts
+                with the current filter / search / ordering / page
+                state preserved. Between Reset and Customize on the
+                filter row. */}
+            <RefreshButton
+              onRefresh={refresh}
+              tooltip="Refresh"
+              icon={<RefreshCw className="h-4 w-4" aria-hidden />}
             />
             <button
               type="button"

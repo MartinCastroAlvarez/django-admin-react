@@ -10,7 +10,7 @@
 // Edit/Delete are gated by the `permissions` block the API returns.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ChevronDown, Clock, ExternalLink } from 'lucide-react';
+import { ChevronDown, Clock, ExternalLink, RefreshCw } from 'lucide-react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import {
@@ -34,7 +34,7 @@ import {
   type WriteValue,
 } from '@dar/data';
 import { detailCollapseKey, usePersistedState } from '@dar/customization';
-import { Breadcrumb, Button, Card, EmptyState, Modal, Table } from '@dar/ui';
+import { Breadcrumb, Button, Card, EmptyState, Modal, RefreshButton, Table } from '@dar/ui';
 import { FieldValueView } from '@dar/details';
 import { FieldInput, InlineEditor } from '@dar/form';
 import { HistoryModal } from '@dar/history';
@@ -275,6 +275,15 @@ export function DetailPage() {
                 onError={(message) => toast.error(message)}
               />
             ))}
+            {/* Refresh (#592): refetch the object + inlines + history
+                with no full page reload. Placed between the actions
+                cluster and the Edit / Delete pair so destructive
+                buttons stay at the trailing edge. */}
+            <RefreshButton
+              onRefresh={refresh}
+              tooltip="Refresh"
+              icon={<RefreshCw className="h-4 w-4" aria-hidden />}
+            />
             {canChange && (
               <Button variant="primary" onClick={() => setEditing(true)}>
                 Edit
