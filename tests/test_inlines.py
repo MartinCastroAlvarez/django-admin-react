@@ -432,3 +432,54 @@ def test_inline_passwordinput_render_value_true_preserves_value() -> None:
         _EchoInline(ContentType, admin.site), ct, "content_type", ["name"], request
     )
     assert rows[0]["fields"]["name"] == "kept-value"
+
+
+@pytest.mark.django_db
+def test_inline_spec_emits_password_widget_for_masked_fields() -> None:
+    """When the inline masks a field with ``forms.PasswordInput``, the
+    ``fields`` meta carries ``widget: "password"`` for that field — paired
+    with the value-redaction in ``_rows_for_inline`` (#535), this lets the
+    SPA render the cell as ``<input type=password>``. Plain inline fields
+    keep no ``widget`` key (back-compat).
+    """
+    from django import forms
+    from django.contrib.auth import get_user_model
+    from django.contrib.auth.models import Permission
+    from django.contrib.contenttypes.models import ContentType
+    from django.db import models
+    from django.test import RequestFactory
+
+    from django_admin_react.api.inlines import _spec_for_inline
+
+    ct = ContentType.objects.create(app_label="dar_test", model="masked_inline")
+
+    request = RequestFactory().get("/")
+    request.user = get_user_model().objects.create_superuser(
+        username="inline-mw-su", email="mw@example.com", password="x"  # noqa: S106
+    )
+
+    class _MaskedInline(TabularInline):
+        model = Permission
+        fk_name = "content_type"
+        formfield_overrides = {models.CharField: {"widget": forms.PasswordInput}}
+
+    spec = _spec_for_inline(
+        _MaskedInline(ContentType, admin.site), ct, request, admin_site=admin.site
+    )
+    assert spec is not None
+    meta_by_name = {m["name"]: m for m in spec["fields"]}
+    # Both CharFields the formfield_overrides catches carry the hint.
+    assert meta_by_name["name"]["widget"] == "password"
+    assert meta_by_name["codename"]["widget"] == "password"
+
+    class _PlainInline(TabularInline):
+        model = Permission
+        fk_name = "content_type"
+
+    plain = _spec_for_inline(
+        _PlainInline(ContentType, admin.site), ct, request, admin_site=admin.site
+    )
+    assert plain is not None
+    # No override → no widget key (back-compat with pre-enrichment clients).
+    plain_by_name = {m["name"]: m for m in plain["fields"]}
+    assert "widget" not in plain_by_name["name"]

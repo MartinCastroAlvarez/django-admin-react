@@ -166,11 +166,24 @@ def _spec_for_inline(
     kind = _inline_kind(inline)
 
     visible_fields = _visible_inline_fields(inline, parent, request)
-    fields_meta = _fields_meta(inline, child_model, visible_fields, request)
+    # Compute the PasswordInput-redacted field set once (#504 inline half,
+    # #535) and pass it to both the header meta (so the SPA masks the
+    # input, widget="password") and the row builder (so the value is
+    # redacted to null). Computing it twice would double the formset build.
+    password_redacted = _password_redacted_fields(inline, parent, request)
+    fields_meta = _fields_meta(inline, child_model, visible_fields, request, password_redacted)
 
     rows: list[dict[str, Any]] = []
     if can_view:
-        rows = _rows_for_inline(inline, parent, fk_name, visible_fields, request, admin_site)
+        rows = _rows_for_inline(
+            inline,
+            parent,
+            fk_name,
+            visible_fields,
+            request,
+            admin_site,
+            password_redacted,
+        )
 
     return {
         "name": fk_name + "_set" if not hasattr(child_model, fk_name + "_set") else fk_name,
@@ -256,6 +269,7 @@ def _fields_meta(
     child_model: type[Model],
     visible_fields: list[str],
     request: HttpRequest,
+    password_redacted: set[str] | None = None,
 ) -> list[dict[str, Any]]:
     """Per-field metadata for the inline header.
 
@@ -267,8 +281,17 @@ def _fields_meta(
     frontend can route inline fields through the same ``FieldInput``
     component. Additive — existing read-only consumers ignore the new
     keys.
+
+    ``password_redacted`` (#504): when a field is in that set, the inline
+    has masked it with ``forms.PasswordInput`` (e.g. via
+    ``formfield_overrides``), so the meta carries ``widget: "password"``
+    to make the SPA render a masked ``<input type=password>`` — matching
+    the top-level fix in #522. The value half (server-side redaction) is
+    already applied in ``_rows_for_inline`` (#535); this completes the
+    pair so the input itself is masked instead of a bare text box.
     """
     readonly = set(inline.get_readonly_fields(request, None) or ())
+    redacted = password_redacted or set()
     out: list[dict[str, Any]] = []
     for name in visible_fields:
         label: Any
@@ -282,15 +305,16 @@ def _fields_meta(
         # it is not ``blank``. ``safe_get_field`` returning ``None`` (a
         # method-only ``list_display`` entry) → not required / unsupported.
         required = bool(model_field is not None and not getattr(model_field, "blank", True))
-        out.append(
-            {
-                "name": name,
-                "label": str(label),
-                "readonly": name in readonly,
-                "type": field_type,
-                "required": required,
-            }
-        )
+        entry: dict[str, Any] = {
+            "name": name,
+            "label": str(label),
+            "readonly": name in readonly,
+            "type": field_type,
+            "required": required,
+        }
+        if name in redacted:
+            entry["widget"] = "password"
+        out.append(entry)
     return out
 
 
@@ -331,15 +355,27 @@ def _rows_for_inline(
     visible_fields: list[str],
     request: HttpRequest,
     admin_site: Any = None,
+    password_redacted: set[str] | None = None,
 ) -> list[dict[str, Any]]:
-    """Fetch + serialize the child rows attached to ``parent``."""
+    """Fetch + serialize the child rows attached to ``parent``.
+
+    ``password_redacted`` (#504): names of fields whose value must be
+    redacted to ``None`` because the inline masks them with
+    ``PasswordInput``. Accept it as a parameter so ``_spec_for_inline`` can
+    compute it once and share it with ``_fields_meta`` (which emits the
+    matching ``widget: "password"`` hint) — building the inline formset
+    twice would double the cost. Falls back to computing it locally for
+    callers that still take the legacy signature (existing tests).
+    """
     try:
         queryset = inline.get_queryset(request).filter(**{fk_name: parent.pk})
     except Exception:  # pragma: no cover
         return []
-    # Fields the admin masks with PasswordInput: redact their value (#504),
-    # computed once for the whole inline rather than per row.
-    redacted = _password_redacted_fields(inline, parent, request)
+    redacted = (
+        password_redacted
+        if password_redacted is not None
+        else _password_redacted_fields(inline, parent, request)
+    )
     rows: list[dict[str, Any]] = []
     for obj in queryset:
         fields_payload: dict[str, Any] = {}

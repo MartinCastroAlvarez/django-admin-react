@@ -408,6 +408,13 @@ export interface InlineFieldMeta {
   readonly: boolean;
   type?: FieldType;
   required?: boolean;
+  /**
+   * Optional control override, mirroring `FieldDescriptor.widget`. Present
+   * only for inline fields the admin masks with `PasswordInput` (#504, the
+   * inline-half completion of #522): the value is server-redacted and the
+   * SPA masks the input.
+   */
+  widget?: WidgetHint;
 }
 
 /** One existing child row of an inline. */

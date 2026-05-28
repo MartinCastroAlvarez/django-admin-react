@@ -711,7 +711,12 @@ inlines declared).
   form layer (`not field.blank`), so the SPA renders a typed input per
   inline field in edit mode (same `FieldInput` widget as top-level
   fields). `type` / `required` are additive — pre-enrichment clients
-  that only read `name`/`label` keep working.
+  that only read `name`/`label` keep working. A field the inline masks
+  with `forms.PasswordInput` (typically via `formfield_overrides`) also
+  carries `"widget": "password"`: the SPA renders the cell as an
+  `<input type=password>` and the row's value is **redacted** to `null`
+  in the response (matching Django's `render_value=False`, the inline
+  half of the §4 `widget` semantics — #504).
 - **`rows`** are the existing children gated by the inline's own
   `get_queryset` (Rule 10).
 
