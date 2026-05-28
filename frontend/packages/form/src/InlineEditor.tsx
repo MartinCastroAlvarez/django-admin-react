@@ -203,6 +203,7 @@ export function InlineEditor({ inline, onItems }: InlineEditorProps) {
                   <div className="col-span-2">
                     <InlineCellInput
                       type={f.type}
+                      widget={f.widget}
                       value={row.values[f.name] ?? null}
                       disabled={row.deleted}
                       onChange={(v) => setCell(row.key, f.name, v)}
@@ -245,6 +246,7 @@ export function InlineEditor({ inline, onItems }: InlineEditorProps) {
                   <td key={f.name} className="py-1 pr-3 align-top">
                     <InlineCellInput
                       type={f.type}
+                      widget={f.widget}
                       value={row.values[f.name] ?? null}
                       disabled={row.deleted}
                       onChange={(v) => setCell(row.key, f.name, v)}
@@ -264,15 +266,35 @@ export function InlineEditor({ inline, onItems }: InlineEditorProps) {
 
 interface InlineCellInputProps {
   type: string | undefined;
+  /**
+   * Optional widget hint (mirrors `FieldDescriptor.widget`). `password`
+   * marks a field the inline masked with `forms.PasswordInput` (#504 /
+   * #535): the row's value is server-redacted (ships `null`), so the
+   * cell renders an empty `<input type="password">` — matching Django's
+   * `render_value=False` and the top-level fix in #522.
+   */
+  widget: string | undefined;
   value: WriteValue;
   disabled: boolean;
   onChange: (value: WriteValue) => void;
 }
 
-function InlineCellInput({ type, value, disabled, onChange }: InlineCellInputProps) {
+function InlineCellInput({ type, widget, value, disabled, onChange }: InlineCellInputProps) {
   const cls =
     'w-full rounded border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-1';
 
+  if (widget === 'password') {
+    return (
+      <input
+        type="password"
+        autoComplete="new-password"
+        className={cls}
+        value={toInputString(value)}
+        disabled={disabled}
+        onChange={(e) => onChange(e.target.value === '' ? null : e.target.value)}
+      />
+    );
+  }
   if (type === 'boolean') {
     return (
       <Checkbox
