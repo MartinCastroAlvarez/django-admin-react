@@ -349,3 +349,86 @@ def test_inline_show_change_link_gated_on_child_view_permission() -> None:
                 admin.site.unregister(Permission)
     assert spec is not None
     assert spec["show_change_link"] is False
+
+
+@pytest.mark.django_db
+def test_inline_passwordinput_field_value_is_redacted() -> None:
+    """A field an inline masks with ``forms.PasswordInput`` (via
+    ``formfield_overrides``) must NOT ship its stored value in the inline
+    row payload — the inline half of the #504 detail-view fix (#522).
+
+    Mirrors Django's default ``render_value=False``: the secret is never
+    echoed back. A plain inline (no override) still ships the value, so
+    there's no read-path regression.
+    """
+    from django import forms
+    from django.contrib.auth import get_user_model
+    from django.contrib.auth.models import Permission
+    from django.contrib.contenttypes.models import ContentType
+    from django.db import models
+    from django.test import RequestFactory
+
+    from django_admin_react.api.inlines import _rows_for_inline
+
+    ct = ContentType.objects.create(app_label="dar_test", model="vault")
+    Permission.objects.create(content_type=ct, codename="open", name="top-secret-value")
+
+    request = RequestFactory().get("/")
+    request.user = get_user_model().objects.create_superuser(
+        username="inline-pwd-su", email="pwd@example.com", password="x"  # noqa: S106
+    )
+
+    class _MaskedInline(TabularInline):
+        model = Permission
+        fk_name = "content_type"
+        formfield_overrides = {models.CharField: {"widget": forms.PasswordInput}}
+
+    masked = _rows_for_inline(
+        _MaskedInline(ContentType, admin.site), ct, "content_type", ["name", "codename"], request
+    )
+    assert len(masked) == 1
+    # The secret never leaves the server — value redacted to null.
+    assert masked[0]["fields"]["name"] is None
+    assert masked[0]["fields"]["codename"] is None
+
+    class _PlainInline(TabularInline):
+        model = Permission
+        fk_name = "content_type"
+
+    plain = _rows_for_inline(
+        _PlainInline(ContentType, admin.site), ct, "content_type", ["name", "codename"], request
+    )
+    # No override → value ships unredacted (no regression).
+    assert plain[0]["fields"]["name"] == "top-secret-value"
+
+
+@pytest.mark.django_db
+def test_inline_passwordinput_render_value_true_preserves_value() -> None:
+    """An inline that opts into ``PasswordInput(render_value=True)`` keeps
+    the value — same escape hatch as the top-level detail view (#522)."""
+    from django import forms
+    from django.contrib.auth import get_user_model
+    from django.contrib.auth.models import Permission
+    from django.contrib.contenttypes.models import ContentType
+    from django.db import models
+    from django.test import RequestFactory
+
+    from django_admin_react.api.inlines import _rows_for_inline
+
+    ct = ContentType.objects.create(app_label="dar_test", model="echo")
+    Permission.objects.create(content_type=ct, codename="show", name="kept-value")
+
+    request = RequestFactory().get("/")
+    request.user = get_user_model().objects.create_superuser(
+        username="inline-echo-su", email="echo@example.com", password="x"  # noqa: S106
+    )
+
+    class _EchoInline(TabularInline):
+        model = Permission
+        fk_name = "content_type"
+        formfield_overrides = {models.CharField: {"widget": forms.PasswordInput(render_value=True)}}
+
+    rows = _rows_for_inline(
+        _EchoInline(ContentType, admin.site), ct, "content_type", ["name"], request
+    )
+    assert rows[0]["fields"]["name"] == "kept-value"
