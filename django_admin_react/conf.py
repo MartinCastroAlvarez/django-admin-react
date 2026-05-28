@@ -87,6 +87,17 @@ DEFAULTS: dict[str, Any] = {
     #                      dicts. ``None`` (default) uses the shipped
     #                      192/512/maskable set under
     #                      ``static/dar/icons/``.
+    # ``API_URL_PREFIX`` — absolute URL prefix the SPA calls for every
+    # JSON request (#559). Default ``None`` keeps the inline include the
+    # package ships today (`<spa-mount>/api/v1/`), so existing consumers
+    # are unaffected. Override when the consumer mounts
+    # ``django_admin_rest_api.urls`` separately and the SPA should talk
+    # to **that** mount instead — for example
+    # ``DJANGO_ADMIN_REACT = {"API_URL_PREFIX": "/api/api/v1/"}`` lets
+    # the SPA and any other client share a single REST mount. When set,
+    # `django_admin_react.urls` skips the inline `api/v1/` include so
+    # there is no double-mount.
+    "API_URL_PREFIX": None,
     "PWA_NAME": None,
     "PWA_SHORT_NAME": None,
     "PWA_ICONS": None,
@@ -109,6 +120,7 @@ class _PackageSettings:
     BRAND_LOGO_URL: str | None = DEFAULTS["BRAND_LOGO_URL"]
     PRIMARY_COLOR: str = DEFAULTS["PRIMARY_COLOR"]
     REACT_LOGIN: bool = DEFAULTS["REACT_LOGIN"]
+    API_URL_PREFIX: str | None = DEFAULTS["API_URL_PREFIX"]
     PWA_NAME: str | None = DEFAULTS["PWA_NAME"]
     PWA_SHORT_NAME: str | None = DEFAULTS["PWA_SHORT_NAME"]
     PWA_ICONS: list[dict[str, str]] | None = DEFAULTS["PWA_ICONS"]

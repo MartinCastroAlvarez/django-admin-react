@@ -29,18 +29,33 @@ from django.urls import include
 from django.urls import path
 from django.urls import re_path
 
+from django_admin_react import conf as dar_conf
 from django_admin_react import pwa
 from django_admin_react import views
 
 app_name = "django_admin_react"
 
+# Inline-mount the API under this package's prefix unless the consumer
+# has explicitly told the SPA to talk to a separately-mounted API via
+# `DJANGO_ADMIN_REACT["API_URL_PREFIX"]` (#559). When the override is
+# set, the consumer is responsible for mounting
+# `django_admin_rest_api.urls` themselves at that prefix — including the
+# API here too would double-mount it and cause routing collisions.
+_inline_api: list = (
+    []
+    if dar_conf.API_URL_PREFIX is not None
+    else [
+        # API endpoints — implemented by the sibling `django-admin-rest-api`
+        # package, included here at the same `api/v1/` prefix the SPA already
+        # expects. No URL namespace: the SPA builds these URLs from the wire
+        # contract, not via Django's `reverse()`, so a namespace would be
+        # dead weight.
+        path("api/v1/", include("django_admin_rest_api.api.urls")),
+    ]
+)
+
 urlpatterns: list = [
-    # API endpoints — implemented by the sibling `django-admin-rest-api`
-    # package, included here at the same `api/v1/` prefix the SPA already
-    # expects. No URL namespace: the SPA builds these URLs from the wire
-    # contract, not via Django's `reverse()`, so a namespace would be
-    # dead weight.
-    path("api/v1/", include("django_admin_rest_api.api.urls")),
+    *_inline_api,
     # The package's own login / logout. These let the package replace
     # the legacy admin's login when the consumer turns
     # ``django.contrib.admin`` off — ``SpaIndexView`` falls back to

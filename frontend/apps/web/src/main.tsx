@@ -38,6 +38,25 @@ function detectMount(): string {
 
 const mount = detectMount();
 
+// API URL prefix (#559) — absolute prefix the API client uses for every
+// JSON request. The backend's `SpaIndexView` writes it to the
+// `index.html` template as `<meta name="dar-api-prefix" content="...">`;
+// defaults to `<mount>api/v1/` (the inline-include path the package
+// ships today), but a consumer can override it via
+// `DJANGO_ADMIN_REACT["API_URL_PREFIX"]` so the SPA talks to a
+// separately-mounted `django-admin-rest-api`. Falls back to the
+// `<mount>api/v1/` derivation when the meta is absent (older templates,
+// dev, tests).
+function detectApiPrefix(): string {
+  if (typeof document !== 'undefined') {
+    const meta = document.querySelector<HTMLMetaElement>('meta[name="dar-api-prefix"]');
+    if (meta?.content) return meta.content;
+  }
+  return `${mount}api/v1/`;
+}
+
+const apiPrefix = detectApiPrefix();
+
 // Mid-session auth loss (#414): when a request returns a session-level
 // auth failure (401, or a 403 flagged `session_expired`), the operator's
 // session is gone — they must not be dead-ended on an error screen. A
@@ -54,7 +73,7 @@ function handleAuthFailure(): void {
   window.location.assign(window.location.href);
 }
 
-const client = new ApiClient({ mount, onAuthFailure: handleAuthFailure });
+const client = new ApiClient({ mount, apiPrefix, onAuthFailure: handleAuthFailure });
 
 // PWA (#86): register the hand-rolled service worker the package serves
 // at `<mount>sw.js`, scoped to the mount so it never claims sibling

@@ -10,6 +10,13 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="dar-mount" content="{{ mount_point }}" />
+    {% comment %}
+      Absolute URL prefix the SPA calls for every JSON request (#559).
+      Defaults to `<mount>/api/v1/` (the inline include behaviour); a
+      consumer can override via `DJANGO_ADMIN_REACT["API_URL_PREFIX"]`
+      to point the SPA at a separately-mounted django-admin-rest-api.
+    {% endcomment %}
+    <meta name="dar-api-prefix" content="{{ api_prefix }}" />
     <meta name="dar-brand-title" content="{{ brand_title }}" />
     {% if brand_logo_url %}<meta name="dar-brand-logo" content="{{ brand_logo_url }}" />{% endif %}
     {% comment %}

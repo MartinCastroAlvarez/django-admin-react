@@ -96,3 +96,46 @@ describe('ApiClient.getRecentActions (#502)', () => {
     expect(calls[0]?.[0]).toBe('/admin-react/api/v1/recent-actions/?limit=5');
   });
 });
+
+describe('ApiClient — apiPrefix override (#559)', () => {
+  it('routes every request through `apiPrefix` instead of `<mount>api/v1/`', async () => {
+    const fetchImpl = vi.fn(
+      async () => fakeResponse(200, { actions: [] }),
+    ) as unknown as typeof fetch;
+    // The consumer mounted django-admin-rest-api at /api/ separately
+    // and set DJANGO_ADMIN_REACT["API_URL_PREFIX"] = "/api/api/v1/" so
+    // the SPA talks to that mount instead of <spa-mount>/api/v1/.
+    const client = new ApiClient({
+      mount: '/admin-react/',
+      apiPrefix: '/api/api/v1/',
+      fetchImpl,
+    });
+    await client.getRecentActions();
+    const calls = (fetchImpl as unknown as ReturnType<typeof vi.fn>).mock.calls;
+    expect(calls[0]?.[0]).toBe('/api/api/v1/recent-actions/');
+  });
+
+  it('adds a trailing slash to `apiPrefix` when missing (concat invariant)', async () => {
+    const fetchImpl = vi.fn(
+      async () => fakeResponse(200, { actions: [] }),
+    ) as unknown as typeof fetch;
+    const client = new ApiClient({
+      mount: '/admin-react/',
+      apiPrefix: '/custom-api/v1',
+      fetchImpl,
+    });
+    await client.getRecentActions();
+    const calls = (fetchImpl as unknown as ReturnType<typeof vi.fn>).mock.calls;
+    expect(calls[0]?.[0]).toBe('/custom-api/v1/recent-actions/');
+  });
+
+  it('defaults to `<mount>api/v1/` when `apiPrefix` is omitted (no change for existing consumers)', async () => {
+    const fetchImpl = vi.fn(
+      async () => fakeResponse(200, { actions: [] }),
+    ) as unknown as typeof fetch;
+    const client = new ApiClient({ mount: '/admin-react/', fetchImpl });
+    await client.getRecentActions();
+    const calls = (fetchImpl as unknown as ReturnType<typeof vi.fn>).mock.calls;
+    expect(calls[0]?.[0]).toBe('/admin-react/api/v1/recent-actions/');
+  });
+});
