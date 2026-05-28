@@ -27,10 +27,18 @@ import type {
 export interface ApiClientConfig {
   /**
    * Absolute path the package is mounted at, e.g. `/admin-react/`.
-   * Reported by the backend in the `registry` response and reused as
-   * the base for all subsequent calls.
+   * Used as the router basename and as the default API-prefix base when
+   * `apiPrefix` is not supplied.
    */
   mount: string;
+  /**
+   * Absolute URL prefix for every JSON request (#559). Lets the consumer
+   * point the SPA at a separately-mounted `django-admin-rest-api`
+   * instead of the inline `<mount>api/v1/` include. When omitted, falls
+   * back to `<mount>api/v1/` — the historical behaviour, unchanged for
+   * existing consumers.
+   */
+  apiPrefix?: string;
   /**
    * Fetch implementation; defaults to global fetch. Overridable for
    * tests.
@@ -69,12 +77,19 @@ const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
 export class ApiClient {
   private readonly mount: string;
+  private readonly apiPrefix: string;
   private readonly fetchImpl: typeof fetch;
   private readonly csrfCookieName: string;
   private readonly onAuthFailure: (() => void) | undefined;
 
   constructor(config: ApiClientConfig) {
     this.mount = config.mount.endsWith('/') ? config.mount : `${config.mount}/`;
+    // Default the API prefix to `<mount>api/v1/` so behaviour is
+    // unchanged for consumers who don't set `DJANGO_ADMIN_REACT
+    // ["API_URL_PREFIX"]` (#559). Always ends with "/" so concat is
+    // safe in `url()`.
+    const rawPrefix = config.apiPrefix ?? `${this.mount}api/v1/`;
+    this.apiPrefix = rawPrefix.endsWith('/') ? rawPrefix : `${rawPrefix}/`;
     this.fetchImpl = config.fetchImpl ?? globalThis.fetch.bind(globalThis);
     this.csrfCookieName = config.csrfCookieName ?? 'csrftoken';
     this.onAuthFailure = config.onAuthFailure;
@@ -93,7 +108,7 @@ export class ApiClient {
 
   private url(path: string): string {
     const trimmed = path.startsWith('/') ? path.slice(1) : path;
-    return `${this.mount}api/v1/${trimmed}`;
+    return `${this.apiPrefix}${trimmed}`;
   }
 
   private csrfToken(): string | null {

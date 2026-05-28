@@ -99,6 +99,12 @@ class SpaIndexView(View):
             "admin_react/index.html",
             {
                 "mount_point": _mount_from_request(request),
+                # Absolute URL prefix the SPA will use for every JSON
+                # request (#559). Defaults to `<mount>/api/v1/` (the
+                # inline-include path); a consumer can override via
+                # `DJANGO_ADMIN_REACT["API_URL_PREFIX"]` to point the
+                # SPA at a separately-mounted `django-admin-rest-api`.
+                "api_prefix": _resolve_api_prefix(request),
                 "bundle": _load_manifest_entry(),
                 "brand_title": _resolve_brand_title(admin_site),
                 "tab_title": _resolve_tab_title(admin_site),
@@ -335,6 +341,32 @@ def _resolve_initial_theme(request: HttpRequest) -> str | None:
     """
     theme = request.COOKIES.get("dar-theme")
     return theme if theme in ("light", "dark") else None
+
+
+def _resolve_api_prefix(request: HttpRequest) -> str:
+    """Absolute URL prefix the SPA should call for JSON requests (#559).
+
+    Priority:
+
+    1. ``DJANGO_ADMIN_REACT["API_URL_PREFIX"]`` — explicit consumer
+       override, used verbatim when the consumer mounts
+       ``django_admin_rest_api.urls`` at their own prefix (so the SPA
+       can talk to a single shared API mount). The package's own
+       ``urls.py`` will *not* inline the API in that case (no double-
+       mount).
+    2. Default — ``<mount>/api/v1/`` where ``<mount>`` is the SPA's
+       configured mount point (the same path the inline include
+       registers). Existing consumers see no change.
+
+    The returned string always ends in a trailing slash so the SPA can
+    concat endpoint paths without thinking about it.
+    """
+    override = dar_conf.API_URL_PREFIX
+    if isinstance(override, str) and override:
+        return override if override.endswith("/") else override + "/"
+    mount = _mount_from_request(request)
+    # ``mount`` always ends in "/", so concatenation is safe.
+    return f"{mount}api/v1/"
 
 
 def _mount_from_request(request: HttpRequest) -> str:

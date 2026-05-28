@@ -120,6 +120,50 @@ def test_mount_meta_tag_reflects_url(superuser_client: Client) -> None:
     assert 'content="/admin-react/"' in body
 
 
+@pytest.mark.django_db
+def test_api_prefix_meta_defaults_to_mount_plus_api_v1(superuser_client: Client) -> None:
+    """Default (no `API_URL_PREFIX` override): the `dar-api-prefix` meta
+    is `<mount>/api/v1/` — the inline-include URL the package already
+    serves, unchanged from before #559."""
+    response = superuser_client.get(ROOT_URL)
+    assert response.status_code == 200
+    body = response.content.decode("utf-8")
+    assert 'name="dar-api-prefix"' in body
+    assert 'content="/admin-react/api/v1/"' in body
+
+
+@pytest.mark.django_db
+def test_api_prefix_meta_honours_override(superuser_client: Client) -> None:
+    """With `DJANGO_ADMIN_REACT["API_URL_PREFIX"]` set, the `dar-api-prefix`
+    meta carries that value verbatim — the SPA will call that URL instead
+    of the inline mount (#559)."""
+    with override_settings(DJANGO_ADMIN_REACT={"API_URL_PREFIX": "/api/api/v1/"}):
+        _reload_conf()
+        try:
+            response = superuser_client.get(ROOT_URL)
+            assert response.status_code == 200
+            body = response.content.decode("utf-8")
+            assert 'name="dar-api-prefix"' in body
+            assert 'content="/api/api/v1/"' in body
+        finally:
+            _reload_conf()
+
+
+@pytest.mark.django_db
+def test_api_prefix_meta_adds_trailing_slash_when_missing(superuser_client: Client) -> None:
+    """Trailing slash invariant (#559): the SPA appends endpoint paths to
+    the prefix, so the resolver always ensures one slash at the end even
+    if the consumer's override omitted it."""
+    with override_settings(DJANGO_ADMIN_REACT={"API_URL_PREFIX": "/custom-api/v1"}):
+        _reload_conf()
+        try:
+            response = superuser_client.get(ROOT_URL)
+            body = response.content.decode("utf-8")
+            assert 'content="/custom-api/v1/"' in body
+        finally:
+            _reload_conf()
+
+
 # --------------------------------------------------------------------------- #
 # Bundle wiring                                                               #
 # --------------------------------------------------------------------------- #
