@@ -9,16 +9,17 @@ your `ModelAdmin` classes drive everything. No React code on your side.
 INSTALLED_APPS = [
     # ...
     "django.contrib.admin",
-    "django_admin_rest_api",   # the JSON REST API (sibling package — pulled in as a dependency)
-    "django_admin_react",      # this package — the React SPA on top of it
+    "django_admin_react",   # the React SPA — includes the JSON API for you
 ]
 
 # urls.py
 urlpatterns = [
     path("admin/",       admin.site.urls),
-    path("admin-react/", include("django_admin_react.urls")),  # SPA + its API include
+    path("admin-react/", include("django_admin_react.urls")),  # SPA + API in one include
 ]
 ```
+
+**One `INSTALLED_APPS` line + one URL include is the entire integration.** `pip install django-admin-react` transitively pulls in the [JSON API](https://pypi.org/project/django-admin-rest-api/) and the [MCP adapter](https://pypi.org/project/django-admin-mcp-api/); `django_admin_react.urls` includes the API endpoints at `<mount>/api/v1/…`, so the SPA finds its wire surface with zero configuration. (Mount the API a second time at your own prefix only if a non-SPA client also needs it.)
 
 > **Beta — v1.0.0.** Available on PyPI; the SPA + the API
 > ([`django-admin-rest-api`](https://pypi.org/project/django-admin-rest-api/))
