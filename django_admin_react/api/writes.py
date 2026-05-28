@@ -346,6 +346,88 @@ def coerce_fk_values(
     return out
 
 
+# PostgreSQL range field internal types. Listed by name so the package
+# never imports ``django.contrib.postgres`` (or psycopg) just to detect
+# them — mirrors ``serializers._RANGE_SUBTYPE_BY_INTERNAL`` (the read half).
+_RANGE_INTERNAL_TYPES = frozenset(
+    {
+        "DateRangeField",
+        "DateTimeRangeField",
+        "DateTimeTZRangeField",
+        "DecimalRangeField",
+        "IntegerRangeField",
+        "BigIntegerRangeField",
+    }
+)
+
+
+def _range_bound(value: Any) -> str:
+    """One range endpoint → the string the multi-widget subfield parses.
+
+    ``None`` (an unbounded / empty side) becomes ``""`` — the form's
+    sub-field reads that as "no bound". Everything else is stringified
+    (dates/datetimes/decimals/ints all round-trip through their
+    sub-field's ``to_python``).
+    """
+    return "" if value is None else str(value)
+
+
+def _range_endpoints(value: Any) -> tuple[str, str]:
+    """Extract ``(lower, upper)`` strings from any accepted range input.
+
+    The WRITE path is symmetric to the read envelope (#141) but tolerant
+    of the shapes a client might send back (#238):
+
+    - ``[lower, upper]`` — the wire-friendly array (fits ``WriteValue``).
+    - the read envelope ``{"value": {"lower", "upper"}}`` or a bare
+      ``{"lower", "upper"}``.
+    - a psycopg ``Range``-shaped object (what the instance carries on a
+      PATCH that doesn't touch the field) — duck-typed, never imported.
+    - ``None`` / anything else → an empty (cleared) range.
+    """
+    if isinstance(value, list | tuple) and len(value) == 2:
+        return _range_bound(value[0]), _range_bound(value[1])
+    if isinstance(value, dict):
+        inner = value.get("value") if isinstance(value.get("value"), dict) else value
+        if isinstance(inner, dict):
+            return _range_bound(inner.get("lower")), _range_bound(inner.get("upper"))
+        return "", ""
+    # Duck-type a psycopg ``Range`` — require ``isempty`` too, so a plain
+    # ``str`` (whose ``.lower`` / ``.upper`` are *methods*) isn't mistaken
+    # for one. Matches the read side's ``_looks_like_range``.
+    if all(hasattr(value, attr) for attr in ("lower", "upper", "isempty")):
+        if getattr(value, "isempty", False):
+            return "", ""
+        return _range_bound(value.lower), _range_bound(value.upper)
+    return "", ""
+
+
+def coerce_range_values(
+    form_data: dict[str, Any],
+    model: type[Model],
+) -> dict[str, Any]:
+    """Expand range-field values into the multi-widget ``_0`` / ``_1`` keys.
+
+    A PostgreSQL ``RangeField`` form field is a ``MultiValueField`` whose
+    widget reads ``<name>_0`` (lower) and ``<name>_1`` (upper) from the
+    form data — not a single ``<name>`` value. The wire sends a range as
+    one value (an ``[lower, upper]`` array, an envelope, or — on a PATCH
+    that leaves the field untouched — the instance's ``Range``), so split
+    it into the two keys the form expects (#238, the write half of #141).
+    Bounds stay Django's canonical ``[)`` (the admin can't set them
+    either). Non-range fields pass through untouched.
+    """
+    for key in list(form_data.keys()):
+        field = safe_get_field(model, key)
+        if field is None or field.get_internal_type() not in _RANGE_INTERNAL_TYPES:
+            continue
+        lower, upper = _range_endpoints(form_data[key])
+        del form_data[key]
+        form_data[f"{key}_0"] = lower
+        form_data[f"{key}_1"] = upper
+    return form_data
+
+
 def form_errors_to_envelope(form: Any) -> dict[str, list[str]]:
     """Convert a Django form's ``errors`` mapping to the wire shape.
 
@@ -400,7 +482,9 @@ def merged_initial_for_update(
         else:
             merged[name] = getattr(obj, name, None)
     merged.update(coerce_fk_values(payload, model))
-    return merged
+    # Expand range fields (whether seeded from the instance's Range or
+    # overridden by the payload) into the multi-widget keys the form reads.
+    return coerce_range_values(merged, model)
 
 
 def log_addition(

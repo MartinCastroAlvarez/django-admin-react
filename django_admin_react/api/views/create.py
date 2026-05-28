@@ -36,6 +36,7 @@ from django_admin_react.api.registry import resolve_model
 from django_admin_react.api.serializers import label_for
 from django_admin_react.api.writes import bad_request
 from django_admin_react.api.writes import coerce_fk_values
+from django_admin_react.api.writes import coerce_range_values
 from django_admin_react.api.writes import conflict_response
 from django_admin_react.api.writes import form_errors_to_envelope
 from django_admin_react.api.writes import log_addition
@@ -128,7 +129,7 @@ class CreateView(View):
             # Strip the inline block before validating parent keys so it
             # isn't treated as an unknown field; it's saved after the parent.
             inlines_payload = payload.pop("inlines", None)
-            form_data = coerce_fk_values(payload, model)
+            form_data = coerce_range_values(coerce_fk_values(payload, model), model)
             files = None
             submitted_keys = payload
 
