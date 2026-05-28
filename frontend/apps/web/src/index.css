@@ -96,7 +96,7 @@ body,
 }
 .dark .hover\:text-gray-200:hover,
 .dark .hover\:text-gray-100:hover {
-  color: #ffffff !important;
+  color: #fff !important;
 }
 /* Form controls have no explicit bg utility (the @dar/ui Input + the
    filter selects render on the browser-default white), so the bg-white
