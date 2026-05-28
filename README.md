@@ -20,8 +20,11 @@ urlpatterns = [
 ]
 ```
 
-> **Pre-alpha.** Available on PyPI as an alpha. Pin tightly; expect
-> breaking changes between alpha releases. Track progress on the
+> **Beta — v1.0.0.** Available on PyPI; the SPA + the API
+> ([`django-admin-rest-api`](https://pypi.org/project/django-admin-rest-api/))
+> + the MCP adapter
+> ([`django-admin-mcp-api`](https://pypi.org/project/django-admin-mcp-api/))
+> all share the v1 wire contract. Track progress on the
 > [Project board](https://github.com/users/MartinCastroAlvarez/projects/3)
 > and the [Issues list](https://github.com/MartinCastroAlvarez/django-admin-react/issues).
 
@@ -100,34 +103,16 @@ emails, account numbers, or PII).
 pip install django-admin-react
 ```
 
-```python
-# settings.py
-INSTALLED_APPS = [
-    "django.contrib.admin",
-    "django.contrib.auth",
-    "django.contrib.contenttypes",
-    "django.contrib.sessions",
-    "django.contrib.messages",
-    "django.contrib.staticfiles",
-    "django_admin_react",   # ← add this
-    # ... your own apps
-]
-```
+This pulls in the JSON API ([`django-admin-rest-api`](https://pypi.org/project/django-admin-rest-api/))
+and the MCP adapter ([`django-admin-mcp-api`](https://pypi.org/project/django-admin-mcp-api/))
+as transitive dependencies. The **two-line `INSTALLED_APPS` + one-line
+URL include** at the top of this README is the *entire* integration.
+Mount at any prefix you like — `/admin-react/`, `/staff/`,
+`/back-office/` — just don't collide with `django.contrib.admin`'s
+own mount.
 
-```python
-# urls.py
-from django.urls import include, path
-
-urlpatterns = [
-    path("admin/", include("django_admin_react.urls")),
-    # any prefix is fine:
-    # path("admin-react/", include("django_admin_react.urls")),
-    # path("staff/",       include("django_admin_react.urls")),
-]
-```
-
-That is the entire integration. Log in as a staff user → modern,
-Tailwind-styled SPA driven by your existing `ModelAdmin` classes.
+Log in as a staff user → modern, Tailwind-styled SPA driven by your
+existing `ModelAdmin` classes.
 
 The wheel ships the **pre-built React bundle**. You do **not** need
 Node, pnpm, or any frontend toolchain to install or run.
@@ -156,6 +141,16 @@ DJANGO_ADMIN_REACT = {
                                 # active states. Hex only (validated);
                                 # injected as the --dar-primary CSS var, so
                                 # rebranding needs no React rebuild.
+
+    # Auth + API mount
+    "REACT_LOGIN": True,        # bool — React-rendered login is the default;
+                                # the SPA shell is served to anonymous users
+                                # and posts to /api/v1/login/. Set False to
+                                # opt back into the legacy admin HTML login.
+    "API_URL_PREFIX": None,     # str | None — point the SPA at a separately-
+                                # mounted django-admin-rest-api (e.g.
+                                # "/api/api/v1/"). Default None keeps the
+                                # inline include the package ships today.
 }
 ```
 
