@@ -252,7 +252,11 @@ export function Sidebar() {
               }}
               placeholder="Filter models…"
               aria-label="Filter models"
-              className="w-full rounded border border-gray-700 bg-gray-800 px-2 py-1 text-sm text-gray-100 placeholder-gray-500 focus:outline-none focus-visible:ring-1 focus-visible:ring-gray-500"
+              // Bumped one step lighter than the sidebar surface (bg-gray-900)
+              // so the input reads as a distinct field, not as part of the
+              // sidebar (#556). `bg-gray-700` + `border-gray-600` gives the
+              // same two-step contrast the rest of the app's inputs have.
+              className="w-full rounded border border-gray-600 bg-gray-700 px-2 py-1 text-sm text-gray-100 placeholder-gray-400 focus:outline-none focus-visible:ring-1 focus-visible:ring-gray-500"
             />
           </div>
         )}
@@ -262,8 +266,10 @@ export function Sidebar() {
             grouped-nav style. */}
         {/* `border-t` draws the line above the FIRST section (the filter
             field sits above it); `divide-y` handles the lines between the
-            rest. */}
-        <nav className="border-t border-gray-800 divide-y divide-gray-800">
+            rest. `gray-700` (one step lighter than `gray-800`, which was
+            indistinguishable from the `gray-900` sidebar surface) so the
+            line is actually visible (#556). */}
+        <nav className="border-t border-gray-700 divide-y divide-gray-700">
           {visibleApps.map((app) => {
             // While a filter query is active, force every group open so
             // matches are never hidden behind a collapsed section.
