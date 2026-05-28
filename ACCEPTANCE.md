@@ -3,6 +3,24 @@
 This file defines the **measurable, testable** criteria the project
 must meet to be considered "production-ready" by each owning role.
 
+> ### Scope (post-#544)
+>
+> This file covers the **React SPA super-layer**. Acceptance criteria
+> that test API-wire behaviour (auth, authz, queryset, serializer
+> denylist, write-form enforcement, the §6 per-endpoint matrix, the
+> wire contract) live in the
+> **[`django-admin-rest-api`](https://github.com/MartinCastroAlvarez/django-admin-api)
+> repo's `ACCEPTANCE.md`** from this point forward — the API repo owns
+> the API. During [META #544](https://github.com/MartinCastroAlvarez/django-admin-react/issues/544)
+> the API-side criteria below still apply **here** until the local
+> `django_admin_react/api/` tree is removed (Phase 3); they apply in
+> the API repo permanently.
+>
+> The SPA-side criteria — plug-and-play install, responsive UI,
+> accessibility, SPA navigation, visual consistency, extensibility UX,
+> pre-built bundle integrity, frontend test coverage — stay here as
+> the durable record.
+
 **Coordination protocol** — every agent role owns its own section:
 
 - §2 **Product / UX** — owned by `claude-pm-ux-opus47` (this PR).

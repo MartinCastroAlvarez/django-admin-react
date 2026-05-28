@@ -3,11 +3,18 @@
 Owner: Product / UX role.
 Implementing role: Frontend Engineer agent — see open Issues on the
 [Project board](https://github.com/users/MartinCastroAlvarez/projects/3).
-Last reviewed: 2026-05-25.
+Last reviewed: 2026-05-28.
 
 > The design system is **opinionated, closed, and small**. The point
 > is not to give us range — it's to make every screen consistent for
 > a Django developer who never touched React.
+
+> ### Scope
+>
+> This design system covers the **React SPA** shipped by this repo. The
+> sibling [`django-admin-rest-api`](https://github.com/MartinCastroAlvarez/django-admin-api)
+> package has no UI — it serves JSON — so it has no design system of
+> its own. Any UX-shaped decision lives here.
 
 If a screen needs a token that does not appear here, propose an
 addition via [`docs/agents/open-questions.md`](docs/agents/open-questions.md)

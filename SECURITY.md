@@ -1,9 +1,29 @@
 # Security
 
-`django-admin-react` sits in front of the Django admin and exposes a REST
-API that any logged-in staff member can use. That position makes it a
-high-value target. Every contribution must read this file before adding or
-changing API behavior.
+`django-admin-react` is the **React SPA super-layer** on top of the
+[`django-admin-rest-api`](https://github.com/MartinCastroAlvarez/django-admin-api)
+package. The API package owns every wire-level gate (authn, authz,
+queryset, serializer denylist, CSRF, write-form enforcement); this repo
+owns the SPA-side concerns (CSP-friendly assets, no secret leakage in
+the bundle, safe SPA mount, PWA boundaries, screenshot hygiene). Every
+contribution must read this file before changing security-sensitive
+behaviour in this repo.
+
+> ### Where each security concern actually lives
+>
+> | Concern | Owned by | Reference |
+> |---|---|---|
+> | API authn / authz / CSRF / queryset / denylist / write enforcement | **`django-admin-rest-api`** repo | [its `SECURITY.md`](https://github.com/MartinCastroAlvarez/django-admin-api/blob/main/SECURITY.md) |
+> | SPA: pre-built bundle integrity, no token/`.env` leakage in assets, PWA cache-on-logout, SPA mount safety | **This repo** | the rest of this file |
+> | Supply chain (Dependabot, SHA-pinned actions, `pip-audit`) | Both repos | this file §6 and §13 |
+> | Release publish (PyPI Trusted Publishing / token) | Both repos, owner-gated | this file §7 + the corresponding section in the API repo |
+>
+> During [META #544](https://github.com/MartinCastroAlvarez/django-admin-react/issues/544)
+> the local `django_admin_react/api/` tree is still on `main` for a few
+> more PRs; the rules below that mention API endpoints continue to
+> apply **here** until that code is removed, and **in the API repo**
+> permanently from that point on. Do not introduce a new API endpoint
+> in this repo — open it in the API repo instead.
 
 ## 1. Reporting a vulnerability
 

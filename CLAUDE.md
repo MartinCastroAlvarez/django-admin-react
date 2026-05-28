@@ -2,14 +2,41 @@
 
 This file is the contract between this repository and any Claude (or other
 AI) agent contributing to it. **Read this file from top to bottom before
-doing anything else, every session.** Multiple agents may be working
-concurrently — coordination is the only way to avoid stepping on each
-other.
+doing anything else, every session.**
 
 > If anything in this file is unclear or seems wrong, do **not** silently
 > work around it. Add an entry to
 > [`docs/agents/open-questions.md`](docs/agents/open-questions.md) and pick
 > the simpler interpretation.
+
+> ### Scope of this repo (post-#544)
+>
+> This is the **React SPA super-layer**. The JSON REST API surface — every
+> endpoint, the serializer denylist, the permission gates, the wire contract
+> — lives in the sibling package
+> [`django-admin-rest-api`](https://github.com/MartinCastroAlvarez/django-admin-api)
+> ([PyPI](https://pypi.org/project/django-admin-rest-api/)) and is pulled
+> in as a dependency. The MCP exposure of the same `ModelAdmin`-driven
+> functionality lives in
+> [`django-admin-mcp-api`](https://pypi.org/project/django-admin-mcp-api/)
+> ([`MartinCastroAlvarez/django-admin-mcp`](https://github.com/MartinCastroAlvarez/django-admin-mcp))
+> — also `0.1.0a0` on PyPI; shipped as a sibling dependency of this package.
+>
+> **Practical impact for agents working here:**
+>
+> 1. Bug fixes / features for any `/api/v1/...` JSON endpoint belong in the
+>    API repo, not here. If you find such a bug while working in this repo,
+>    open the issue in the API repo and link it from here. Do **not** add
+>    a parallel implementation in this repo.
+> 2. The local `django_admin_react/api/` tree is **transient** — it is
+>    being removed in Phases 2-7 of [META #544](https://github.com/MartinCastroAlvarez/django-admin-react/issues/544).
+>    Don't add new endpoints here.
+> 3. SPA work (React components, the PWA, the SPA mount, screenshots,
+>    static assets, the build pipeline) belongs here.
+>
+> The mode of execution after the owner's 2026-05-28 directive: **a single
+> agent at a time, no worktrees** — work on branches off `main` in the
+> primary checkout.
 
 ---
 
@@ -122,17 +149,21 @@ Detailed shape is in [`ARCHITECTURE.md`](ARCHITECTURE.md).
 
 ---
 
-## 4. Multi-agent coordination
+## 4. Coordination (sole-agent mode — 2026-05-28 directive)
 
-Several agents may be running at once. Coordination lives on GitHub —
-not in committed markdown — so the surface stays searchable, indexed,
-and notification-driven.
+> **Earlier sessions ran a multi-agent swarm in parallel worktrees.**
+> The owner ended that mode on 2026-05-28: a **single agent** works in
+> the primary checkout, on branches off `main`, **no worktrees**. The
+> guidance below is updated for that mode.
 
-1. **Claim a Project board card before opening a PR.** Look at the
+All coordination still lives on GitHub — not in committed markdown — so
+the surface stays searchable, indexed, and notification-driven.
+
+1. **Track work as Issues / Project board cards.** Look at the
    [Project board](https://github.com/users/MartinCastroAlvarez/projects/3)
    and the open [Issues](https://github.com/MartinCastroAlvarez/django-admin-react/issues).
-   Assign yourself (or post a claim comment on the issue) before you
-   start. If the issue doesn't exist yet, open one first.
+   For new work, open the issue first; for in-flight work, leave a
+   status comment so the audit trail is real-time.
 2. **Use GitHub for everything else:**
    - **[Issues](https://github.com/MartinCastroAlvarez/django-admin-react/issues)**
      — work tracking. One issue per actionable piece of work.
@@ -147,14 +178,21 @@ and notification-driven.
    - [`docs/agents/open-questions.md`](docs/agents/open-questions.md)
      — questions awaiting a decision that aren't yet shaped for an
      issue or Discussion.
-3. **Do not duplicate work.** Before starting, scan the open PR list
-   and the assigned cards on the board. If someone is already on it,
-   comment on their PR or their card instead of forking the effort.
-4. **Public repo, public eyes.** Everything in this repository
+3. **Branch off `main` directly** — no `git worktree`. One branch per
+   PR; squash-merge through the GitHub UI (or `gh pr merge --squash`)
+   when CI is green and the review is on the record.
+4. **Cross-repo discipline.** API work (any `/api/v1/...` endpoint, the
+   wire contract, the serializer denylist, the permission gates) goes
+   to the **`django-admin-rest-api` repo**, not here. MCP work to the
+   `django-admin-mcp` repo (PyPI: `django-admin-mcp-api`). This repo owns the **React SPA**
+   super-layer and its docs only — see the scope notice at the top of
+   this file.
+5. **Public repo, public eyes.** Everything in this repository
    (`docs/`, commits, PR descriptions, commit messages, Issues,
    Discussions) is published. Do not paste secrets, tokens,
    transcripts, private user data, or anything that wouldn't survive
-   a public audit.
+   a public audit. The PAT embedded in the local git remote is a
+   build-time convenience — treat it like a `.env` secret.
 
 ---
 

@@ -4,10 +4,38 @@ A drop-in **React single-page admin** for any Django 5+ project. Same
 `pip install`, same `INSTALLED_APPS`, same `urls.py include()` — and
 your `ModelAdmin` classes drive everything. No React code on your side.
 
+```python
+# settings.py
+INSTALLED_APPS = [
+    # ...
+    "django.contrib.admin",
+    "django_admin_rest_api",   # the JSON REST API (sibling package — pulled in as a dependency)
+    "django_admin_react",      # this package — the React SPA on top of it
+]
+
+# urls.py
+urlpatterns = [
+    path("admin/",       admin.site.urls),
+    path("admin-react/", include("django_admin_react.urls")),  # SPA + its API include
+]
+```
+
 > **Pre-alpha.** Available on PyPI as an alpha. Pin tightly; expect
 > breaking changes between alpha releases. Track progress on the
 > [Project board](https://github.com/users/MartinCastroAlvarez/projects/3)
 > and the [Issues list](https://github.com/MartinCastroAlvarez/django-admin-react/issues).
+
+## Three repos, one product
+
+The project is split into three independently-published, cross-referenced repos so each piece can be consumed on its own merits:
+
+| Repo | PyPI | Role |
+|---|---|---|
+| **[`django-admin-rest-api`](https://github.com/MartinCastroAlvarez/django-admin-api)** | [`django-admin-rest-api`](https://pypi.org/project/django-admin-rest-api/) | The JSON REST API for the Django admin — same permissions, same `ModelAdmin`, no new features. The wire surface. |
+| **`django-admin-react`** *(this repo)* | [`django-admin-react`](https://pypi.org/project/django-admin-react/) | The React SPA frontend. A **super-layer** that depends on `django-admin-rest-api` for every wire call. |
+| **[`django-admin-mcp-api`](https://github.com/MartinCastroAlvarez/django-admin-mcp)** | [`django-admin-mcp-api`](https://pypi.org/project/django-admin-mcp-api/) | Wire-protocol-only **MCP** adapter (call, manifest, …) over `django-admin-rest-api` — lets agents reach the same `ModelAdmin`-driven REST surface, no new functionality / permissions / validation. |
+
+The wire contract itself lives in the **API repo** (`docs/api-contract.md` there). This README is about the SPA. The migration from "self-contained" to the 3-repo split is tracked in [META #544](https://github.com/MartinCastroAlvarez/django-admin-react/issues/544).
 
 ---
 
@@ -46,8 +74,9 @@ permissions at runtime from `GET /api/v1/registry/`. Add a new
 
 Real captures of the **django-admin-react SPA** rendering the bundled
 `examples/` apps — driven entirely by each app's `ModelAdmin`.
-Regenerate any time with `scripts/screenshots.sh` (Playwright against a
-throwaway example server).
+Captured **manually** against a local dev server (the project deliberately
+does not require Playwright / Cypress / e2e tooling; see
+[`TESTING.md`](TESTING.md)).
 
 | Sign in (package login)                            | Registry / home                                       |
 | -------------------------------------------------- | ----------------------------------------------------- |
