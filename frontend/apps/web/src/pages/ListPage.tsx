@@ -98,6 +98,10 @@ export function ListPage() {
   // Row selection (page-scoped, matches Django's changelist) drives
   // the Actions dropdown's visibility (#182).
   const [selected, setSelected] = useState<Set<string | number>>(new Set());
+  // "Select all N matching" across pages (#386): when true the next action
+  // runs over the whole filtered queryset, not just the page's `selected`.
+  // Any manual selection change exits the mode.
+  const [selectAcross, setSelectAcross] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [runningAction, setRunningAction] = useState(false);
   // The action awaiting confirmation (#206) — drives the styled
@@ -263,6 +267,7 @@ export function ListPage() {
   }
 
   function toggleRow(key: string | number): void {
+    setSelectAcross(false);
     setSelected((prev) => {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key);
@@ -272,13 +277,14 @@ export function ListPage() {
   }
 
   function toggleAll(checked: boolean, pageRows: ListRow[]): void {
+    setSelectAcross(false);
     setSelected(() => (checked ? new Set(pageRows.map((r) => r.pk)) : new Set()));
   }
 
   // Dropdown click: actions that declare requires_confirmation open the
   // styled confirm modal (#206); the rest run immediately.
   function requestAction(action: ActionDescriptor): void {
-    if (runningAction || selected.size === 0) return;
+    if (runningAction || (selected.size === 0 && !selectAcross)) return;
     setActionsOpen(false);
     if (action.requires_confirmation) {
       setPendingAction(action);
@@ -288,19 +294,31 @@ export function ListPage() {
   }
 
   async function performAction(action: ActionDescriptor): Promise<void> {
-    const pks = Array.from(selected);
-    if (pks.length === 0 || runningAction) return;
+    if (runningAction || (selected.size === 0 && !selectAcross)) return;
     setRunningAction(true);
     setPendingAction(null);
-    const count = pks.length;
     try {
-      // Run the action over the wire and stay in the SPA: the styled
-      // confirm modal already replaced Django's intermediate
-      // confirmation page (the request carries `confirmed`), so we
-      // never follow a server-side redirect / full-page navigation.
-      // Clear the selection and re-validate the list in place.
+      // "Select all N matching" (#386): pull every pk across pages from the
+      // list endpoint (same q/filters, `all` — bounded by list_max_show_all,
+      // the same guard as "Show all" #385), then run the action over them.
+      // Otherwise act on the page-scoped selection. The styled confirm
+      // modal already replaced Django's intermediate page, so we never
+      // follow a server-side redirect.
+      let pks: Array<string | number>;
+      if (selectAcross) {
+        const all = await client.list(appLabel, modelName, {
+          all: true,
+          filters: activeFilters,
+          ...(q ? { q } : {}),
+        });
+        pks = all.results.map((r) => r.pk);
+      } else {
+        pks = Array.from(selected);
+      }
+      const count = pks.length;
       const result = await client.runAction(appLabel, modelName, action.name, pks);
       setSelected(new Set());
+      setSelectAcross(false);
       await refresh();
       // Prefer the action's own message_user output (#442); fall back to a
       // generic confirmation when the action queued nothing.
@@ -431,6 +449,24 @@ export function ListPage() {
   const actions = data.actions ?? [];
   const canRunActions = actions.length > 0 && data.permissions.change;
 
+  // Select-all-across-pages (#386). The total matching the current filter
+  // (full_count when show_full_result_count differs, else total).
+  const matchingTotal = data.full_count ?? data.total;
+  const allPageSelected =
+    data.results.length > 0 && data.results.every((r) => selected.has(r.pk));
+  // Offer "select all N matching" once the whole page is ticked AND there
+  // are more rows than the page AND the total is within the bound we can
+  // safely page through in one ?all request (the #385 "Show all" cap).
+  const canOfferAcross =
+    canRunActions &&
+    allPageSelected &&
+    !selectAcross &&
+    matchingTotal > data.results.length &&
+    matchingTotal <= data.list_max_show_all;
+  // Rows the next action will run over — the whole filtered set when
+  // "select across" is active, else the page-scoped selection.
+  const effectiveCount = selectAcross ? matchingTotal : selected.size;
+
   // Derive the active sort (single column in v1) from the URL. `sortKey`
   // is '' when unsorted (no column header matches it → no caret shown).
   const ordering = searchParams.get('ordering') ?? '';
@@ -499,7 +535,7 @@ export function ListPage() {
         // only once at least one row is selected (Django changelist
         // parity — the actions selector leads the toolbar).
         leading={
-          canRunActions && selected.size > 0 ? (
+          canRunActions && (selected.size > 0 || selectAcross) ? (
             <div className="relative">
               <button
                 type="button"
@@ -509,7 +545,7 @@ export function ListPage() {
                 disabled={runningAction}
                 className="shrink-0 rounded-md border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-100 disabled:opacity-50"
               >
-                Actions · {selected.size} ▾
+                Actions · {effectiveCount} ▾
               </button>
               {actionsOpen && (
                 <div
@@ -563,6 +599,44 @@ export function ListPage() {
           </div>
         </div>
       )}
+
+      {/* Select-all-across-pages (#386). Once the whole page is ticked and
+          more rows match, offer to extend the selection to the entire
+          filtered set (Django changelist parity); while active, say so and
+          offer to clear. Only when the total is within the safe ?all cap. */}
+      {canOfferAcross || selectAcross ? (
+        <div className="flex flex-wrap items-center justify-center gap-2 rounded-md border border-blue-300 bg-blue-50 px-3 py-2 text-center text-sm text-blue-700">
+          {selectAcross ? (
+            <>
+              <span>All {matchingTotal.toLocaleString()} selected.</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectAcross(false);
+                  setSelected(new Set());
+                }}
+                className="font-medium underline hover:no-underline"
+              >
+                Clear selection
+              </button>
+            </>
+          ) : (
+            <>
+              <span>
+                All {data.results.length} on this page {data.results.length === 1 ? 'is' : 'are'}{' '}
+                selected.
+              </span>
+              <button
+                type="button"
+                onClick={() => setSelectAcross(true)}
+                className="font-medium underline hover:no-underline"
+              >
+                Select all {matchingTotal.toLocaleString()} matching
+              </button>
+            </>
+          )}
+        </div>
+      ) : null}
 
       {/* The list is a full-width table on desktop and stacked record-cards
           on narrow viewports (#421); both read from the same `columns`.
@@ -670,8 +744,8 @@ export function ListPage() {
           }
         >
           <p className="text-sm text-gray-700">
-            Run <span className="font-medium">{pendingAction.label}</span> on {selected.size}{' '}
-            selected item{selected.size === 1 ? '' : 's'}?
+            Run <span className="font-medium">{pendingAction.label}</span> on {effectiveCount}{' '}
+            selected item{effectiveCount === 1 ? '' : 's'}?
           </p>
         </Modal>
       )}
