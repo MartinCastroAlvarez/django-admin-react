@@ -66,8 +66,10 @@ def test_non_staff_rejected_at_login(client: Client, make_user) -> None:
     # Re-renders the form with an error; never establishes a staff session.
     assert response.status_code == 200
     assert "staff account" in response.content.decode().lower()
-    # The SPA still bounces them.
-    assert client.get(SPA_URL).status_code in (302,)
+    # Under the post-2026-05-28 default (`REACT_LOGIN=True`), the SPA
+    # shell serves to a non-staff session and the React app re-renders
+    # the login form. Every wire call still 403s, so no data leaks.
+    assert client.get(SPA_URL).status_code == 200
 
 
 @pytest.mark.django_db
@@ -75,7 +77,10 @@ def test_bad_password_rejected(client: Client, make_user) -> None:
     make_user("boss", staff=True)
     response = client.post(LOGIN_URL, {"username": "boss", "password": "wrong"})
     assert response.status_code == 200
-    assert client.get(SPA_URL).status_code == 302
+    # Anonymous (login failed) gets the React shell under the new
+    # `REACT_LOGIN=True` default; the in-SPA login form posts to the
+    # API.
+    assert client.get(SPA_URL).status_code == 200
 
 
 @pytest.mark.django_db
@@ -109,19 +114,37 @@ def test_logout_returns_to_login(client: Client, make_user) -> None:
     response = client.post(LOGOUT_URL)
     assert response.status_code == 302
     assert response["Location"] == LOGIN_URL
-    # Session cleared — SPA bounces again.
-    assert client.get(SPA_URL).status_code == 302
+    # Session cleared — under `REACT_LOGIN=True` (default) the SPA shell
+    # serves to the now-anonymous user; the in-SPA login form re-renders.
+    assert client.get(SPA_URL).status_code == 200
 
 
 # --------------------------------------------------------------------------- #
 # Fallback when the legacy admin is OFF                                        #
 # --------------------------------------------------------------------------- #
-@override_settings(ROOT_URLCONF="tests.test_project.urls_no_admin", LOGIN_URL="/accounts/login/")
+@override_settings(
+    ROOT_URLCONF="tests.test_project.urls_no_admin",
+    LOGIN_URL="/accounts/login/",
+    DJANGO_ADMIN_REACT={"REACT_LOGIN": False},
+)
 @pytest.mark.django_db
 def test_spa_falls_back_to_package_login_when_admin_off(client: Client) -> None:
-    # No admin mounted + LOGIN_URL is Django's untouched default → the
-    # package login must be the redirect target.
-    response = client.get(SPA_URL)
-    assert response.status_code == 302
-    assert response["Location"].startswith(LOGIN_URL)
-    assert "next=" in response["Location"]
+    """Legacy fallback path (`REACT_LOGIN=False`): with no admin mounted
+    and a default `LOGIN_URL`, the SPA index view redirects to the
+    package's own `<mount>/login/`. Preserved for consumers who opt out
+    of the React-rendered login (the post-2026-05-28 default is
+    `REACT_LOGIN=True`, which serves the shell to anon instead — that
+    path is covered in `test_spa_index.py`)."""
+    import django_admin_react.conf as _conf
+    import importlib
+    import django_admin_react.views as _views
+    importlib.reload(_conf)
+    importlib.reload(_views)
+    try:
+        response = client.get(SPA_URL)
+        assert response.status_code == 302
+        assert response["Location"].startswith(LOGIN_URL)
+        assert "next=" in response["Location"]
+    finally:
+        importlib.reload(_conf)
+        importlib.reload(_views)
