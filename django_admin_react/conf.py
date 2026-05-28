@@ -118,6 +118,17 @@ DEFAULTS: dict[str, Any] = {
     # mapping). When the matching legacy route doesn't exist, the
     # legacy admin 404s — same outcome as visiting that URL directly.
     "LEGACY_ADMIN_URL_PREFIX": None,
+    # ``REACT_ADMIN_URL_PREFIX`` — sibling of ``LEGACY_ADMIN_URL_PREFIX``
+    # (#584). When **both** are set, the legacy Django admin renders a
+    # mirror strip at the top of every page linking the same path under
+    # the React admin's mount — so a user on either surface can swap
+    # to the other in one click. The value is the prefix the SPA was
+    # mounted at in ``urls.py`` — e.g. ``"admin2/"`` for
+    # ``urlpatterns = [path("admin2/", include("django_admin_react.urls")), ...]``.
+    # When only ``LEGACY_ADMIN_URL_PREFIX`` is set, only the SPA-side
+    # strip renders (reverse direction stays off — no implicit guess
+    # at the consumer's chosen mount).
+    "REACT_ADMIN_URL_PREFIX": None,
     "PWA_NAME": None,
     "PWA_SHORT_NAME": None,
     "PWA_ICONS": None,
@@ -142,6 +153,7 @@ class _PackageSettings:
     REACT_LOGIN: bool = DEFAULTS["REACT_LOGIN"]
     API_URL_PREFIX: str | None = DEFAULTS["API_URL_PREFIX"]
     LEGACY_ADMIN_URL_PREFIX: str | None = DEFAULTS["LEGACY_ADMIN_URL_PREFIX"]
+    REACT_ADMIN_URL_PREFIX: str | None = DEFAULTS["REACT_ADMIN_URL_PREFIX"]
     PWA_NAME: str | None = DEFAULTS["PWA_NAME"]
     PWA_SHORT_NAME: str | None = DEFAULTS["PWA_SHORT_NAME"]
     PWA_ICONS: list[dict[str, str]] | None = DEFAULTS["PWA_ICONS"]

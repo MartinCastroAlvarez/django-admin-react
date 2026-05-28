@@ -1,0 +1,37 @@
+{% extends "admin/base.html" %}
+{% comment %}
+  Override of Django admin's `admin/base_site.html` (#584). The package's
+  template loader picks this up automatically when `django_admin_react`
+  appears **before** `django.contrib.admin` in `INSTALLED_APPS`
+  (Django's app-directory template loader resolves left-to-right and
+  the first match wins). Documented in the README's
+  "Legacy-admin escape hatch" section.
+
+  We extend `admin/base.html` (one level up) so:
+  - We preserve every block the consumer's own admin theme may have
+    already redefined.
+  - The original `base_site.html` blocks (`branding`, `nav-global`)
+    are passed through unchanged unless the consumer overrode them.
+
+  The only thing we add is the reverse escape-hatch strip rendered
+  above `{% block content %}`. When the prefixes aren't both set, the
+  template tag renders nothing, so this override is **a pure no-op
+  for consumers who haven't opted into the escape hatch**.
+{% endcomment %}
+{% load i18n experience_toggle %}
+
+{% block title %}{{ title }} | {{ site_title|default:_('Django site admin') }}{% endblock %}
+
+{% block branding %}
+<div id="site-name"><a href="{% url 'admin:index' %}">{{ site_header|default:_('Django administration') }}</a></div>
+{% if user.is_anonymous %}
+  {% include "admin/color_theme_toggle.html" %}
+{% endif %}
+{% endblock %}
+
+{% block content %}
+  {% experience_toggle_strip %}
+  {{ block.super }}
+{% endblock %}
+
+{% block nav-global %}{% endblock %}
