@@ -24,6 +24,14 @@ contract for AI coding agents working in this repository.
 > `django_admin_react/api/` here — please don't add new API features
 > to that copy; raise them in the API repo.
 
+## 0. Code of Conduct
+
+This project is governed by the [`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md)
+— it adopts the **Contributor Covenant 2.1** and applies to everyone
+participating in this repo (humans and AI agents alike), the sibling
+repos, and any public space where you represent the project. Reports
+follow the [`SECURITY.md`](SECURITY.md) §1 private channel.
+
 ## 1. Before you start
 
 Read, in order:
