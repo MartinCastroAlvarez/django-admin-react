@@ -23,11 +23,15 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    # The JSON REST API surface (sibling package — implements every
-    # `/api/v1/...` endpoint). `django_admin_react.urls` includes its
-    # URLs at the same `api/v1/` prefix the SPA already expects.
-    "django_admin_rest_api",
-    # This package — the React SPA super-layer.
+    # **Minimal plug-and-play (#564 owner directive 2026-05-28):** only
+    # `django_admin_react` is registered. `pip install django-admin-react`
+    # transitively pulls in `django-admin-rest-api`; the URL include in
+    # `django_admin_react.urls` mounts the API at `<mount>/api/v1/`, so
+    # the API package does not need its own `INSTALLED_APPS` entry — the
+    # endpoints resolve through `include("django_admin_rest_api.api.urls")`
+    # without the AppConfig being registered (the API ships zero models +
+    # zero signals, so the registration adds nothing the URL include needs).
+    # Test-suite parity with the README's recommended snippet.
     "django_admin_react",
     # Test-only app with a FileField model retained for back-compat
     # (the package's own suite owns the upload tests now).
