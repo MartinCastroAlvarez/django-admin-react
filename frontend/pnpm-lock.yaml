@@ -291,6 +291,9 @@ importers:
       '@dar/settings':
         specifier: workspace:*
         version: link:../settings
+      '@dar/ui':
+        specifier: workspace:*
+        version: link:../ui
     devDependencies:
       '@types/react':
         specifier: ^18.3.0

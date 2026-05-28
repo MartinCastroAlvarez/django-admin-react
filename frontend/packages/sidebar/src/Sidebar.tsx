@@ -1,16 +1,17 @@
 // @dar/sidebar — the SPA navigation chrome: the brand header, the
-// per-user actions (Settings / Install), the model filter, the
+// per-user identity menu (theme + sign out), the model filter, the
 // metadata-driven app/model nav, and the responsive drawer (static
 // column at ≥lg, off-canvas drawer below). The app shell composes
 // <Sidebar/> next to its own <main> content region.
 
 import { useEffect, useMemo, useState } from 'react';
-import { ChevronDown, Download, Menu, Settings } from 'lucide-react';
+import { ChevronDown, Download, Menu } from 'lucide-react';
 import { Link, NavLink } from 'react-router-dom';
 
 import { NAV_COLLAPSE_KEY, usePersistedSet } from '@dar/customization';
 import { useRegistry } from '@dar/data';
-import { SettingsModal } from '@dar/settings';
+import { AccountMenu } from '@dar/settings';
+import { Popover } from '@dar/ui';
 
 // The browser's `beforeinstallprompt` event (Chromium). Captured so we
 // can show an explicit "Install" affordance and call `.prompt()` on
@@ -123,8 +124,10 @@ export function Sidebar() {
   // so it never eats horizontal space on a phone/tablet. ``drawerOpen``
   // only affects the mobile/tablet presentation.
   const [drawerOpen, setDrawerOpen] = useState(false);
-  // Settings dialog (cog) — appearance / dark-mode toggle (#84).
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  // Identity dropdown (#578) — anchored under the email-with-caret button;
+  // holds the theme toggle + Sign out (was a separate Settings modal in
+  // v1.0.2 and earlier).
+  const [accountOpen, setAccountOpen] = useState(false);
   // Collapsed app-group sections (#227), persisted per device via
   // @dar/customization (the single home for localStorage-backed prefs).
   const [collapsed, setCollapsed] = usePersistedSet(NAV_COLLAPSE_KEY);
@@ -212,33 +215,56 @@ export function Sidebar() {
             )}
             <span>{BRAND_TITLE}</span>
           </Link>
+          {/* Identity dropdown (#578): a single email-with-caret button
+              replaces the v1.0.2 two-line "<email> · <role>" + Settings
+              button. The dropdown is mounted via the shared <Popover>
+              (outside-click + Escape inherited from the same primitive
+              the list-page Actions menu uses, #575). The optional Install
+              affordance stays as a sibling button — orthogonal concern. */}
           {data?.user && (
-            <div className="mt-1 text-xs text-gray-400">
-              {data.user.display_name}
-              {data.user.is_superuser ? ' · superuser' : ''}
+            <div className="mt-3 flex items-center gap-2">
+              <Popover
+                open={accountOpen}
+                onClose={() => setAccountOpen(false)}
+                align="left"
+                panelClassName="text-gray-700"
+                trigger={
+                  <button
+                    type="button"
+                    onClick={() => setAccountOpen((o) => !o)}
+                    aria-haspopup="menu"
+                    aria-expanded={accountOpen}
+                    title={data.user.display_name}
+                    className="inline-flex max-w-full items-center gap-1.5 rounded bg-gray-800 px-2 py-1 text-xs text-gray-200 hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
+                  >
+                    <span className="truncate">{data.user.display_name}</span>
+                    <ChevronDown
+                      className={`h-3.5 w-3.5 shrink-0 transition-transform ${
+                        accountOpen ? 'rotate-180' : ''
+                      }`}
+                      aria-hidden
+                    />
+                  </button>
+                }
+              >
+                <AccountMenu
+                  identityLabel={data.user.display_name}
+                  roleLabel={data.user.is_superuser ? 'superuser' : undefined}
+                  onAfterAction={() => setAccountOpen(false)}
+                />
+              </Popover>
+              {canInstall && (
+                <button
+                  type="button"
+                  onClick={promptInstall}
+                  className="inline-flex items-center gap-1.5 rounded bg-gray-800 px-2 py-1 text-xs text-gray-200 hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
+                >
+                  <Download className="h-3.5 w-3.5" aria-hidden />
+                  Install app
+                </button>
+              )}
             </div>
           )}
-          <div className="mt-3 flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setSettingsOpen(true)}
-              aria-label="Settings"
-              className="inline-flex items-center gap-1.5 rounded bg-gray-800 px-2 py-1 text-xs text-gray-200 hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
-            >
-              <Settings className="h-3.5 w-3.5" aria-hidden />
-              Settings
-            </button>
-            {canInstall && (
-              <button
-                type="button"
-                onClick={promptInstall}
-                className="inline-flex items-center gap-1.5 rounded bg-gray-800 px-2 py-1 text-xs text-gray-200 hover:bg-gray-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gray-400"
-              >
-                <Download className="h-3.5 w-3.5" aria-hidden />
-                Install app
-              </button>
-            )}
-          </div>
         </div>
 
         {showFilter && (
@@ -335,7 +361,6 @@ export function Sidebar() {
         </nav>
       </aside>
 
-      {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
     </>
   );
 }
