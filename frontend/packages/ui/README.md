@@ -5,8 +5,8 @@ allowed.** No knowledge of Django, the API, or any consumer model.
 
 ## Exports
 
-- **Layout / data:** `Card`, `Table`, `RecordCardList`, `Skeleton`,
-  `EmptyState`, `Breadcrumb`.
+- **Layout / data:** `Card`, `Table`, `RecordCardList`, `Pagination`,
+  `Skeleton`, `EmptyState`, `Breadcrumb`.
 - **Controls:** `Button`, `Input`, `Checkbox`, `Modal`, `Popover`,
   `Spinner`.
 - **Hooks:** `useMediaQuery(query)` — re-renders on a CSS media-query

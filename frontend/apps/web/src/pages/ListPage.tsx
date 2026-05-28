@@ -27,12 +27,13 @@ import {
   Checkbox,
   EmptyState,
   Modal,
+  Pagination,
   RecordCardList,
-  Skeleton,
   Table,
   useMediaQuery,
 } from '@dar/ui';
 import { FieldValueView } from '@dar/details';
+import { ListSkeleton } from '@dar/list';
 import { FilterBar } from '@dar/search';
 
 import { useToast } from '../toast';
@@ -732,42 +733,6 @@ export function ListPage() {
   );
 }
 
-// First-paint skeleton: shown while the very first list load is in
-// flight (no cached/stale data yet, so the columns aren't known). Mirrors
-// the real layout — title + count, the toolbar row, then a card of rows —
-// with a sensible default column count so the page has weight instead of
-// a lone spinner. Once `data` exists, refetch loading is shown inline by
-// the Table's own `loading` skeleton (which uses the real columns).
-function ListSkeleton() {
-  return (
-    <div className="space-y-4" aria-busy="true">
-      <span role="status" className="sr-only">
-        Loading…
-      </span>
-      <div className="space-y-2">
-        <Skeleton className="h-7 w-48" />
-        <Skeleton className="h-4 w-24" />
-      </div>
-      <div className="flex flex-wrap gap-2">
-        <Skeleton className="h-9 w-72" />
-        <Skeleton className="h-9 w-24" />
-        <Skeleton className="h-9 w-28" />
-      </div>
-      <Card>
-        <div className="divide-y divide-gray-100">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-4 px-4 py-3">
-              {Array.from({ length: 5 }).map((__, j) => (
-                <Skeleton key={j} className="h-4 flex-1" />
-              ))}
-            </div>
-          ))}
-        </div>
-      </Card>
-    </div>
-  );
-}
-
 function capitalize(value: string): string {
   if (!value) return value;
   return value.charAt(0).toUpperCase() + value.slice(1);
@@ -779,58 +744,4 @@ function capitalize(value: string): string {
 function emptyLabel(hasQuery: boolean, chipCount: number): string {
   if (hasQuery || chipCount > 0) return 'No results match the current search / filters.';
   return 'No objects yet.';
-}
-
-interface PaginationProps {
-  page: number;
-  totalPages: number;
-  /** "N object(s)" — shown before the page indicator (#95). */
-  countLabel: string;
-  onChange: (next: number) => void;
-}
-
-function Pagination({ page, totalPages, countLabel, onChange }: PaginationProps) {
-  const prevDisabled = page <= 1;
-  const nextDisabled = page >= totalPages;
-  const buttonClass = (disabled: boolean): string =>
-    // Give the enabled button an explicit border-gray-300 (matching the
-    // Filter/Customize buttons): a bare `border` falls back to Tailwind's
-    // light-gray default, which the dark-mode utility remap can't catch
-    // and shows as a white border in dark mode.
-    `px-3 py-1 rounded border ${
-      disabled
-        ? 'text-gray-300 border-gray-200 cursor-not-allowed'
-        : 'border-gray-300 hover:bg-gray-100'
-    }`;
-  return (
-    <nav className="flex items-center justify-between text-sm text-gray-600">
-      <span>
-        {countLabel}
-        {/* A vertically-centered middot separates the count from the page
-            indicator (#95) — not a period. */}
-        <span aria-hidden className="px-2 text-gray-400">
-          ·
-        </span>
-        Page {page} of {totalPages}
-      </span>
-      <div className="flex gap-2">
-        <button
-          type="button"
-          className={buttonClass(prevDisabled)}
-          disabled={prevDisabled}
-          onClick={() => onChange(page - 1)}
-        >
-          ← Prev
-        </button>
-        <button
-          type="button"
-          className={buttonClass(nextDisabled)}
-          disabled={nextDisabled}
-          onClick={() => onChange(page + 1)}
-        >
-          Next →
-        </button>
-      </div>
-    </nav>
-  );
 }

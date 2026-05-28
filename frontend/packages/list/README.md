@@ -13,9 +13,13 @@ layer and each unit can be unit-tested in isolation:
 - **`DateHierarchyBar`** — the `date_hierarchy` drill-down breadcrumb +
   next-level buckets (Django changelist parity). Props-driven
   (`dh` + `onNavigate`), no router/business coupling.
+- **`ListSkeleton`** — first-paint placeholder for the list page (title +
+  count, toolbar row, then a card of rows) shown before the columns are
+  known. Optional `rows` / `columns` counts; no business coupling.
 
-More units (filter/columns modals, pagination, the `list_editable`
-controller) land here as the decomposition progresses.
+More units (filter/columns modals, the `list_editable` controller) land
+here as the decomposition progresses. (Generic, business-free primitives
+like `Pagination` live in `@dar/ui`, not here.)
 
 ## Rules
 

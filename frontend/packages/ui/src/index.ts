@@ -26,6 +26,9 @@ export type { TableColumn, TableProps } from './Table';
 export { RecordCardList } from './RecordCardList';
 export type { RecordCardListProps } from './RecordCardList';
 
+export { Pagination } from './Pagination';
+export type { PaginationProps } from './Pagination';
+
 export { useMediaQuery } from './useMediaQuery';
 
 export { Input } from './Input';
