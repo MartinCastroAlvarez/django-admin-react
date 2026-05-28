@@ -8,11 +8,15 @@
 // `WriteValue` (string | number | boolean | null) — FK sends the bare
 // pk, per the wire contract §5.1.
 
+import { useState } from 'react';
+import { Plus } from 'lucide-react';
+
 import type { FieldDescriptor, FieldValue, WriteValue } from '@dar/data';
 import { FieldValueView } from '@dar/details';
 import { Checkbox } from '@dar/ui';
 
 import { AutocompleteInput } from './AutocompleteInput';
+import { RelatedAddModal } from './RelatedAddModal';
 
 interface FieldInputProps {
   name: string;
@@ -80,54 +84,16 @@ export function FieldInput({ name, field, value, error, onChange }: FieldInputPr
       />
     );
   } else if (field.type === 'choice' || field.type === 'foreignkey') {
-    const choices = field.choices ?? [];
-    if (choices.length > 0) {
-      const current = field.type === 'foreignkey' ? fkId(field.value) : value;
-      control = (
-        <select
-          id={id}
-          value={current == null ? '' : String(current)}
-          onChange={(e) => onChange(e.target.value === '' ? null : e.target.value)}
-          className={base}
-        >
-          <option value="">{field.required ? '— select —' : '(none)'}</option>
-          {choices.map((c) => (
-            <option key={String(c.value)} value={String(c.value)}>
-              {c.label}
-            </option>
-          ))}
-        </select>
-      );
-    } else if (field.to) {
-      // FK with no inlined choices (large target table) — typeahead
-      // against the target model's autocomplete endpoint.
-      const currentLabel =
-        field.value && typeof field.value === 'object' && 'label' in field.value
-          ? (field.value as { label: string }).label
-          : undefined;
-      control = (
-        <AutocompleteInput
-          to={field.to}
-          value={value}
-          initialLabel={currentLabel}
-          invalid={Boolean(error?.length)}
-          onChange={onChange}
-        />
-      );
-    } else {
-      // FK with neither choices nor a `to` target — bare-pk fallback.
-      const current = fkId(field.value);
-      control = (
-        <input
-          id={id}
-          type="text"
-          defaultValue={current == null ? '' : String(current)}
-          onChange={(e) => onChange(e.target.value === '' ? null : e.target.value)}
-          placeholder="related object id"
-          className={base}
-        />
-      );
-    }
+    control = (
+      <ForeignKeyControl
+        field={field}
+        value={value}
+        error={error}
+        id={id}
+        base={base}
+        onChange={onChange}
+      />
+    );
   } else if (field.type === 'manytomany') {
     // ManyToMany write (#240). The backend accepts a list of pks
     // (form.save_m2m). When the target set is small the descriptor
@@ -282,6 +248,117 @@ export function FieldInput({ name, field, value, error, onChange }: FieldInputPr
     <Row id={id} field={field} error={error}>
       {control}
     </Row>
+  );
+}
+
+interface ForeignKeyControlProps {
+  field: FieldDescriptor;
+  value: WriteValue;
+  error: string[] | undefined;
+  id: string;
+  base: string;
+  onChange: (value: WriteValue) => void;
+}
+
+// FK / choice control with Django's related "+add" affordance (#383): a
+// "+" next to a foreign-key field opens RelatedAddModal for the target
+// model, then adds the created object to the options and selects it —
+// without leaving the parent form (Django's RelatedFieldWidgetWrapper).
+function ForeignKeyControl({ field, value, error, id, base, onChange }: ForeignKeyControlProps) {
+  const [addOpen, setAddOpen] = useState(false);
+  // The object just created via "+add", so it shows as selected even
+  // though it isn't in the inlined choices / wasn't the initial value.
+  const [added, setAdded] = useState<{ value: string | number; label: string } | null>(null);
+
+  // "+add" only for a foreign key with a known, reachable target model;
+  // plain choice enums and readonly fields get no "+".
+  const canAdd = field.type === 'foreignkey' && field.to != null && !field.readonly;
+  const onCreated = (created: { value: string | number; label: string }): void => {
+    setAdded(created);
+    onChange(created.value);
+    setAddOpen(false);
+  };
+
+  const choices = field.choices ?? [];
+  let control: React.ReactNode;
+  if (choices.length > 0) {
+    // Inlined choices (≤25 rows). Controlled by the form value so a change
+    // — or a just-added object — shows; the added object is appended as an
+    // extra option when not already listed.
+    const withAdded =
+      added && !choices.some((c) => String(c.value) === String(added.value))
+        ? [...choices, { value: added.value, label: added.label }]
+        : choices;
+    control = (
+      <select
+        id={id}
+        value={value == null ? '' : String(value)}
+        onChange={(e) => onChange(e.target.value === '' ? null : e.target.value)}
+        className={base}
+      >
+        <option value="">{field.required ? '— select —' : '(none)'}</option>
+        {withAdded.map((c) => (
+          <option key={String(c.value)} value={String(c.value)}>
+            {c.label}
+          </option>
+        ))}
+      </select>
+    );
+  } else if (field.to) {
+    // Large target table → typeahead. A just-added object isn't searchable
+    // yet, so seed its label and remount (via key) so the picker shows it
+    // as the current selection.
+    const envelopeLabel =
+      field.value && typeof field.value === 'object' && 'label' in field.value
+        ? (field.value as { label: string }).label
+        : undefined;
+    control = (
+      <AutocompleteInput
+        key={added ? `added-${added.value}` : 'init'}
+        to={field.to}
+        value={value}
+        initialLabel={added?.label ?? envelopeLabel}
+        invalid={Boolean(error?.length)}
+        onChange={onChange}
+      />
+    );
+  } else {
+    // FK with neither choices nor a `to` target — bare-pk fallback.
+    const bare = fkId(field.value);
+    control = (
+      <input
+        id={id}
+        type="text"
+        defaultValue={bare == null ? '' : String(bare)}
+        onChange={(e) => onChange(e.target.value === '' ? null : e.target.value)}
+        placeholder="related object id"
+        className={base}
+      />
+    );
+  }
+
+  if (!canAdd) return <>{control}</>;
+  return (
+    <div className="flex items-start gap-2">
+      <div className="min-w-0 flex-1">{control}</div>
+      <button
+        type="button"
+        onClick={() => setAddOpen(true)}
+        aria-label={`Add ${field.label}`}
+        title={`Add ${field.label}`}
+        className="shrink-0 rounded-md border border-gray-300 p-1.5 text-gray-600 hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+      >
+        <Plus className="h-4 w-4" aria-hidden />
+      </button>
+      {addOpen && field.to ? (
+        <RelatedAddModal
+          to={field.to}
+          title={field.label}
+          onCreated={onCreated}
+          onClose={() => setAddOpen(false)}
+        />
+      ) : null}
+    </div>
   );
 }
 
