@@ -9,8 +9,6 @@ truth** for permissions, querysets, forms, and field configuration — both
 packages honour that contract.
 
 > This document is the architectural contract for the **SPA super-layer**.
-> Any change that conflicts with it must update this file in the same PR
-> and be recorded in [`docs/agents/decisions.md`](docs/agents/decisions.md).
 > The wire-contract document (what the API actually emits / accepts) lives
 > in the **API repo** — this file refers to it but does not duplicate it.
 
@@ -216,8 +214,7 @@ Conservative, list in [`SECURITY.md`](SECURITY.md) and codified in
   with timezone).
 - `ForeignKey` → `{ "id": ..., "label": str(obj) }`.
 - `ManyToMany` → list of `{ "id": ..., "label": str(obj) }` envelopes
-  (Issue #55; supersedes the earlier "unsupported" decision logged in
-  `docs/agents/decisions.md`).
+  (Issue #55).
 - `FileField` / `ImageField` → `{ "name", "url", "size" }`; `url` defers
   to the consumer's storage backend so signed-URL backends work
   unchanged (Issue #57).
@@ -377,8 +374,7 @@ There is exactly one data path inside the SPA:
 
 - The package ships a `tailwind.config.js` with a minimal, modern, neutral
   palette and CSS-variable-backed colors for trivial recoloring.
-- Consumers can extend it via their own `tailwind.config.js`; this is
-  documented in `docs/installation.md`.
+- Consumers can extend it via their own `tailwind.config.js`.
 - **Partial replacement is supported** (e.g., override `colors`, `fontFamily`,
   `spacing`).
 - **Full replacement of the config is not a v1 goal** — it would mean every
