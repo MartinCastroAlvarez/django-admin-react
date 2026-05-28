@@ -2,7 +2,13 @@
 // rows of arbitrary shape; consumers (page packages) pass the data and
 // the cell-render function. No business knowledge.
 
-import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react';
+import {
+  useLayoutEffect,
+  useRef,
+  useState,
+  type MouseEvent as ReactMouseEvent,
+  type ReactNode,
+} from 'react';
 
 import { Checkbox } from './Checkbox';
 import { Skeleton } from './Skeleton';
@@ -23,6 +29,18 @@ export interface TableColumn<Row> {
    * identity must never be clipped.
    */
   noTruncate?: boolean;
+  /**
+   * Pin this column to the left edge of the scroll viewport — when the
+   * table scrolls horizontally, sticky columns stay visible. Sticky
+   * columns MUST form a contiguous prefix from the leading edge
+   * (selection checkbox if present, then any sticky data columns); the
+   * caller is responsible for that invariant. The primitive measures
+   * each sticky column's offset after layout and writes `style.left` so
+   * the columns stack correctly even when their widths differ. Last
+   * sticky column gets a subtle right shadow to delimit it from the
+   * scrolling content (#586 — column-lock / frozen-cols feature).
+   */
+  sticky?: boolean;
 }
 
 export interface TableProps<Row> {
@@ -106,6 +124,53 @@ export function Table<Row>({
   columnWidths,
   onColumnResize,
 }: TableProps<Row>) {
+  // Hooks must run unconditionally and in stable order on every
+  // render — the empty-state early-return below has to come AFTER
+  // every hook is called. Sticky-column state + refs (#586 frozen-cols
+  // feature) are set up here so they survive any subsequent render
+  // path (empty / loading / loaded).
+  const headerCellRefs = useRef<Record<string, HTMLTableCellElement | null>>({});
+  const checkboxHeaderRef = useRef<HTMLTableCellElement | null>(null);
+  // `stickyLefts['__select']` for the checkbox col, `stickyLefts[col.key]`
+  // for each data sticky col.
+  const [stickyLefts, setStickyLefts] = useState<Record<string, number>>({});
+
+  // Which column keys are sticky, in the rendered (left-to-right) order.
+  // Selection comes first when present; sticky data cols follow.
+  const stickyKeys: string[] = [];
+  if (selectable) stickyKeys.push('__select');
+  for (const c of columns) {
+    if (c.sticky) stickyKeys.push(c.key);
+  }
+  const lastStickyKey = stickyKeys[stickyKeys.length - 1];
+  // Stable signature for the dep array — Tailwind / eslint-react-hooks
+  // doesn't like complex expressions inline.
+  const stickyKeysSignature = stickyKeys.join(',');
+
+  useLayoutEffect(() => {
+    if (stickyKeys.length === 0) {
+      if (Object.keys(stickyLefts).length !== 0) setStickyLefts({});
+      return;
+    }
+    const next: Record<string, number> = {};
+    let acc = 0;
+    for (const key of stickyKeys) {
+      next[key] = acc;
+      const el =
+        key === '__select' ? checkboxHeaderRef.current : headerCellRefs.current[key];
+      if (el) acc += el.offsetWidth;
+    }
+    // Avoid setState loops by skipping a no-op update.
+    const changed =
+      Object.keys(next).length !== Object.keys(stickyLefts).length ||
+      stickyKeys.some((k) => next[k] !== stickyLefts[k]);
+    if (changed) setStickyLefts(next);
+    // `stickyKeys` is computed each render from columns + selectable;
+    // its content is captured via `stickyKeysSignature` so the deps
+    // array is the static set lint demands.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [columns, columnWidths, selectable, rows.length, stickyKeysSignature]);
+
   // Only fall back to the empty-state when we're genuinely empty — not
   // while a fetch is in flight, where we'd rather show skeleton rows.
   if (!loading && rows.length === 0) {
@@ -123,6 +188,22 @@ export function Table<Row>({
   // auto layout — when the user controls widths, they widen to see more).
   const hasWidths = columnWidths != null && Object.keys(columnWidths).length > 0;
   const resizable = onColumnResize != null;
+
+  // Helpers to build the sticky `<th>` / `<td>` style + className.
+  // `style.left` is set so the browser knows where to pin during
+  // horizontal scroll; the cell needs a background colour so content
+  // scrolling underneath doesn't bleed through (bg-white is in the
+  // .dark remap, so dark mode is covered).
+  function stickyStyle(key: string): { left: number; position: 'sticky' } | undefined {
+    const left = stickyLefts[key];
+    if (left === undefined) return undefined;
+    return { left, position: 'sticky' };
+  }
+  function stickyClass(key: string, base = 'bg-white'): string {
+    return stickyLefts[key] === undefined
+      ? ''
+      : `${base} z-10 ${key === lastStickyKey ? 'shadow-[2px_0_0_-1px_rgba(0,0,0,0.06)]' : ''}`;
+  }
 
   const startResize = (key: string, e: ReactMouseEvent): void => {
     e.preventDefault();
@@ -161,7 +242,12 @@ export function Table<Row>({
         <thead className="bg-gray-50 text-gray-700">
           <tr>
             {selectable && (
-              <th scope="col" className="w-10 px-4 py-2">
+              <th
+                ref={checkboxHeaderRef}
+                scope="col"
+                className={`w-10 px-4 py-2 ${stickyClass('__select', 'bg-gray-50')}`}
+                style={stickyStyle('__select')}
+              >
                 <Checkbox
                   aria-label="Select all rows on this page"
                   checked={allSelected}
@@ -172,9 +258,17 @@ export function Table<Row>({
             {columns.map((col) => {
               const align = ALIGN_CLASSES[col.align ?? 'left'];
               const sortable = col.sortable && onSort;
+              const stickyCls = col.sticky ? stickyClass(col.key, 'bg-gray-50') : '';
               return (
                 <th
                   key={col.key}
+                  ref={
+                    col.sticky
+                      ? (el) => {
+                          headerCellRefs.current[col.key] = el;
+                        }
+                      : undefined
+                  }
                   scope="col"
                   // Keyboard-operable sort (#434): a sortable header is
                   // focusable (tabIndex 0), reports its state via aria-sort,
@@ -189,7 +283,8 @@ export function Table<Row>({
                       : undefined
                   }
                   tabIndex={sortable ? 0 : undefined}
-                  className={`group relative ${hasWidths ? 'overflow-hidden' : 'whitespace-nowrap'} px-4 py-2 font-medium ${align} ${sortable ? 'cursor-pointer hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500' : ''}`}
+                  style={col.sticky ? stickyStyle(col.key) : undefined}
+                  className={`group relative ${hasWidths ? 'overflow-hidden' : 'whitespace-nowrap'} px-4 py-2 font-medium ${align} ${stickyCls} ${sortable ? 'cursor-pointer hover:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-blue-500' : ''}`}
                   onClick={sortable ? () => onSort(col.key) : undefined}
                   onKeyDown={
                     sortable
@@ -242,12 +337,19 @@ export function Table<Row>({
             ? Array.from({ length: skeletonCount }).map((_, i) => (
                 <tr key={`dar-skeleton-${i}`}>
                   {selectable && (
-                    <td className="w-10 px-4 py-2">
+                    <td
+                      className={`w-10 px-4 py-2 ${stickyClass('__select', 'bg-white')}`}
+                      style={stickyStyle('__select')}
+                    >
                       <Skeleton className="h-4 w-4" />
                     </td>
                   )}
                   {columns.map((col) => (
-                    <td key={col.key} className={`px-4 py-2 ${ALIGN_CLASSES[col.align ?? 'left']}`}>
+                    <td
+                      key={col.key}
+                      className={`px-4 py-2 ${ALIGN_CLASSES[col.align ?? 'left']} ${col.sticky ? stickyClass(col.key, 'bg-white') : ''}`}
+                      style={col.sticky ? stickyStyle(col.key) : undefined}
+                    >
                       <Skeleton className="h-4 w-full max-w-[12rem]" />
                     </td>
                   ))}
@@ -262,7 +364,11 @@ export function Table<Row>({
                     className={onRowClick ? 'cursor-pointer hover:bg-gray-50' : ''}
                   >
                     {selectable && (
-                      <td className="w-10 px-4 py-2" onClick={(e) => e.stopPropagation()}>
+                      <td
+                        className={`w-10 px-4 py-2 ${stickyClass('__select', 'bg-white')}`}
+                        style={stickyStyle('__select')}
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <Checkbox
                           aria-label="Select row"
                           checked={selected.has(key)}
@@ -273,7 +379,8 @@ export function Table<Row>({
                     {columns.map((col, ci) => (
                       <td
                         key={col.key}
-                        className={`px-4 py-2 ${ALIGN_CLASSES[col.align ?? 'left']}`}
+                        className={`px-4 py-2 ${ALIGN_CLASSES[col.align ?? 'left']} ${col.sticky ? stickyClass(col.key, 'bg-white') : ''}`}
+                        style={col.sticky ? stickyStyle(col.key) : undefined}
                       >
                         {/* Cap very wide cells and truncate with an
                         ellipsis so one long column doesn't dominate the
