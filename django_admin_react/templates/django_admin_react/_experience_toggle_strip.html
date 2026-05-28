@@ -29,8 +29,17 @@
     <strong style="font-weight:600;">Open this page in {{ react_root }}</strong>
   </a>
 </div>
-{# Inline :hover via <style> so we keep zero external CSS dependencies
-   while still meeting the "hover brightens, never dims" contract (#589). #}
+{% comment %}
+  Inline :hover via the <style> block below so we keep zero external
+  CSS dependencies while still meeting the "hover brightens, never
+  dims" contract (#589). Django hash-form comments are single-line
+  only — a multi-line hash-form leaks the hash tokens onto the page
+  as literal text (#596), so the block comment form is mandatory
+  here. (Comment text deliberately avoids quoting the tag names
+  themselves — Django's comment lexer is a naive forward scan and
+  closes on the FIRST tag-close token it sees, including ones inside
+  the body text.)
+{% endcomment %}
 <style>
   .dar-experience-toggle-link:hover,
   .dar-experience-toggle-link:focus-visible {

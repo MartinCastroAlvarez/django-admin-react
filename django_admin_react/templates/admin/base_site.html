@@ -7,16 +7,18 @@
   the first match wins). Documented in the README's
   "Legacy-admin escape hatch" section.
 
-  We extend `admin/base.html` (one level up) so:
-  - We preserve every block the consumer's own admin theme may have
-    already redefined.
-  - The original `base_site.html` blocks (`branding`, `nav-global`)
-    are passed through unchanged unless the consumer overrode them.
+  Strip placement (#595): `{% block content %}` is overridden WITHOUT
+  `{{ block.super }}` by Django's `change_list.html`, `change_form.html`,
+  `index.html`, and `login.html` — which silently discards anything we
+  put in that block on most pages a user actually visits. `{% block
+  header %}` (defined once in `admin/base.html`) is NOT overridden by
+  those templates, so the strip renders consistently across the whole
+  admin surface AND lands visually above the admin header — exactly
+  where a migration-direction banner should be.
 
-  The only thing we add is the reverse escape-hatch strip rendered
-  above `{% block content %}`. When the prefixes aren't both set, the
-  template tag renders nothing, so this override is **a pure no-op
-  for consumers who haven't opted into the escape hatch**.
+  When the prefixes aren't both set the template tag renders nothing,
+  so this override is **a pure no-op for consumers who haven't opted
+  into the escape hatch**.
 {% endcomment %}
 {% load i18n experience_toggle %}
 
@@ -29,7 +31,7 @@
 {% endif %}
 {% endblock %}
 
-{% block content %}
+{% block header %}
   {% experience_toggle_strip %}
   {{ block.super }}
 {% endblock %}

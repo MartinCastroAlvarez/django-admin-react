@@ -17,22 +17,19 @@ DEBUG = False
 ALLOWED_HOSTS = ["*"]
 
 INSTALLED_APPS = [
+    # `django_admin_react` MUST appear before `django.contrib.admin`
+    # for the package's `admin/base_site.html` override to win the
+    # template loader's left-to-right walk (#584 / #595 — without
+    # this ordering the reverse experience-toggle strip is silently
+    # invisible on every legacy admin page). Documented in the
+    # README's "Experience-toggle strip" section.
+    "django_admin_react",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    # **Minimal plug-and-play (#564 owner directive 2026-05-28):** only
-    # `django_admin_react` is registered. `pip install django-admin-react`
-    # transitively pulls in `django-admin-rest-api`; the URL include in
-    # `django_admin_react.urls` mounts the API at `<mount>/api/v1/`, so
-    # the API package does not need its own `INSTALLED_APPS` entry — the
-    # endpoints resolve through `include("django_admin_rest_api.api.urls")`
-    # without the AppConfig being registered (the API ships zero models +
-    # zero signals, so the registration adds nothing the URL include needs).
-    # Test-suite parity with the README's recommended snippet.
-    "django_admin_react",
     # Test-only app with a FileField model retained for back-compat
     # (the package's own suite owns the upload tests now).
     "tests.test_project.uploads",
