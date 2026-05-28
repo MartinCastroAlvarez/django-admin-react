@@ -18,10 +18,11 @@ export type FieldType =
   | 'datetime'
   | 'time'
   | 'uuid'
-  // Structured types the backend emits (#242). `json` and `duration`
-  // have editable SPA widgets; others currently render read-only.
+  // Structured types the backend emits (#242). `json` / `duration` /
+  // `array` have editable SPA widgets; others currently render read-only.
   | 'json'
   | 'duration'
+  | 'array'
   | 'choice'
   | 'foreignkey'
   | 'manytomany'

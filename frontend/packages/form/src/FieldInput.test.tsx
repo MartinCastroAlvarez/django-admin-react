@@ -108,6 +108,24 @@ describe('FieldInput — structured editors (#242)', () => {
     expect(onChange).toHaveBeenCalledWith('1 00:00:00');
   });
 
+  it('renders a comma-delimited text input for an array field', () => {
+    const onChange = vi.fn();
+    render(
+      <FieldInput
+        name="tags"
+        field={field({ type: 'array' })}
+        value="a,b,c"
+        error={undefined}
+        onChange={onChange}
+      />,
+    );
+    const input = screen.getByRole('textbox');
+    expect(input.tagName).toBe('INPUT');
+    expect(input).toHaveValue('a,b,c');
+    fireEvent.change(input, { target: { value: 'a,b' } });
+    expect(onChange).toHaveBeenCalledWith('a,b');
+  });
+
   it('keeps a readonly json field read-only (no textbox)', () => {
     render(
       <FieldInput

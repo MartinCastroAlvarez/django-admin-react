@@ -252,6 +252,23 @@ export function FieldInput({ name, field, value, error, onChange }: FieldInputPr
         className={base}
       />
     );
+  } else if (field.type === 'array') {
+    // ArrayField editor (#242): a comma-delimited text input, mirroring
+    // Django's SimpleArrayField widget. The form seeds it as the
+    // comma-joined value; the raw string is sent as-is and SimpleArrayField
+    // splits + coerces each element (reporting a bad element as a normal
+    // field error). Values containing commas aren't supported — the same
+    // limitation as Django's default admin widget.
+    control = (
+      <input
+        id={id}
+        type="text"
+        value={value == null ? '' : String(value)}
+        placeholder="comma,separated,values"
+        onChange={(e) => onChange(e.target.value)}
+        className={base}
+      />
+    );
   } else {
     // Fallback: render value read-only for any type without an editor.
     control = (
