@@ -30,6 +30,20 @@ export function columnWidthsKey(appLabel: string, modelName: string): string {
   return `dar:colwidths:${appLabel}:${modelName}`;
 }
 
+/**
+ * Locked (frozen) non-pk list columns for one model (a Set of column
+ * names). The pk column is implicitly always locked (never stored in
+ * this set). Locked columns must form a contiguous prefix starting
+ * from the pk — the modal's lock/unlock actions enforce that by
+ * setting / clearing every column between the pk and the target.
+ *
+ * Persisted separately from `columnsKey` (hidden) and the column-order
+ * list so the three preferences can evolve independently.
+ */
+export function lockedColsKey(appLabel: string, modelName: string): string {
+  return `dar:colslocked:${appLabel}:${modelName}`;
+}
+
 /** Persisted `list_filter` selections for one model. */
 export function filtersKey(appLabel: string, modelName: string): string {
   return `dar:filters:${appLabel}:${modelName}`;

@@ -13,6 +13,7 @@ export {
   PRESERVED_ON_LOGOUT,
   columnsKey,
   columnWidthsKey,
+  lockedColsKey,
   filtersKey,
   detailCollapseKey,
 } from './keys';

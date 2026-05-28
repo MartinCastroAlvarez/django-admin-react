@@ -12,6 +12,7 @@ import { Link, useHref, useNavigate, useParams, useSearchParams } from 'react-ro
 import { useApiClient, useList, type ActionDescriptor, type ListRow } from '@dar/data';
 import {
   columnsKey,
+  lockedColsKey,
   columnWidthsKey,
   filtersKey,
   readJSON,
@@ -122,6 +123,14 @@ export function ListPage() {
   // operator's layout survives reloads. A UI preference (not data) —
   // stored via @dar/customization, the single home for such prefs.
   const [hiddenCols, setHiddenCols] = usePersistedSet(columnsKey(appLabel, modelName));
+  // Locked / frozen columns (#586 frozen-cols feature). PK is always
+  // locked (never in the set); the set stores names of non-pk
+  // columns the user has locked. Locked columns MUST form a
+  // contiguous prefix from the pk — `<ColumnLayoutModal>` enforces
+  // that invariant via its lockThrough / unlockFrom helpers.
+  const [lockedCols, setLockedCols] = usePersistedSet(
+    lockedColsKey(appLabel, modelName),
+  );
   const [colsOpen, setColsOpen] = useState(false);
 
   // Drag-to-resize column widths, persisted per app/model (a UI
@@ -425,6 +434,14 @@ export function ListPage() {
       header: c.label,
       sortable: c.sortable,
       noTruncate: isPkCol(c.name),
+      // Frozen / sticky columns (#586): pk is implicitly always
+      // locked + sticky; the user-locked set adds more. The Table
+      // primitive measures pixel offsets after layout and writes
+      // `style.left` so the sticky cluster stays pinned during
+      // horizontal scroll. The mobile RecordCardList path renders
+      // its own stacked layout (no horizontal scroll, no Table) so
+      // this flag is a desktop/tablet-only concern by construction.
+      sticky: isPkCol(c.name) || lockedCols.has(c.name),
       render: (row: ListRow) => {
         if (c.editable && canEdit) {
           const pk = String(row.pk);
@@ -801,25 +818,28 @@ export function ListPage() {
             orderedDescriptors={orderedDescriptors}
             isPk={isPkCol}
             hiddenCols={hiddenCols}
+            lockedCols={lockedCols}
             visibleColumnCount={visibleColumnCount}
             onToggle={toggleColumn}
             onReorder={setColOrder}
-            // The layout is "customised" when either preference has
-            // any state — a non-empty saved order or any hidden col.
-            // Both persist via localStorage (`dar:colorder:v1:*` and
-            // the columnsKey set); resetting drops both back to the
-            // empty / default state so the ModelAdmin's registered
-            // order + visibility take over again on the next render
-            // (#590).
-            isCustomised={colOrder.length > 0 || hiddenCols.size > 0}
+            onSetLocked={(next) => setLockedCols(() => next)}
+            // The layout is "customised" when any preference has
+            // state — saved order, hidden col, or locked col. All
+            // three persist via localStorage; resetting drops them
+            // back to empty so the ModelAdmin's registered defaults
+            // take over again on the next render (#590).
+            isCustomised={
+              colOrder.length > 0 || hiddenCols.size > 0 || lockedCols.size > 0
+            }
             onReset={() => {
               // `usePersistedSet`'s setter takes a functional updater,
               // not the raw next-value (unlike `useState`); returning a
-              // fresh empty Set clears every saved-hidden entry. The
+              // fresh empty Set clears every saved entry. The
               // `colOrder` setter from `usePersistedState` is the
               // plain useState variant, so it accepts the raw next.
               setColOrder([]);
               setHiddenCols(() => new Set<string>());
+              setLockedCols(() => new Set<string>());
             }}
           />
         </Suspense>
