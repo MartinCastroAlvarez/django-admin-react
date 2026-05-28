@@ -139,3 +139,52 @@ describe('FieldInput — structured editors (#242)', () => {
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
   });
 });
+
+describe('FieldInput — related "+add" affordance (#383)', () => {
+  it('shows a "+add" button for a foreign-key field with a target model', () => {
+    render(
+      <FieldInput
+        name="author"
+        field={field({
+          type: 'foreignkey',
+          to: { app_label: 'lib', model_name: 'author' },
+          choices: [{ value: 1, label: 'Ada' }],
+        })}
+        value={null}
+        error={undefined}
+        onChange={() => {}}
+      />,
+    );
+    expect(screen.getByRole('button', { name: /Add F/ })).toBeInTheDocument();
+  });
+
+  it('does NOT show "+add" for a plain choice field (no target model)', () => {
+    render(
+      <FieldInput
+        name="status"
+        field={field({ type: 'choice', choices: [{ value: 'a', label: 'Active' }] })}
+        value={null}
+        error={undefined}
+        onChange={() => {}}
+      />,
+    );
+    expect(screen.queryByRole('button', { name: /Add/ })).not.toBeInTheDocument();
+  });
+
+  it('does NOT show "+add" for a readonly foreign key', () => {
+    render(
+      <FieldInput
+        name="author"
+        field={field({
+          type: 'foreignkey',
+          readonly: true,
+          to: { app_label: 'lib', model_name: 'author' },
+        })}
+        value={null}
+        error={undefined}
+        onChange={() => {}}
+      />,
+    );
+    expect(screen.queryByRole('button', { name: /Add/ })).not.toBeInTheDocument();
+  });
+});
