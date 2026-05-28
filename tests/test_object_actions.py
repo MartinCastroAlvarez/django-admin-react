@@ -192,6 +192,34 @@ def test_detail_change_actions_attr_without_hook(superuser_client: Client) -> No
 
 
 @pytest.mark.django_db
+def test_detail_fallback_filters_by_allowed_permissions(superuser_client: Client) -> None:
+    """Defense in depth (#455): without ``get_change_actions``, the
+    ``change_actions`` fallback also filters each declared action by its
+    callable's ``allowed_permissions`` against ``has_<perm>_permission``,
+    mirroring Django's ``_filter_actions_by_permissions``. An action whose
+    required perm fails is dropped from ``object_actions``."""
+    u = _make_user()
+
+    def _delete_action(self, request, queryset):  # noqa: ANN001, ANN202, ARG001
+        queryset.delete()
+
+    _delete_action.allowed_permissions = ("delete",)
+
+    def _no_delete(self, request, obj=None):  # noqa: ANN001, ANN202, ARG001
+        return False
+
+    with admin_attr(
+        User,
+        change_actions=["_delete_action"],
+        _delete_action=_delete_action,
+        has_delete_permission=_no_delete,
+    ):
+        body = superuser_client.get(DETAIL_URL.format(pk=u.pk)).json()
+    # _delete_action requires `delete`; the admin denies → action dropped.
+    assert body["object_actions"] == []
+
+
+@pytest.mark.django_db
 def test_detail_filters_unpermitted_actions(superuser_client: Client) -> None:
     """An action the user is not permitted to run (per get_change_actions)
     does not appear in object_actions."""
