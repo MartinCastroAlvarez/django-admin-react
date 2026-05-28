@@ -167,8 +167,13 @@ Every endpoint added must include all of these tests before merging:
 ## 6. Dependencies
 
 - Runtime dependencies are deliberately minimal: only Django
-  (`>=5.0,<6.0`). No DRF, no auth framework, no JWT lib. See
-  `ACCEPTANCE.md` §4.9 S-47.
+  (`>=5.0,<7.0`), the sibling
+  [`django-admin-rest-api`](https://pypi.org/project/django-admin-rest-api/)
+  (the JSON API), and the sibling
+  [`django-admin-mcp-api`](https://pypi.org/project/django-admin-mcp-api/)
+  (the MCP exposure of the same API). No DRF, no auth framework, no JWT
+  lib — the API package reuses Django's session + CSRF; the SPA reuses
+  the same.
 - Dev dependencies are pinned in `pyproject.toml` and locked with Poetry.
   Frontend dev dependencies are locked with `pnpm-lock.yaml`.
 - Every new third-party dependency (runtime **or** dev) requires a
@@ -368,7 +373,10 @@ Three things remain the **consumer's** responsibility:
 
 ## 10. Cross-references
 
-- [`ACCEPTANCE.md`](ACCEPTANCE.md) §4 — measurable security criteria.
+- The **API package's** own `SECURITY.md` in
+  [`MartinCastroAlvarez/django-admin-api`](https://github.com/MartinCastroAlvarez/django-admin-api/blob/main/SECURITY.md)
+  — every API-side concern (each `/api/v1/...` endpoint, the
+  serializer denylist, the permission gates) lives there.
 - [`docs/threat-model.md`](docs/threat-model.md) — STRIDE pass per
   endpoint group.
 - [`docs/agents/security-expert/AGENT.md`](docs/agents/security-expert/AGENT.md)
