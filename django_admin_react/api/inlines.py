@@ -32,6 +32,7 @@ from django.contrib.admin.utils import lookup_field
 from django.db.models import ForeignKey
 from django.db.models import ManyToManyField
 from django.db.models import Model
+from django.forms.widgets import PasswordInput
 from django.http import HttpRequest
 
 from django_admin_react.api.serializers import field_type_for
@@ -293,6 +294,36 @@ def _fields_meta(
     return out
 
 
+def _password_redacted_fields(
+    inline: InlineModelAdmin, parent: Model, request: HttpRequest
+) -> set[str]:
+    """Inline field names whose stored value must be redacted from the row
+    payload because the admin masks them with ``forms.PasswordInput`` (#504
+    — the inline half of the detail-view fix in #522).
+
+    Django's admin renders a ``PasswordInput`` with ``render_value=False``
+    by default, so a secret kept on a field the inline routes through it
+    (typically ``formfield_overrides = {CharField: {"widget":
+    PasswordInput}}``) is never echoed back into the form. The SPA reads
+    inline values over the wire, so the equivalent is to drop the value
+    from the payload. Detection reads the inline's own bound form widgets
+    (the source of truth Django already applied), so ``formfield_overrides``
+    and a custom inline ``form`` are both honoured; a field the admin opted
+    into echoing (``render_value=True``) is left alone. Degrades to an empty
+    set on any error — never 500s the parent detail.
+    """
+    try:
+        base_fields = inline.get_formset(request, parent).form.base_fields
+    except Exception:  # pragma: no cover - defensive, mirrors this module
+        return set()
+    redacted: set[str] = set()
+    for name, field in base_fields.items():
+        widget = getattr(field, "widget", None)
+        if isinstance(widget, PasswordInput) and not getattr(widget, "render_value", False):
+            redacted.add(name)
+    return redacted
+
+
 def _rows_for_inline(
     inline: InlineModelAdmin,
     parent: Model,
@@ -306,10 +337,18 @@ def _rows_for_inline(
         queryset = inline.get_queryset(request).filter(**{fk_name: parent.pk})
     except Exception:  # pragma: no cover
         return []
+    # Fields the admin masks with PasswordInput: redact their value (#504),
+    # computed once for the whole inline rather than per row.
+    redacted = _password_redacted_fields(inline, parent, request)
     rows: list[dict[str, Any]] = []
     for obj in queryset:
         fields_payload: dict[str, Any] = {}
         for name in visible_fields:
+            if name in redacted:
+                # Never read or serialize a masked field's secret — ship
+                # null, matching PasswordInput(render_value=False).
+                fields_payload[name] = None
+                continue
             model_field = None
             try:
                 model_field = inline.model._meta.get_field(name)
