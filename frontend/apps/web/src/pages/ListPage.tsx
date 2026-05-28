@@ -581,27 +581,30 @@ export function ListPage() {
           ) : null
         }
         trailing={
-          // Filter-row trailing slot (#554): "Clear all" + "Customize"
-          // as the last two buttons on the row, in that order.
-          // "Clear all" is the shared <ResetButton> primitive from
-          // @dar/ui (#590) — same component the Layout modal uses for
-          // its "Reset" affordance, with the label + icon overridden
-          // for filter-row muscle memory. Renders disabled (not
-          // hidden) when no filters are applied so the affordance
-          // stays discoverable.
+          // Filter-row trailing slot (#554): "Clear all" + Refresh +
+          // Customize, in that order, as the last three buttons on
+          // the row. "Clear all" hides entirely when no filters apply
+          // (owner directive, v1.3.3) — the filter pills themselves
+          // signal there's nothing to clear, so a disabled button
+          // would be redundant chrome (CLAUDE.md §7). The Customize
+          // affordance is icon-only (the cog speaks for itself
+          // alongside Refresh — text + count chip were noise on a
+          // row that's already crowded).
           <>
-            <ResetButton
-              isDirty={activeFilterCount > 0}
-              onReset={() => patchParams((next) => filters.forEach((f) => next.delete(f.name)))}
-              label="Clear all"
-              disabledHint="No filters applied"
-              icon={<X className="h-4 w-4" aria-hidden />}
-              title="Clear all filters"
-            />
+            {activeFilterCount > 0 ? (
+              <ResetButton
+                isDirty
+                onReset={() =>
+                  patchParams((next) => filters.forEach((f) => next.delete(f.name)))
+                }
+                label="Clear all"
+                icon={<X className="h-4 w-4" aria-hidden />}
+                title="Clear all filters"
+              />
+            ) : null}
             {/* Refresh (#592): refetch the changelist + filter counts
                 with the current filter / search / ordering / page
-                state preserved. Between Reset and Customize on the
-                filter row. */}
+                state preserved. Between Clear all and Customize. */}
             <RefreshButton
               onRefresh={refresh}
               tooltip="Refresh"
@@ -612,16 +615,14 @@ export function ListPage() {
               onClick={() => setColsOpen(true)}
               aria-haspopup="dialog"
               aria-label="Customize columns"
-              title="Customize columns"
-              className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-100"
+              title={
+                hiddenCols.size > 0
+                  ? `Customize columns (${hiddenCols.size} hidden)`
+                  : 'Customize columns'
+              }
+              className="inline-flex shrink-0 items-center justify-center rounded-md border border-gray-300 px-2 py-1.5 text-sm hover:bg-gray-100"
             >
               <Settings2 className="h-4 w-4" aria-hidden />
-              Customize
-              {hiddenCols.size > 0 && (
-                <span className="ml-0.5 rounded-full bg-gray-500 px-1.5 py-0.5 text-xs text-white">
-                  {hiddenCols.size} hidden
-                </span>
-              )}
             </button>
           </>
         }
