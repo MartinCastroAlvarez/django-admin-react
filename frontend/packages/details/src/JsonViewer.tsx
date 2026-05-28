@@ -68,7 +68,11 @@ function Node({ value, depth }: { value: unknown; depth: number }) {
       <span className="text-purple-600 dark:text-purple-400">{value ? 'true' : 'false'}</span>
     );
   if (typeof value === 'number')
-    return <span className="text-blue-600 dark:text-blue-400">{String(value)}</span>;
+    // Use text-blue-700 (the variant with a `.dark` remap in
+    // apps/web/src/index.css) so dark-mode coverage is automatic
+    // — the JSX-side `dark:` variant alone is not what the
+    // check-dark-mode-coverage.mjs lint accepts (#433).
+    return <span className="text-blue-700">{String(value)}</span>;
   if (typeof value === 'string')
     return (
       <span className="text-green-700 dark:text-green-400">
