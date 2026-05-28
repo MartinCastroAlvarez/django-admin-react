@@ -235,6 +235,44 @@ export function FieldInput({ name, field, value, error, onChange }: FieldInputPr
         className={base}
       />
     );
+  } else if (field.type === 'range') {
+    // RangeField editor (#242, paired with the write-half in #533). Two
+    // text inputs (lower / upper) wired to the `[lower, upper]` array
+    // shape `_range_endpoints` accepts. Subtype-aware formatting is the
+    // user's job: Django's `MultiValueField` sub-fields validate each
+    // side per its subtype (date / datetime / int / decimal) and surface
+    // a bad value as a normal field error — same contract as the json /
+    // duration / array editors. An empty side = unbounded. The form
+    // seeds the pair from the read envelope `{subtype, value: {lower,
+    // upper, bounds}}`.
+    const pair: [string, string] =
+      Array.isArray(value) && value.length === 2
+        ? [String(value[0] ?? ''), String(value[1] ?? '')]
+        : ['', ''];
+    control = (
+      <div className="flex items-center gap-2">
+        <input
+          id={id}
+          type="text"
+          value={pair[0]}
+          placeholder="lower"
+          aria-label={`${field.label} lower bound`}
+          onChange={(e) => onChange([e.target.value, pair[1]])}
+          className={base}
+        />
+        <span aria-hidden className="text-gray-400">
+          –
+        </span>
+        <input
+          type="text"
+          value={pair[1]}
+          placeholder="upper"
+          aria-label={`${field.label} upper bound`}
+          onChange={(e) => onChange([pair[0], e.target.value])}
+          className={base}
+        />
+      </div>
+    );
   } else {
     // Fallback: render value read-only for any type without an editor.
     control = (

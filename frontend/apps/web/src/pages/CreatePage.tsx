@@ -145,6 +145,26 @@ function CreateForm({ schema, onCreate, onCancel }: CreateFormProps) {
         init[name] = Array.isArray(v) ? v.join(',') : null;
         continue;
       }
+      if (field.type === 'range') {
+        // RangeField editor (#242): unwrap the read envelope
+        // `{subtype, value: {lower, upper, bounds}}` into the
+        // `[lower, upper]` array `_range_endpoints` accepts (#533). A
+        // missing default → two empty inputs (unbounded both sides).
+        if (v && typeof v === 'object' && 'value' in v) {
+          const inner = (v as { value?: unknown }).value;
+          if (inner && typeof inner === 'object') {
+            const lower = (inner as { lower?: unknown }).lower;
+            const upper = (inner as { upper?: unknown }).upper;
+            init[name] = [
+              lower == null ? '' : String(lower),
+              upper == null ? '' : String(upper),
+            ];
+            continue;
+          }
+        }
+        init[name] = ['', ''];
+        continue;
+      }
       // Seed with the model default where the wire carries a scalar;
       // FK envelopes / html start empty for a new object.
       init[name] = v !== null && typeof v !== 'object' ? v : null;

@@ -138,6 +138,43 @@ describe('FieldInput — structured editors (#242)', () => {
     );
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
   });
+
+  it('renders two text inputs for a range field and sends [lower, upper] on change', () => {
+    const onChange = vi.fn();
+    render(
+      <FieldInput
+        name="window"
+        field={field({ type: 'range', label: 'Window' })}
+        value={['2026-01-01', '2026-12-31']}
+        error={undefined}
+        onChange={onChange}
+      />,
+    );
+    const lower = screen.getByRole('textbox', { name: /lower bound/i });
+    const upper = screen.getByRole('textbox', { name: /upper bound/i });
+    expect(lower).toHaveValue('2026-01-01');
+    expect(upper).toHaveValue('2026-12-31');
+    // Editing the lower side preserves the upper side in the emitted pair.
+    fireEvent.change(lower, { target: { value: '2026-02-01' } });
+    expect(onChange).toHaveBeenLastCalledWith(['2026-02-01', '2026-12-31']);
+    // …and vice versa: the upper change preserves the lower side.
+    fireEvent.change(upper, { target: { value: '2027-01-01' } });
+    expect(onChange).toHaveBeenLastCalledWith(['2026-01-01', '2027-01-01']);
+  });
+
+  it('renders two empty range inputs when value is null (a new object)', () => {
+    render(
+      <FieldInput
+        name="window"
+        field={field({ type: 'range', label: 'Window' })}
+        value={null}
+        error={undefined}
+        onChange={() => {}}
+      />,
+    );
+    expect(screen.getByRole('textbox', { name: /lower bound/i })).toHaveValue('');
+    expect(screen.getByRole('textbox', { name: /upper bound/i })).toHaveValue('');
+  });
 });
 
 describe('FieldInput — related "+add" affordance (#383)', () => {
