@@ -74,9 +74,8 @@ permissions at runtime from `GET /api/v1/registry/`. Add a new
 
 Real captures of the **django-admin-react SPA** rendering the bundled
 `examples/` apps — driven entirely by each app's `ModelAdmin`.
-Captured **manually** against a local dev server (the project deliberately
-does not require Playwright / Cypress / e2e tooling; see
-[`TESTING.md`](TESTING.md)).
+Captured **manually** against a local dev server (no Playwright / Cypress /
+e2e tooling required).
 
 | Sign in (package login)                            | Registry / home                                       |
 | -------------------------------------------------- | ----------------------------------------------------- |
@@ -508,7 +507,6 @@ and the [project board](https://github.com/users/MartinCastroAlvarez/projects/3)
 ✅ = shipped in the current alpha. 🟡 = not yet built (tracked). This
 column is the **backend** capability only — for which surfaces the React
 UI renders today, see the [frontend tracker (#160)](https://github.com/MartinCastroAlvarez/django-admin-react/issues/160).
-[`ACCEPTANCE.md`](ACCEPTANCE.md) carries the full criterion-by-criterion list.
 
 ---
 
@@ -598,5 +596,9 @@ See [`SECURITY.md`](SECURITY.md). Do **not** open a public issue.
 
 ## Contributing
 
-Humans and AI agents both welcome. Start with
-[`CONTRIBUTING.md`](CONTRIBUTING.md).
+Open an [Issue](https://github.com/MartinCastroAlvarez/django-admin-react/issues/new)
+or a [Discussion](https://github.com/MartinCastroAlvarez/django-admin-react/discussions)
+before sending a PR for anything non-trivial. **API-side contributions** (any
+`/api/v1/...` endpoint, the wire contract, permission gates, serializer
+denylist) go to [`MartinCastroAlvarez/django-admin-api`](https://github.com/MartinCastroAlvarez/django-admin-api)
+— this repo owns only the **React SPA super-layer** on top.

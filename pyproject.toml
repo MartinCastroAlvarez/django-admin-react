@@ -45,21 +45,14 @@ django = ">=5.0,<7.0"
 # The JSON REST API surface (every list / detail / create / update /
 # delete / action / history / autocomplete endpoint) lives in this
 # sibling package — same `ModelAdmin` source of truth, same permissions,
-# no new features. This repo's role is the React super-layer on top of
-# it (META #544). The package is plug-and-play: it is added to
-# `INSTALLED_APPS` by `django_admin_react.apps.DjangoAdminReactConfig`,
-# and its `urls` are included by `django_admin_react.urls`. Phase 1 of
-# the migration only **adds** the dependency; the local
-# `django_admin_react/api/` tree is removed in later phases.
-django-admin-rest-api = "^0.1.0a0"
-# `django-admin-mcp-api` (sibling published to PyPI as part of the same
-# three-repo split, #544): an MCP-protocol adapter over the REST API so
-# agents reach the SAME `ModelAdmin`-driven surface. Wire-protocol-only
-# layer — adds NO new functionality, permissions, or validation; reuses
-# the rest-api package transitively. Phase 1 just lands the dependency
-# alongside `django-admin-rest-api`; later phases ship the joint
-# `INSTALLED_APPS` + URL include guidance, so a consumer's `pip install
-# django-admin-react` gives them the React SPA AND the MCP API server.
+# no new features. **This repo implements no API of its own**; it is the
+# React SPA super-layer over `django-admin-rest-api`. The package's URLs
+# are included by `django_admin_react.urls`, and consumers add
+# `"django_admin_rest_api"` to `INSTALLED_APPS` alongside this package.
+django-admin-rest-api = "^1.0.0"
+# `django-admin-mcp-api` — MCP-protocol adapter over the same REST API
+# so agents reach the SAME `ModelAdmin`-driven surface. Wire-protocol-only
+# layer; adds NO new functionality, permissions, or validation.
 django-admin-mcp-api = "^0.1.0a0"
 
 [tool.poetry.group.dev.dependencies]

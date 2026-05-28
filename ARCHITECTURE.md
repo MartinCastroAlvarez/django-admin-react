@@ -153,9 +153,7 @@ django-admin-react/
 │
 ├── ARCHITECTURE.md              # ← you are here
 ├── SECURITY.md
-├── CONTRIBUTING.md
-├── CLAUDE.md                    # Required reading for AI agents
-├── README.md
+├── README.md                    # product sales page + install + 3-repo links
 ├── LICENSE
 └── pyproject.toml               # Poetry-managed
 ```
@@ -165,7 +163,7 @@ Live status / backlog / coordination lives on GitHub (Issues, the
 Discussions, PR review comments), not in committed markdown.
 
 Every folder above has its own `README.md` describing its purpose and what
-belongs there. This is enforced in [`CLAUDE.md`](CLAUDE.md).
+belongs there.
 
 ---
 

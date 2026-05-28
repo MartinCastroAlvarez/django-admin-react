@@ -48,8 +48,14 @@ from django.utils.http import urlencode
 from django.views.generic import View
 
 from django_admin_react import conf as dar_conf
-from django_admin_react.api.permissions import is_admin_user
-from django_admin_react.api.registry import get_admin_site
+
+# Re-use the API package's helpers — this repo implements no API of its
+# own (#544), and the staff-gate / admin-site lookup logic is the same
+# `ModelAdmin`-driven source of truth. The SPA shell view consults them
+# only to decide whether to render the React index for the requesting
+# user; the wire calls then go through the package's endpoints.
+from django_admin_rest_api.api.permissions import is_admin_user
+from django_admin_rest_api.api.registry import get_admin_site
 
 # Path the Vite build writes its manifest to (matches
 # ``frontend/apps/web/vite.config.ts``'s build.outDir + manifest).
@@ -374,7 +380,7 @@ def _redirect_to_login(request: HttpRequest) -> HttpResponse:
     The ``next`` query parameter brings the user back to the SPA
     after login.
     """
-    from django_admin_react.api.registry import get_admin_site
+    from django_admin_rest_api.api.registry import get_admin_site
 
     login_url: str | None = None
 

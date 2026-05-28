@@ -34,7 +34,11 @@ from django.shortcuts import render
 from django.views.generic import View
 
 from django_admin_react import conf as dar_conf
-from django_admin_react.api.registry import get_admin_site
+
+# Re-use the API package's admin-site lookup (this repo implements no
+# API; the registry helper lives there). The PWA only needs the active
+# `AdminSite.name` for the manifest's start URL.
+from django_admin_rest_api.api.registry import get_admin_site
 
 # Theme colours keyed by the resolved colour scheme. Kept here (not in
 # the SPA's CSS-var system) because the manifest is rendered server-side

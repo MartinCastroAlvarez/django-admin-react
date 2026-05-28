@@ -23,8 +23,14 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    # The JSON REST API surface (sibling package — implements every
+    # `/api/v1/...` endpoint). `django_admin_react.urls` includes its
+    # URLs at the same `api/v1/` prefix the SPA already expects.
+    "django_admin_rest_api",
+    # This package — the React SPA super-layer.
     "django_admin_react",
-    # Test-only app with a FileField model for the upload write path (#241).
+    # Test-only app with a FileField model retained for back-compat
+    # (the package's own suite owns the upload tests now).
     "tests.test_project.uploads",
 ]
 
