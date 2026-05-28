@@ -141,6 +141,16 @@ DJANGO_ADMIN_REACT = {
                                 # active states. Hex only (validated);
                                 # injected as the --dar-primary CSS var, so
                                 # rebranding needs no React rebuild.
+
+    # Auth + API mount
+    "REACT_LOGIN": True,        # bool — React-rendered login is the default;
+                                # the SPA shell is served to anonymous users
+                                # and posts to /api/v1/login/. Set False to
+                                # opt back into the legacy admin HTML login.
+    "API_URL_PREFIX": None,     # str | None — point the SPA at a separately-
+                                # mounted django-admin-rest-api (e.g.
+                                # "/api/api/v1/"). Default None keeps the
+                                # inline include the package ships today.
 }
 ```
 
