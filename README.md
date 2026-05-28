@@ -78,23 +78,38 @@ permissions at runtime from `GET /api/v1/registry/`. Add a new
 
 Real captures of the **django-admin-react SPA** rendering the bundled
 `examples/` apps — driven entirely by each app's `ModelAdmin`.
-Captured **manually** against a local dev server (no Playwright / Cypress /
-e2e tooling required).
 
-| Sign in (package login)                            | Registry / home                                       |
-| -------------------------------------------------- | ----------------------------------------------------- |
-| ![Sign in](https://raw.githubusercontent.com/MartinCastroAlvarez/django-admin-react/main/docs/screenshots/01-spa-login.png)      | ![Registry](https://raw.githubusercontent.com/MartinCastroAlvarez/django-admin-react/main/docs/screenshots/02-spa-registry.png)     |
+### Light + dark — your `ModelAdmin` decides the chrome, the theme is operator/user choice
 
-| List view (`list_display` + search)                     | Detail view                                          |
-| ------------------------------------------------------- | ---------------------------------------------------- |
-| ![List](https://raw.githubusercontent.com/MartinCastroAlvarez/django-admin-react/main/docs/screenshots/03-spa-list.png)               | ![Detail](https://raw.githubusercontent.com/MartinCastroAlvarez/django-admin-react/main/docs/screenshots/05-spa-detail.png)        |
+| Registry / home (dark)                                                                                                            | List view — `list_display` + filters + actions                                                                                |
+| --------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| ![Registry dark](https://raw.githubusercontent.com/MartinCastroAlvarez/django-admin-react/main/docs/screenshots/02-spa-registry.png) | ![List light](https://raw.githubusercontent.com/MartinCastroAlvarez/django-admin-react/main/docs/screenshots/03-spa-list.png) |
 
-| Mobile (375 px)                                            | API: `GET /api/v1/registry/`                               |
-| ---------------------------------------------------------- | ---------------------------------------------------------- |
-| ![Mobile](https://raw.githubusercontent.com/MartinCastroAlvarez/django-admin-react/main/docs/screenshots/04-spa-list-mobile.png)         | ![Registry JSON](https://raw.githubusercontent.com/MartinCastroAlvarez/django-admin-react/main/docs/screenshots/06-registry-api-json.png) |
+| List view (dark)                                                                                                                  | Detail view                                                                                                                  |
+| --------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| ![List dark](https://raw.githubusercontent.com/MartinCastroAlvarez/django-admin-react/main/docs/screenshots/07-spa-list-dark.png) | ![Detail light](https://raw.githubusercontent.com/MartinCastroAlvarez/django-admin-react/main/docs/screenshots/05-spa-detail.png) |
 
-Screenshots use deterministic synthetic fixtures (no real names,
-emails, account numbers, or PII).
+| Detail view (dark)                                                                                                                       | Sign in (package login)                                                                                                            |
+| ---------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| ![Detail dark](https://raw.githubusercontent.com/MartinCastroAlvarez/django-admin-react/main/docs/screenshots/08-spa-detail-dark.png) | ![Sign in](https://raw.githubusercontent.com/MartinCastroAlvarez/django-admin-react/main/docs/screenshots/01-spa-login.png)        |
+
+### Phone-shaped (375 px) — `RecordCardList` fallback, full feature parity
+
+| Mobile list (cards)                                                                                                                 | Mobile detail (stacked fieldsets)                                                                                                       |
+| ----------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| ![Mobile list](https://raw.githubusercontent.com/MartinCastroAlvarez/django-admin-react/main/docs/screenshots/04-spa-list-mobile.png) | ![Mobile detail](https://raw.githubusercontent.com/MartinCastroAlvarez/django-admin-react/main/docs/screenshots/09-spa-detail-mobile.png) |
+
+### One API, many surfaces
+
+The SPA is one consumer of the wire format. The same JSON powers the
+React app, the [MCP layer](https://pypi.org/project/django-admin-mcp-api/),
+and any client you write:
+
+![Registry JSON](https://raw.githubusercontent.com/MartinCastroAlvarez/django-admin-react/main/docs/screenshots/06-registry-api-json.png)
+
+Screenshots are captured deterministically against the
+[`examples/`](./examples) apps' fixtures — no real names, emails,
+account numbers, or PII.
 
 ---
 
