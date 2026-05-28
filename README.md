@@ -20,8 +20,11 @@ urlpatterns = [
 ]
 ```
 
-> **Pre-alpha.** Available on PyPI as an alpha. Pin tightly; expect
-> breaking changes between alpha releases. Track progress on the
+> **Beta — v1.0.0.** Available on PyPI; the SPA + the API
+> ([`django-admin-rest-api`](https://pypi.org/project/django-admin-rest-api/))
+> + the MCP adapter
+> ([`django-admin-mcp-api`](https://pypi.org/project/django-admin-mcp-api/))
+> all share the v1 wire contract. Track progress on the
 > [Project board](https://github.com/users/MartinCastroAlvarez/projects/3)
 > and the [Issues list](https://github.com/MartinCastroAlvarez/django-admin-react/issues).
 

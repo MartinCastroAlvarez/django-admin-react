@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "django-admin-react"
-version = "0.2.0a8"
+version = "1.0.0"
 description = "A drop-in React single-page admin for Django, driven entirely by ModelAdmin."
 authors = ["django-admin-react contributors"]
 license = "MIT"
@@ -10,7 +10,7 @@ repository = "https://github.com/MartinCastroAlvarez/django-admin-react"
 documentation = "https://github.com/MartinCastroAlvarez/django-admin-react#readme"
 keywords = ["django", "admin", "react", "spa", "tailwind"]
 classifiers = [
-    "Development Status :: 2 - Pre-Alpha",
+    "Development Status :: 4 - Beta",
     "Environment :: Web Environment",
     "Framework :: Django",
     "Framework :: Django :: 5.0",
