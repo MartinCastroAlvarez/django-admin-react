@@ -265,30 +265,58 @@ urlpatterns = [
 ]
 ```
 
-#### Legacy-admin escape hatch (optional)
+#### Experience-toggle strip (optional)
 
-During the rollout, show an in-SPA banner on every page that links to
-**the same page** in the original admin. End-users with muscle memory
-for `/admin/` (or bookmarks pointing at it) can return to the classic
-surface in one click while you close feature gaps in the SPA:
+During the rollout, show a thin **persistent** strip at the top of
+every page on **both** admins that links to the same page on the
+other admin. Users can switch surfaces in one click, regardless of
+which one they're on:
 
 ```python
 # settings.py
 DJANGO_ADMIN_REACT = {
-    "LEGACY_ADMIN_URL_PREFIX": "admin/",   # the legacy admin's mount
+    "LEGACY_ADMIN_URL_PREFIX": "admin/",     # the legacy admin's mount
+    "REACT_ADMIN_URL_PREFIX":  "admin2/",    # this package's mount
 }
 ```
 
-The value must match the prefix you mounted the legacy admin under in
-`urls.py`. When set, the SPA renders a thin notice banner at the top
-of every page linking the matching legacy URL (computed by swapping
-the prefix — both admins honour the same `app_label/model_name/...`
-URL shape). The banner is dismissible per session (`sessionStorage`),
-so each session shows it once and a user who forgot the escape hatch
-exists is reminded the next time they log in.
+Both values must match the prefixes you used in `urls.py`. When set:
 
-When you remove the setting (or set it to `None`), the banner
-disappears on the next page load — completing the migration.
+- The **React SPA** renders a strip linking the same path under the
+  legacy admin's mount (with `?query=string` preserved and a trailing
+  slash, since Django admin URLs require one).
+- The **legacy Django admin** renders the mirror strip linking the
+  matching React URL.
+
+Set `LEGACY_ADMIN_URL_PREFIX` alone if you only want the SPA → legacy
+direction (reverse direction stays off).
+
+##### `INSTALLED_APPS` ordering
+
+For the legacy-side strip, list `django_admin_react` **before**
+`django.contrib.admin`. Django's template loader resolves
+`admin/base_site.html` left-to-right and the first match wins —
+the package's override of that template injects the strip:
+
+```python
+INSTALLED_APPS = [
+    "django_admin_react",            # ← BEFORE django.contrib.admin
+    "django.contrib.admin",
+    # ...
+]
+```
+
+If you don't enable the legacy-side strip (`REACT_ADMIN_URL_PREFIX`
+unset) the ordering doesn't matter — the override is a no-op for
+consumers who haven't opted in.
+
+##### UX contract
+
+The strip is **subtle and persistent**: one line tall, neutral
+chrome, no dismiss control. Operators turn it on/off via the
+settings; end-users do not. When you remove the settings (or set
+them to `None`), the strips disappear on the next page load —
+completing the migration.
 
 ---
 

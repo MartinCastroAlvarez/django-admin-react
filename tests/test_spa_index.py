@@ -227,6 +227,96 @@ def test_legacy_admin_meta_absent_for_empty_string(superuser_client: Client) -> 
 
 
 # --------------------------------------------------------------------------- #
+# Reverse escape-hatch strip on the legacy admin (#584)                       #
+# --------------------------------------------------------------------------- #
+def _render_experience_strip(path: str, settings_overrides: dict[str, Any]) -> str:
+    """Render the inclusion-tag inline against a synthetic request.
+
+    Mirrors the way Django's admin templates render: a context dict that
+    includes ``request``. Returns the rendered HTML (or "" when the tag
+    short-circuits).
+    """
+    from django.template import Context
+    from django.template import Template
+    from django.test import RequestFactory
+
+    with override_settings(DJANGO_ADMIN_REACT=settings_overrides):
+        _reload_conf()
+        try:
+            req = RequestFactory().get(path)
+            tpl = Template("{% load experience_toggle %}{% experience_toggle_strip %}")
+            rendered = tpl.render(Context({"request": req}))
+            return rendered.strip()
+        finally:
+            _reload_conf()
+
+
+def test_reverse_strip_renders_nothing_when_both_prefixes_unset() -> None:
+    """No prefixes configured → no DOM, no extra work (#584). Existing
+    consumers who haven't opted into the escape hatch see no change to
+    the legacy admin chrome."""
+    out = _render_experience_strip("/admin/auth/user/", {})
+    assert out == ""
+
+
+def test_reverse_strip_renders_nothing_when_only_legacy_set() -> None:
+    """Only `LEGACY_ADMIN_URL_PREFIX` (the SPA-side direction) → the
+    reverse strip is intentionally off. We do NOT guess the consumer's
+    SPA mount; the strip only renders when both prefixes agree (#584)."""
+    out = _render_experience_strip(
+        "/admin/auth/user/",
+        {"LEGACY_ADMIN_URL_PREFIX": "admin/"},
+    )
+    assert out == ""
+
+
+def test_reverse_strip_renders_link_under_react_mount() -> None:
+    """Both prefixes set + request on the legacy admin → reverse strip
+    points at the same path under the React mount (#584). The strip is
+    the legacy mirror of the SPA-side banner."""
+    out = _render_experience_strip(
+        "/admin/auth/user/",
+        {
+            "LEGACY_ADMIN_URL_PREFIX": "admin/",
+            "REACT_ADMIN_URL_PREFIX": "admin2/",
+        },
+    )
+    assert 'href="/admin2/auth/user/"' in out
+    assert "Open this page in /admin2/" in out
+
+
+def test_reverse_strip_preserves_query_string() -> None:
+    """The strip carries `request.GET` to the React side verbatim so a
+    user on a filtered legacy changelist lands on the matching filtered
+    React list (#584, mirror of #582 on the SPA side)."""
+    out = _render_experience_strip(
+        "/admin/auth/user/?ordering=id&status=active",
+        {
+            "LEGACY_ADMIN_URL_PREFIX": "admin/",
+            "REACT_ADMIN_URL_PREFIX": "admin2/",
+        },
+    )
+    # `&` is HTML-escaped to `&amp;` in attributes by Django's
+    # auto-escape; the rendered URL is still correct.
+    assert 'href="/admin2/auth/user/?ordering=id&amp;status=active"' in out
+
+
+def test_reverse_strip_short_circuits_off_legacy_mount() -> None:
+    """Defensive — the template override could in principle reach pages
+    outside the legacy mount (e.g. if a consumer reuses
+    `admin/base_site.html` from a non-admin app). The strip checks the
+    current path matches the legacy prefix before rendering (#584)."""
+    out = _render_experience_strip(
+        "/some-other-app/page/",
+        {
+            "LEGACY_ADMIN_URL_PREFIX": "admin/",
+            "REACT_ADMIN_URL_PREFIX": "admin2/",
+        },
+    )
+    assert out == ""
+
+
+# --------------------------------------------------------------------------- #
 # Bundle wiring                                                               #
 # --------------------------------------------------------------------------- #
 @pytest.mark.django_db
