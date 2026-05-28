@@ -22,8 +22,6 @@ import {
   updateObject,
   useApiClient,
   useDetail,
-  useList,
-  type ActionDescriptor,
   type CustomView,
   type DeletePreviewResponse,
   type DetailResponse,
@@ -186,18 +184,13 @@ export function DetailPage() {
   const [historyOpen, setHistoryOpen] = useState(false);
   const { plural: modelPlural } = useModelMeta(appLabel, modelName);
 
-  // Changelist actions on the detail page (#555). `ModelAdmin.actions` is
-  // surfaced in the list response, not the detail response, so we read it
-  // through `useList` with `pageSize: 1` — cheap and idempotent (the data
-  // layer caches it; arrives essentially free for users who came from the
-  // list). The action runner is the **same** endpoint the changelist uses,
-  // called with a one-pk array; the SPA pulls in `requires_confirmation`,
-  // `message_user` toasts, and the intermediate-redirect-in-new-tab flow
-  // unchanged.
-  const listMeta = useList({ client, appLabel, modelName, page: 1, pageSize: 1 });
-  const detailActions: ActionDescriptor[] = listMeta.data?.actions ?? [];
-  const [pendingAction, setPendingAction] = useState<ActionDescriptor | null>(null);
-  const [runningAction, setRunningAction] = useState(false);
+  // Detail-page action buttons (#571): per-object actions only, via
+  // `django-object-actions` (`change_actions`). Surfaced by the API as
+  // `data.object_actions` and rendered below via <ObjectActionButton>.
+  // The original #555 attempt — running `ModelAdmin.actions` (changelist
+  // bulk actions) on a one-pk slice — was the wrong primitive: bulk
+  // actions are *list* semantics and confused the operator on a
+  // single-object page. Reverted in v1.0.2.
 
   if (loading && !data) return <RecordSkeleton />;
   if (error && !data) {
@@ -212,57 +205,16 @@ export function DetailPage() {
   // changelist filters (#441) when they arrived from a filtered list.
   const listPath = listPathWithPreservedFilters(`/${appLabel}/${modelName}`, searchParams);
 
-  // Detail-page action runner (#555). Mirrors the changelist's runner
-  // exactly — `requires_confirmation` opens the styled confirm modal;
-  // otherwise runs immediately. The wire payload is a one-pk array
-  // (`[pk]`), so the server-side permission gate + queryset filter
-  // operates over a single row identically to the changelist flow.
-  function requestDetailAction(action: ActionDescriptor): void {
-    if (runningAction) return;
-    if (action.requires_confirmation) {
-      setPendingAction(action);
-    } else {
-      void performDetailAction(action);
-    }
-  }
-
-  async function performDetailAction(action: ActionDescriptor): Promise<void> {
-    if (runningAction) return;
-    setRunningAction(true);
-    setPendingAction(null);
-    try {
-      const result = await client.runAction(appLabel, modelName, action.name, [pk]);
-      // Intermediate / form-returning action (#250): the server forwards
-      // the action's Location as `redirect`; open it in a new tab so the
-      // operator can complete the flow there — the SPA stays mounted.
-      if (result.redirect) {
-        window.open(result.redirect, '_blank', 'noopener,noreferrer');
-        toast.info(`${action.label} opened in a new tab.`);
-        return;
-      }
-      await refresh();
-      // Prefer the action's own `message_user` output (#442).
-      const msgs = result.messages ?? [];
-      if (msgs.length > 0) {
-        for (const m of msgs) {
-          if (m.level === 'error' || m.level === 'warning') toast.error(m.message);
-          else if (m.level === 'info' || m.level === 'debug') toast.info(m.message);
-          else toast.success(m.message);
-        }
-      } else {
-        toast.success(`${action.label} — “${data?.label ?? ''}”.`);
-      }
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Action failed.');
-    } finally {
-      setRunningAction(false);
-    }
-  }
-
   return (
     <div className="space-y-4">
+      {/* Header (#572): the title is the page's most important element
+          and gets as much horizontal space as it needs (`flex-1
+          min-w-0`); the toolbar is `shrink-0` and only pushes the title
+          when it genuinely can't fit on its row. `justify-end` on the
+          toolbar's flex-wrap keeps wrapped button rows flush right to
+          the page padding, instead of left-aligned within their column. */}
       <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-        <div className="space-y-1">
+        <div className="min-w-0 flex-1 space-y-1">
           <Breadcrumb
             items={[
               { label: 'Home', to: '/' },
@@ -278,7 +230,7 @@ export function DetailPage() {
           <h1 className="text-2xl font-semibold">{data.label}</h1>
         </div>
         {!editing && (
-          <div className="flex flex-wrap gap-2">
+          <div className="flex shrink-0 flex-wrap justify-end gap-2">
             <button
               type="button"
               onClick={() => setHistoryOpen(true)}
@@ -323,23 +275,6 @@ export function DetailPage() {
                 onError={(message) => toast.error(message)}
               />
             ))}
-            {/* Changelist actions on the detail page (#555) — render only
-                when the user has change permission, mirroring the bulk
-                runner's visibility on the list page. Each button fires
-                the same `runAction` endpoint with a one-pk array. */}
-            {canChange &&
-              detailActions.map((action) => (
-                <button
-                  key={action.name}
-                  type="button"
-                  onClick={() => requestDetailAction(action)}
-                  disabled={runningAction}
-                  title={action.description}
-                  className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-50"
-                >
-                  {action.label}
-                </button>
-              ))}
             {canChange && (
               <Button variant="primary" onClick={() => setEditing(true)}>
                 Edit
@@ -436,31 +371,6 @@ export function DetailPage() {
           pk={pk}
           onClose={() => setHistoryOpen(false)}
         />
-      )}
-
-      {/* Detail-page action confirm modal (#555) — same styled
-          confirmation as the changelist (#206), reads exactly "Run X on
-          this object?" to make the single-pk scope explicit. */}
-      {pendingAction && (
-        <Modal
-          title="Confirm action"
-          onClose={() => setPendingAction(null)}
-          footer={
-            <>
-              <Button variant="secondary" onClick={() => setPendingAction(null)}>
-                Cancel
-              </Button>
-              <Button variant="primary" onClick={() => void performDetailAction(pendingAction)}>
-                Run
-              </Button>
-            </>
-          }
-        >
-          <p className="text-sm text-gray-700">
-            Run <span className="font-medium">{pendingAction.label}</span> on{' '}
-            <span className="font-medium">“{data.label}”</span>?
-          </p>
-        </Modal>
       )}
     </div>
   );
