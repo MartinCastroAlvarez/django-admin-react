@@ -5,18 +5,37 @@
   rather than a new admin CSS file so the strip ships without any
   staticfiles requirement on the consumer's side.
 
+  Theme awareness (#589): the link uses CSS custom properties that fall
+  back to a legible-everywhere palette but get overridden by Django
+  admin's own theme variables (`--body-fg`, `--link-fg`,
+  `--link-hover-color`) where present. This keeps contrast WCAG-AA on
+  both Django's default light theme and the dark-mode toggle Django
+  added in 4.2 — hover *brightens* the link, never dims it.
+
   When `visible` is false (either prefix unset, request missing, or
   current path outside the legacy mount), this template renders
   nothing — the surrounding {% block %} stays clean.
 {% endcomment %}
 {% if visible %}
 <div role="region" aria-label="Experience toggle"
-     style="padding:.25rem .75rem; border-bottom:1px solid #e5e7eb;
-            background:#f9fafb; font-size:.75rem; color:#4b5563;">
+     style="padding:.25rem .75rem; border-bottom:1px solid var(--border-color, #e5e7eb);
+            background:var(--darkened-bg, #f9fafb); font-size:.75rem;
+            color:var(--body-fg, #4b5563);">
   <a href="{{ target }}" target="_self" rel="noopener"
-     style="color:inherit; text-decoration:none;">
+     class="dar-experience-toggle-link"
+     style="color:var(--link-fg, #1f2937); text-decoration:underline;
+            text-underline-offset:2px;">
     Looking for the new admin experience?
     <strong style="font-weight:600;">Open this page in {{ react_root }}</strong>
   </a>
 </div>
+{# Inline :hover via <style> so we keep zero external CSS dependencies
+   while still meeting the "hover brightens, never dims" contract (#589). #}
+<style>
+  .dar-experience-toggle-link:hover,
+  .dar-experience-toggle-link:focus-visible {
+    color: var(--link-hover-color, #000000);
+    text-decoration-thickness: 2px;
+  }
+</style>
 {% endif %}

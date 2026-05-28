@@ -17,7 +17,7 @@
 // rendered without a handle, with a small lock icon and a title=
 // tooltip, so the operator can see WHY it's not draggable.
 
-import { GripVertical, Lock } from 'lucide-react';
+import { GripVertical, Lock, RotateCcw } from 'lucide-react';
 import {
   DndContext,
   KeyboardSensor,
@@ -36,7 +36,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
-import { Checkbox, Modal } from '@dar/ui';
+import { Checkbox, Modal, ResetButton } from '@dar/ui';
 
 export interface ColumnLayoutDescriptor {
   name: string;
@@ -58,6 +58,12 @@ export interface ColumnLayoutModalProps {
   onToggle: (name: string, visibleCount: number) => void;
   /** Persist the new ordering of the non-pk columns. */
   onReorder: (nextNonPkOrder: string[]) => void;
+  /** Is the column layout currently customised vs the registered
+   *  `ModelAdmin` default? Drives the Reset button's enabled state. */
+  isCustomised: boolean;
+  /** Discard any per-user reorder + hide preferences and fall back to
+   *  the registered `ModelAdmin` default (#590). */
+  onReset: () => void;
 }
 
 // Default export to make `React.lazy(() => import('./ColumnLayoutModal'))`
@@ -71,6 +77,8 @@ export default function ColumnLayoutModal({
   visibleColumnCount,
   onToggle,
   onReorder,
+  isCustomised,
+  onReset,
 }: ColumnLayoutModalProps) {
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -98,10 +106,24 @@ export default function ColumnLayoutModal({
 
   return (
     <Modal title="Layout" onClose={onClose}>
-      <p className="mb-2 text-xs text-gray-500">
-        Toggle to show or hide. Drag the handle to reorder (keyboard:
-        Tab to a handle, then Space + arrow keys + Space to drop).
-      </p>
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <p className="text-xs text-gray-500">
+          Toggle to show or hide. Drag the handle to reorder (keyboard:
+          Tab to a handle, then Space + arrow keys + Space to drop).
+        </p>
+        {/* Reset (#590): discards the per-user layout and falls back
+            to the registered ModelAdmin default. Disabled when the
+            layout is already at default — the tooltip explains why
+            so the affordance stays discoverable. */}
+        <ResetButton
+          isDirty={isCustomised}
+          onReset={onReset}
+          label="Reset"
+          disabledHint="Layout is already at default"
+          icon={<RotateCcw className="h-4 w-4" aria-hidden />}
+          title="Reset to the default layout"
+        />
+      </div>
       <ul className="space-y-1">
         {pkRow ? (
           <LockedRow

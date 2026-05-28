@@ -905,17 +905,48 @@ function DeleteButton({ label, loadPreview, onConfirm }: DeleteButtonProps) {
   );
 }
 
+// CollapsedEmptyInline (#591) — a slim card showing only the inline's
+// title + a caret toggle. The body (the "No X yet" copy + a hint to
+// enter edit mode) is hidden by default; clicking the title expands
+// it. Default-collapsed every page load — per-user persistence isn't
+// worth the storage for a detail-page hint.
+function CollapsedEmptyInline({ label }: { label: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Card>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-expanded={open}
+        className="flex w-full items-center justify-between gap-2 text-left text-base font-semibold text-gray-900"
+      >
+        <span>{label}</span>
+        <ChevronDown
+          className={`h-4 w-4 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`}
+          aria-hidden
+        />
+      </button>
+      {open ? (
+        <p className="mt-3 text-sm text-gray-500">
+          No {label.toLowerCase()} yet. Click <span className="font-medium">Edit</span> to
+          add the first one.
+        </p>
+      ) : null}
+    </Card>
+  );
+}
+
 function InlineSection({ inline }: { inline: InlineDescriptor }) {
+  // Empty inline (#591):
+  // - Not addable → hide the whole section (Option A). Empty + read-only
+  //   has zero information value and just lengthens the page.
+  // - Addable → render as a single-line collapsed card with a caret
+  //   (Option B). The operator can see the inline EXISTS (so they
+  //   know to click Edit to add a first child) but the "No X yet"
+  //   placeholder no longer eats vertical space on every load.
   if (inline.rows.length === 0) {
-    // An empty inline the user can't add to is pure noise on the detail
-    // page (#411) — hide the whole section. An empty but *addable* inline
-    // stays, so the first child can still be added.
     if (!inline.can_add) return null;
-    return (
-      <Card title={inline.label}>
-        <p className="py-4 text-sm text-gray-500">No {inline.label.toLowerCase()} yet.</p>
-      </Card>
-    );
+    return <CollapsedEmptyInline label={inline.label} />;
   }
 
   // Per-row link to the child's own change page (#384 — Django's
