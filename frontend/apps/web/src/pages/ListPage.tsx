@@ -319,6 +319,18 @@ export function ListPage() {
       const result = await client.runAction(appLabel, modelName, action.name, pks);
       setSelected(new Set());
       setSelectAcross(false);
+      // Intermediate / form-returning action (#250). When the admin action
+      // returns an HttpResponse (e.g. Django's delete-selected, or a
+      // custom action that needs a confirmation/parameter page), the
+      // backend forwards its Location as `redirect`. Open it in a new tab
+      // so the operator can complete the flow there — the SPA stays
+      // mounted, no silent no-op. (Parameterised in-SPA forms are a
+      // follow-up; this closes the "silent no-op" minimum.)
+      if (result.redirect) {
+        window.open(result.redirect, '_blank', 'noopener,noreferrer');
+        toast.info(`${action.label} opened in a new tab.`);
+        return;
+      }
       await refresh();
       // Prefer the action's own message_user output (#442); fall back to a
       // generic confirmation when the action queued nothing.
