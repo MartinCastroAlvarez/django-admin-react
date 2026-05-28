@@ -8,6 +8,7 @@
 // text (e.g. a `CharField` holding `<script>`) stays inert. The trust
 // boundary is identical to Django's `mark_safe`. See SECURITY.md + #172.
 
+import { Suspense, lazy } from 'react';
 import { Check, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
@@ -19,6 +20,37 @@ import {
   type FieldType,
   type FieldValue,
 } from '@dar/data';
+
+// Lazy-loaded so detail pages whose models hold no large JSON-shaped
+// strings pay zero bundle weight for the viewer (#576). Vite splits the
+// import boundary into its own chunk; the fallback below is the same
+// monospace block we render below the threshold, so the transition is
+// imperceptible when the chunk arrives.
+const JsonViewer = lazy(() => import('./JsonViewer'));
+
+// Threshold below which we don't bother with the viewer — a small JSON
+// blob renders fine as plain text and any chrome is overkill (#576).
+// 1 KB is the issue-acceptance threshold.
+const JSON_VIEWER_THRESHOLD = 1024;
+
+// Cheap detection: a string field whose trimmed value starts with `{`
+// or `[` AND parses as JSON. We only call `JSON.parse` after the
+// length + bracket-shape gate to keep the read path cheap for every
+// detail-page render.
+function tryParseLargeJson(value: unknown): { raw: string; parsed: unknown } | null {
+  if (typeof value !== 'string') return null;
+  if (value.length < JSON_VIEWER_THRESHOLD) return null;
+  const trimmed = value.trimStart();
+  if (trimmed.length === 0) return null;
+  const first = trimmed[0];
+  if (first !== '{' && first !== '[') return null;
+  try {
+    const parsed = JSON.parse(value) as unknown;
+    return { raw: value, parsed };
+  } catch {
+    return null;
+  }
+}
 
 interface FieldValueViewProps {
   value: FieldValue | undefined;
@@ -64,6 +96,22 @@ export function FieldValueView({ value, type }: FieldValueViewProps) {
       );
     }
     return <span className="font-medium text-gray-700">{value.label}</span>;
+  }
+  // JSON-shaped string fields (#576): a TextField / JSONField whose
+  // string value parses as JSON and exceeds the threshold renders
+  // through the syntax-highlighted, collapsible viewer with a
+  // copy-the-original-string button. Below the threshold, or for
+  // non-JSON strings, fall through to the plain `renderValue` path
+  // — small snippets are fine as monospace text and any chrome would
+  // be overkill (CLAUDE.md §7, no redundant chrome). The viewer is
+  // lazy-loaded so detail pages without JSON fields pay nothing.
+  const json = tryParseLargeJson(value);
+  if (json) {
+    return (
+      <Suspense fallback={<pre className="whitespace-pre-wrap font-mono text-xs">{json.raw}</pre>}>
+        <JsonViewer raw={json.raw} parsed={json.parsed} />
+      </Suspense>
+    );
   }
   // FileField / ImageField: a download link to the stored file (matching
   // Django admin's "Currently: <a>" affordance). No URL → plain name.
