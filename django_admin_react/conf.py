@@ -62,19 +62,20 @@ DEFAULTS: dict[str, Any] = {
     # falls back to this default, since the value is written into a
     # ``<style>`` block and must not be able to inject CSS.
     "PRIMARY_COLOR": "#2563eb",
-    # ``REACT_LOGIN`` — opt-in React-rendered login (Issue #167).
-    # Default ``False`` keeps today's behavior: ``SpaIndexView``
-    # redirects anonymous / unauthorized users to Django's HTML login
-    # (or the package's own ``<mount>/login/`` page). When ``True``,
-    # the SPA shell is served to anonymous users (with the CSRF cookie
-    # set) so the React app can render its own login form, which POSTs
-    # to ``/api/v1/login/``. The auth *mechanism* is unchanged — still
-    # Django's ``authenticate``/``login`` behind the JSON endpoint
-    # (`api/views/auth.py`); only the UI surface differs. The shell
-    # carries no user data, so serving it to anonymous users discloses
-    # nothing the static bundle wouldn't, and every data API call still
-    # returns 403 until the user authenticates.
-    "REACT_LOGIN": False,
+    # ``REACT_LOGIN`` — React-rendered login is the **default** so the
+    # SPA fully replaces the Django admin URL surface end-to-end (owner
+    # directive 2026-05-28). ``SpaIndexView`` serves the React shell to
+    # anonymous users (with the CSRF cookie set) and the in-SPA login
+    # form POSTs to the API package's ``/api/v1/login/``. A consumer
+    # who wants the legacy HTML-admin login back can opt out with
+    # ``"REACT_LOGIN": False`` — the package's own ``<mount>/login/``
+    # endpoint is still mounted in either mode. The auth *mechanism* is
+    # unchanged in both modes (Django's ``authenticate``/``login``
+    # behind the JSON endpoint); only the UI surface differs. The
+    # shell carries no user data — serving it to anonymous users
+    # discloses nothing the static bundle wouldn't, and every data API
+    # call still returns 403 until the user authenticates.
+    "REACT_LOGIN": True,
     # PWA (Issue #86) — all optional; sane defaults make the manifest
     # work with zero config. See ``django_admin_react/pwa.py`` +
     # ``docs/ux/pwa.md``.

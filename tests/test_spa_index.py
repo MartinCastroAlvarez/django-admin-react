@@ -59,29 +59,30 @@ def fake_manifest(tmp_path: Path) -> Path:
 # Auth gate                                                                   #
 # --------------------------------------------------------------------------- #
 @pytest.mark.django_db
-def test_anonymous_user_redirected_to_login(anon_client: Client) -> None:
+def test_anonymous_user_gets_shell_under_react_login_default(anon_client: Client) -> None:
+    """Default mode (`REACT_LOGIN=True`, the post-2026-05-28 default):
+    anonymous users get the React shell so the in-SPA login form renders
+    — replacing the legacy admin login URL surface end-to-end. The shell
+    carries no user data; every API call still 403s until the user is
+    authenticated."""
     response = anon_client.get(ROOT_URL)
-    assert response.status_code == 302
-    # The package leaves LOGIN_URL up to the consumer's settings — only
-    # assert that the redirect carries the SPA path as the ``next``
-    # parameter so the user lands back here after login. The ``next``
-    # value is percent-encoded (CodeQL py/url-redirection fix), so the
-    # raw path appears encoded in Location; decode the query to compare.
-    location = response["Location"]
-    assert "next=" in location
-    query = parse_qs(urlsplit(location).query)
-    assert query["next"][0].startswith(ROOT_URL)
+    assert response.status_code == 200
+    body = response.content.decode("utf-8")
+    # The shell is what's served (not a redirect).
+    assert 'name="dar-mount"' in body
 
 
 @pytest.mark.django_db
-def test_authenticated_non_staff_redirected(user_client: Client) -> None:
-    """Non-staff users do not see the SPA, even if logged in."""
+def test_authenticated_non_staff_gets_shell_under_react_login_default(user_client: Client) -> None:
+    """Non-staff users get the React shell under the new `REACT_LOGIN=True`
+    default; the in-SPA login form re-renders for them and the API still
+    403s every wire call so no data leaks. (The shell is purely chrome —
+    serving it to a non-staff session discloses nothing the static bundle
+    wouldn't.)"""
     response = user_client.get(ROOT_URL)
-    # The package treats them like anonymous for the SPA — same redirect
-    # path. (The API returns 403, but the SPA shell is a UI surface and
-    # bouncing through login is the friendlier flow.)
-    assert response.status_code == 302
-    assert "next=" in response["Location"]
+    assert response.status_code == 200
+    body = response.content.decode("utf-8")
+    assert 'name="dar-mount"' in body
 
 
 @pytest.mark.django_db
@@ -340,13 +341,20 @@ def test_invalid_theme_cookie_is_ignored(superuser_client: Client) -> None:
 # --------------------------------------------------------------------------- #
 # REACT_LOGIN — serve the shell to anonymous users (Issue #167)               #
 # --------------------------------------------------------------------------- #
-def test_react_login_off_anon_still_redirected(anon_client: Client) -> None:
-    """Default (REACT_LOGIN unset): anonymous → 302 to the login page."""
-    with override_settings(DJANGO_ADMIN_REACT={}):
+def test_react_login_off_anon_redirected(anon_client: Client) -> None:
+    """Opt-out (`REACT_LOGIN=False`): anonymous users are redirected to
+    the legacy login page with a `?next=` round-trip back to the SPA.
+    Preserved as the escape hatch for consumers who don't want the
+    React-rendered login (the default is `True` since 2026-05-28)."""
+    with override_settings(DJANGO_ADMIN_REACT={"REACT_LOGIN": False}):
         _reload_conf()
         try:
             response = anon_client.get(ROOT_URL)
             assert response.status_code == 302
+            location = response["Location"]
+            assert "next=" in location
+            query = parse_qs(urlsplit(location).query)
+            assert query["next"][0].startswith(ROOT_URL)
         finally:
             _reload_conf()
 
