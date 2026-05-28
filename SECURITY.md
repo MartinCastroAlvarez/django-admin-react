@@ -103,10 +103,9 @@ them must not merge.
    `exclude`. The set of readable fields is similarly derived from
    `get_fields(request, obj)`/`get_fieldsets(...)`.
 7. **Never serialize passwords, tokens, API keys, or other secret-shaped
-   fields.** A denylist of common patterns lives in
-   `api/serializers.py` and is applied **on top of** the
-   `exclude`/`readonly_fields` rules (defense in depth). Documented in
-   `docs/api-contract.md`.
+   fields.** A denylist of common patterns lives in the
+   `django-admin-rest-api` package and is applied **on top of** the
+   `exclude`/`readonly_fields` rules (defense in depth).
 8. **Writes always go through the admin form.** Create and update must
    instantiate `ModelAdmin.get_form(request, obj=...)` and call
    `form.is_valid()`. No manual `setattr(obj, field, ...)` from JSON.
@@ -144,22 +143,14 @@ Every endpoint added must include all of these tests before merging:
 ## 5. Secrets in the repository
 
 - `.env`, `*.pem`, `*.key`, `*.crt`, and `secrets/` are gitignored.
-- Never paste a token, password, or API key into any file in this repo
-  (including `docs/agents/`, PR descriptions, Issues, Discussions, commit
-  messages). **Partial / redacted token references** (e.g., `ghp_…XYZ`)
-  are also forbidden and detected by the pre-commit hook +
-  `tests/test_security.py`.
-- If a secret is accidentally committed, the response is:
-  1. Rotate the secret immediately on the upstream provider.
-  2. **Wait for human approval** before rewriting history. No agent may
-     `git push --force` autonomously. Once approved, force-push the
-     rewritten history that removes the secret and notify downstream
-     consumers.
-  3. Open a GitHub Issue labelled `incident:secret-leak` describing what
-     happened and what was rotated. The Issue itself is the durable
-     record; an Issue with that label active is a "kill switch" entry
-     that disables auto-merge per
-     `docs/agents/autonomy-policy.md` §3.
+- Never paste a token, password, or API key into any file in this repo,
+  PR description, Issue, Discussion, or commit message. **Partial /
+  redacted token references** (e.g., `ghp_…XYZ`) are also forbidden and
+  detected by the pre-commit hook.
+- If a secret is accidentally committed: (1) rotate it immediately on
+  the upstream provider; (2) request approval to rewrite history; (3)
+  open a GitHub Issue labelled `incident:secret-leak` as the durable
+  record.
 - A pre-commit hook (`.pre-commit-config.yaml`) runs `gitleaks` plus a
   custom `pygrep` for partial token patterns. Enable it locally with:
   `pre-commit install`.
@@ -176,12 +167,9 @@ Every endpoint added must include all of these tests before merging:
   the same.
 - Dev dependencies are pinned in `pyproject.toml` and locked with Poetry.
   Frontend dev dependencies are locked with `pnpm-lock.yaml`.
-- Every new third-party dependency (runtime **or** dev) requires a
-  matching entry in `docs/agents/decisions.md` explaining why and what
-  alternative was rejected.
-- Run `./scripts/audit-deps.sh` before every release. CI is intentionally
-  absent (repo-owner direction); the dep audit is a local gate that the
-  Merger / Releaser owns.
+- Every new third-party dependency (runtime **or** dev) goes through PR
+  review explaining why and what alternative was rejected.
+- Run `./scripts/audit-deps.sh` before every release.
 
 ## 7. Build & release
 
@@ -193,20 +181,17 @@ Every endpoint added must include all of these tests before merging:
 - The PyPI token lives in environment variables only
   (`POETRY_PYPI_TOKEN_PYPI`), never in any file in the repo. The token
   is **never** echoed or logged by `scripts/deploy.sh`.
-- Releases require a **human maintainer** (tier 6 in
-  `docs/agents/autonomy-policy.md`). Agents do not tag, do not publish,
-  do not auto-bump the version.
+- Releases require a **human maintainer**. The publish is driven by the
+  `release.yml` workflow (OIDC Trusted Publishing — no stored token);
+  the maintainer triggers it by publishing a GitHub Release.
 - TestPyPI may be used for verification by the maintainer with a
   separate token; same hygiene rules apply.
 
 ## 8. Static analysis (local + CI)
 
-The earlier "local-only, no CI in v0.x" posture was revisited and
-reversed (issue #452 — regressions were slipping onto `main` under
-CodeQL-only gating; see `docs/agents/decisions.md`). **The test suites
-now run server-side in CI** (`.github/workflows/ci.yml`): backend
-`pytest` and the frontend `pnpm` gate (typecheck + lint + test + build),
-so a red suite cannot merge.
+**The test suites run server-side in CI**
+(`.github/workflows/ci.yml`): backend `pytest` and the frontend `pnpm`
+gate (typecheck + lint + test + build), so a red suite cannot merge.
 
 Enforcing the **Python lint gate** in CI is a near-term follow-up:
 `scripts/lint.sh` currently runs two formatters (`ruff format` + `black`)
@@ -377,12 +362,13 @@ Three things remain the **consumer's** responsibility:
   [`MartinCastroAlvarez/django-admin-api`](https://github.com/MartinCastroAlvarez/django-admin-api/blob/main/SECURITY.md)
   — every API-side concern (each `/api/v1/...` endpoint, the
   serializer denylist, the permission gates) lives there.
-- [`docs/threat-model.md`](docs/threat-model.md) — STRIDE pass per
-  endpoint group.
-- [`docs/agents/security-expert/AGENT.md`](docs/agents/security-expert/AGENT.md)
-  — Security Lead role contract.
-- [`docs/agents/security-expert/REVIEW_CHECKLIST.md`](docs/agents/security-expert/REVIEW_CHECKLIST.md)
-  — what Security checks on every PR.
+- [`README.md`](README.md) — install + three-repo cross-links.
+- [`ARCHITECTURE.md`](ARCHITECTURE.md) — what lives in this repo
+  vs. the API / MCP siblings.
+- The **API package's** own `SECURITY.md` —
+  [`MartinCastroAlvarez/django-admin-api`](https://github.com/MartinCastroAlvarez/django-admin-api/blob/main/SECURITY.md)
+  — for every API-side gate (each `/api/v1/...` endpoint, the
+  serializer denylist, the permission checks).
 
 ## 11. Disclosure timeline
 

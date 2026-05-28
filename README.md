@@ -459,8 +459,9 @@ register_field_type(MoneyField, vocab_type="decimal")
 # code required.
 ```
 
-For coining a brand-new `vocab_type` (with a matching SPA widget)
-see [`docs/extensions.md`](docs/extensions.md).
+Coining a brand-new `vocab_type` (with a matching SPA widget) is an
+**API-repo** concern — open the issue at
+[`MartinCastroAlvarez/django-admin-api`](https://github.com/MartinCastroAlvarez/django-admin-api).
 
 ### Pre-built `get_*` overrides still work
 
@@ -531,8 +532,9 @@ frontend, a script).
 
 Every endpoint is **staff-only by default** (or whatever
 `AdminSite.has_permission` returns), CSRF-required on unsafe
-methods, and emits `Cache-Control: no-store`. Full wire contract:
-[`docs/api-contract.md`](docs/api-contract.md).
+methods, and emits `Cache-Control: no-store`. Full wire contract
+lives in the API repo:
+[`MartinCastroAlvarez/django-admin-api`](https://github.com/MartinCastroAlvarez/django-admin-api).
 
 ---
 
