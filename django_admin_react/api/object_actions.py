@@ -73,9 +73,44 @@ def permitted_action_names(
 
     declared = getattr(model_admin, "change_actions", None)
     if declared is not None:
-        return [str(n) for n in (declared or ())]
+        # Defense in depth (#455): in the fallback path (no
+        # ``get_change_actions`` hook) filter each declared name by its
+        # action callable's ``allowed_permissions`` against the admin's
+        # ``has_<perm>_permission(request)``, mirroring Django's own
+        # ``_filter_actions_by_permissions``. The run view still gates the
+        # object via ``has_change_permission``; this just keeps an action
+        # the user can't run from being surfaced.
+        out: list[str] = []
+        for raw in declared or ():
+            name = str(raw)
+            callable_obj = getattr(model_admin, name, None)
+            perms = getattr(callable_obj, "allowed_permissions", None) or ()
+            if _user_has_action_perms(model_admin, request, perms):
+                out.append(name)
+        return out
 
     return None
+
+
+def _user_has_action_perms(
+    model_admin: ModelAdmin, request: HttpRequest, perms: Any
+) -> bool:
+    """Apply each ``perm`` against ``has_<perm>_permission(request)``.
+
+    Mirrors Django's ``_filter_actions_by_permissions``. An unknown perm
+    (no ``has_<perm>_permission`` method) or a raising check denies — we
+    never grant an action whose permission we can't verify.
+    """
+    for perm in perms:
+        method = getattr(model_admin, f"has_{perm}_permission", None)
+        if not callable(method):
+            return False
+        try:
+            if not method(request):
+                return False
+        except Exception:
+            return False
+    return True
 
 
 def resolve_action_callable(model_admin: ModelAdmin, name: str) -> Any | None:
