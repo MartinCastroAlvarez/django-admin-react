@@ -19,10 +19,14 @@ export type FieldType =
   | 'time'
   | 'uuid'
   // Structured types the backend emits (#242). `json` / `duration` /
-  // `array` have editable SPA widgets; others currently render read-only.
+  // `array` / `range` have editable SPA widgets. `range` values arrive as
+  // the documented envelope `{subtype, value: {lower, upper, bounds}}`
+  // (see `docs/api-contract.md` §range types) and write back as a
+  // `[lower, upper]` pair (#533).
   | 'json'
   | 'duration'
   | 'array'
+  | 'range'
   | 'choice'
   | 'foreignkey'
   | 'manytomany'

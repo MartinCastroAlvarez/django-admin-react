@@ -44,7 +44,25 @@ function seedValue(field: FieldDescriptor): WriteValue {
   if (field.type === 'manytomany') return [];
   if (field.type === 'json') return v == null ? null : JSON.stringify(v, null, 2);
   if (field.type === 'array') return Array.isArray(v) ? v.join(',') : null;
+  if (field.type === 'range') return rangeToPair(v);
   return v != null && typeof v !== 'object' ? (v as WriteValue) : null;
+}
+
+// RangeField (#242): unwrap the read envelope
+// `{subtype, value: {lower, upper, bounds}}` into the `[lower, upper]`
+// array shape the backend `_range_endpoints` accepts (#533). An empty
+// side stays empty (= unbounded); a missing envelope → empty pair so a
+// new object starts with two empty inputs instead of `null`.
+function rangeToPair(v: unknown): WriteValue {
+  if (v && typeof v === 'object' && 'value' in v) {
+    const inner = (v as { value?: unknown }).value;
+    if (inner && typeof inner === 'object') {
+      const lower = (inner as { lower?: unknown }).lower;
+      const upper = (inner as { upper?: unknown }).upper;
+      return [lower == null ? '' : String(lower), upper == null ? '' : String(upper)];
+    }
+  }
+  return ['', ''];
 }
 
 export function RelatedAddModal({ to, title, onCreated, onClose }: RelatedAddModalProps) {
