@@ -28,6 +28,7 @@ import {
   EmptyState,
   Modal,
   Pagination,
+  Popover,
   RecordCardList,
   Table,
   useMediaQuery,
@@ -536,37 +537,49 @@ export function ListPage() {
         // parity — the actions selector leads the toolbar).
         leading={
           canRunActions && (selected.size > 0 || selectAcross) ? (
-            <div className="relative">
-              <button
-                type="button"
-                onClick={() => setActionsOpen((o) => !o)}
-                aria-haspopup="menu"
-                aria-expanded={actionsOpen}
-                disabled={runningAction}
-                className="shrink-0 rounded-md border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-100 disabled:opacity-50"
-              >
-                Actions · {effectiveCount} ▾
-              </button>
-              {actionsOpen && (
-                <div
-                  role="menu"
-                  className="absolute left-0 z-20 mt-1 min-w-48 rounded border border-gray-200 bg-white py-1 shadow-lg"
+            // Actions menu (#574 width / #575 outside-click): rendered
+            // through the shared <Popover> so the menu inherits the
+            // outside-click + Escape close behaviour from the same
+            // primitive the sidebar identity dropdown uses (#578). Width
+            // tracks the longest action label between sensible bounds —
+            // `min-w-56` (224px) so short labels don't collapse the
+            // menu, `max-w-md` (28rem / 448px) so a single ridiculously
+            // long label doesn't blow it open. Items are `whitespace-
+            // nowrap truncate` so a longer-than-max label gets `…` with
+            // the full text reachable via the existing `title=` tooltip.
+            <Popover
+              open={actionsOpen}
+              onClose={() => setActionsOpen(false)}
+              align="left"
+              panelClassName="min-w-56 max-w-md py-1"
+              trigger={
+                <button
+                  type="button"
+                  onClick={() => setActionsOpen((o) => !o)}
+                  aria-haspopup="menu"
+                  aria-expanded={actionsOpen}
+                  disabled={runningAction}
+                  className="shrink-0 rounded-md border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-100 disabled:opacity-50"
                 >
-                  {actions.map((a) => (
-                    <button
-                      key={a.name}
-                      type="button"
-                      role="menuitem"
-                      onClick={() => requestAction(a)}
-                      className="block w-full px-3 py-2 text-left text-sm hover:bg-gray-100"
-                      title={a.description}
-                    >
-                      {a.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+                  Actions · {effectiveCount} ▾
+                </button>
+              }
+            >
+              <div role="menu">
+                {actions.map((a) => (
+                  <button
+                    key={a.name}
+                    type="button"
+                    role="menuitem"
+                    onClick={() => requestAction(a)}
+                    className="block w-full truncate whitespace-nowrap px-3 py-2 text-left text-sm hover:bg-gray-100"
+                    title={a.description ?? a.label}
+                  >
+                    {a.label}
+                  </button>
+                ))}
+              </div>
+            </Popover>
           ) : null
         }
         trailing={

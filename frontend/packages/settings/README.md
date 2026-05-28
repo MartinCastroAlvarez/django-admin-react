@@ -1,13 +1,16 @@
 # @dar/settings
 
-The **Settings dialog** and the user-preference state it owns.
+The **identity dropdown panel** (theme + sign out) and the
+user-preference state it owns.
 
 ## What lives here
 
-- `SettingsModal.tsx` — the dialog opened from the sidebar cog. Built on
-  the shared `@dar/ui` `Modal` so it matches every other confirm/overlay
-  in the SPA. Today it holds the appearance (light / dark) toggle; it is
-  the home for future per-user UI preferences.
+- `AccountMenu.tsx` — the dropdown panel rendered inside the sidebar's
+  email-with-caret button (`#578`). Holds the appearance (light / dark)
+  toggle and the Sign out action. The component is the **panel body
+  only**; the consumer wraps it in the shared `@dar/ui` `Popover` so
+  outside-click + Escape close behaviour is inherited from the same
+  primitive the list-page Actions menu uses.
 - `theme.ts` — the light/dark preference: read/resolve (saved choice →
   system default), persist to the `dar:theme` localStorage key, and
   apply by toggling the `.dark` class on `<html>`. `initTheme()` is
@@ -17,12 +20,18 @@ The **Settings dialog** and the user-preference state it owns.
 
 - Model-aware logic or anything that talks to the API. This package is
   pure UI preference; it imports only `@dar/ui` (+ React / lucide).
-- The sidebar chrome that *opens* the modal — that's `@dar/sidebar`.
+- The sidebar chrome that *mounts* the panel — that's `@dar/sidebar`.
 - The `.dark` utility remap CSS — that stays in the app's `index.css`
   (Tailwind layer), since it's global styling, not component logic.
 
 ## Pointers
 
-- Rendered by `@dar/sidebar` (the cog button) and bootstrapped by
+- Rendered by `@dar/sidebar` (the identity dropdown) and bootstrapped by
   `apps/web/src/main.tsx` (`initTheme`).
 - Data-flow rule: a UI package never imports `@dar/api` (CLAUDE.md §7).
+
+## History
+
+- v1.0.3: replaced the prior `SettingsModal` with `AccountMenu`. The
+  modal-around-two-controls was heavier than warranted; the dropdown
+  is the right primitive for a profile menu.

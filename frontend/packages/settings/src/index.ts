@@ -1,11 +1,11 @@
-// @dar/settings — the Settings dialog + the appearance (theme) state it
-// owns. Isolated so the modal can grow its own per-user preference
-// surface without touching the app shell or the sidebar.
+// @dar/settings — per-user UI preferences (appearance) and session
+// controls (Sign out), exposed as a dropdown panel mounted from the
+// sidebar identity area (#578).
 
-export { SettingsModal } from './SettingsModal';
+export { AccountMenu, type AccountMenuProps } from './AccountMenu';
 // Theme state lives in @dar/customization (the home for all
 // localStorage-backed UI customization); re-exported here so the app
-// shell + Settings modal keep importing it from @dar/settings.
+// shell + AccountMenu keep importing it from @dar/settings.
 export {
   applyTheme,
   getStoredTheme,
