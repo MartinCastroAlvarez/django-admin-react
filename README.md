@@ -265,6 +265,31 @@ urlpatterns = [
 ]
 ```
 
+#### Legacy-admin escape hatch (optional)
+
+During the rollout, show an in-SPA banner on every page that links to
+**the same page** in the original admin. End-users with muscle memory
+for `/admin/` (or bookmarks pointing at it) can return to the classic
+surface in one click while you close feature gaps in the SPA:
+
+```python
+# settings.py
+DJANGO_ADMIN_REACT = {
+    "LEGACY_ADMIN_URL_PREFIX": "admin/",   # the legacy admin's mount
+}
+```
+
+The value must match the prefix you mounted the legacy admin under in
+`urls.py`. When set, the SPA renders a thin notice banner at the top
+of every page linking the matching legacy URL (computed by swapping
+the prefix — both admins honour the same `app_label/model_name/...`
+URL shape). The banner is dismissible per session (`sessionStorage`),
+so each session shows it once and a user who forgot the escape hatch
+exists is reminded the next time they log in.
+
+When you remove the setting (or set it to `None`), the banner
+disappears on the next page load — completing the migration.
+
 ---
 
 ## Extend without writing React

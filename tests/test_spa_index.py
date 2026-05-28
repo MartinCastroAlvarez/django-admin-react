@@ -166,6 +166,67 @@ def test_api_prefix_meta_adds_trailing_slash_when_missing(superuser_client: Clie
 
 
 # --------------------------------------------------------------------------- #
+# Legacy-admin escape hatch (#577) — opt-in banner pointer                    #
+# --------------------------------------------------------------------------- #
+@pytest.mark.django_db
+def test_legacy_admin_meta_absent_by_default(superuser_client: Client) -> None:
+    """No `LEGACY_ADMIN_URL_PREFIX` setting → the `dar-legacy-admin-prefix`
+    meta tag is **not** emitted, so the SPA renders no banner (#577).
+    Existing consumers are unaffected; behaviour is identical to v1.0.x."""
+    response = superuser_client.get(ROOT_URL)
+    assert response.status_code == 200
+    body = response.content.decode("utf-8")
+    assert 'name="dar-legacy-admin-prefix"' not in body
+
+
+@pytest.mark.django_db
+def test_legacy_admin_meta_when_setting_enabled(superuser_client: Client) -> None:
+    """With `LEGACY_ADMIN_URL_PREFIX` set, the `dar-legacy-admin-prefix`
+    meta carries the normalised prefix so the SPA can render the
+    escape-hatch banner (#577). Trailing slash invariant matches the
+    `api_prefix` behaviour for parity."""
+    with override_settings(DJANGO_ADMIN_REACT={"LEGACY_ADMIN_URL_PREFIX": "admin/"}):
+        _reload_conf()
+        try:
+            response = superuser_client.get(ROOT_URL)
+            assert response.status_code == 200
+            body = response.content.decode("utf-8")
+            assert 'name="dar-legacy-admin-prefix"' in body
+            assert 'content="admin/"' in body
+        finally:
+            _reload_conf()
+
+
+@pytest.mark.django_db
+def test_legacy_admin_prefix_normalises_input(superuser_client: Client) -> None:
+    """The resolver trims a leading slash and appends a trailing one so
+    the SPA can always do `<origin>/<prefix><tail>` cleanly (#577)."""
+    with override_settings(DJANGO_ADMIN_REACT={"LEGACY_ADMIN_URL_PREFIX": "/old-admin"}):
+        _reload_conf()
+        try:
+            response = superuser_client.get(ROOT_URL)
+            body = response.content.decode("utf-8")
+            assert 'content="old-admin/"' in body
+        finally:
+            _reload_conf()
+
+
+@pytest.mark.django_db
+def test_legacy_admin_meta_absent_for_empty_string(superuser_client: Client) -> None:
+    """An empty / whitespace-only override is treated like ``None`` —
+    no meta emitted, no banner (#577). Defensive normalisation so a
+    consumer doesn't accidentally render a banner to the site root."""
+    with override_settings(DJANGO_ADMIN_REACT={"LEGACY_ADMIN_URL_PREFIX": "   "}):
+        _reload_conf()
+        try:
+            response = superuser_client.get(ROOT_URL)
+            body = response.content.decode("utf-8")
+            assert 'name="dar-legacy-admin-prefix"' not in body
+        finally:
+            _reload_conf()
+
+
+# --------------------------------------------------------------------------- #
 # Bundle wiring                                                               #
 # --------------------------------------------------------------------------- #
 @pytest.mark.django_db

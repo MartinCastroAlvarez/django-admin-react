@@ -17,6 +17,14 @@
       to point the SPA at a separately-mounted django-admin-rest-api.
     {% endcomment %}
     <meta name="dar-api-prefix" content="{{ api_prefix }}" />
+    {% comment %}
+      Legacy-admin escape hatch (#577): only emitted when the consumer
+      set ``DJANGO_ADMIN_REACT["LEGACY_ADMIN_URL_PREFIX"]``. The SPA
+      reads this meta and renders a thin top banner linking the same
+      page under the legacy admin's prefix. Absent meta = no banner,
+      no behavioural change.
+    {% endcomment %}
+    {% if legacy_admin_prefix %}<meta name="dar-legacy-admin-prefix" content="{{ legacy_admin_prefix }}" />{% endif %}
     <meta name="dar-brand-title" content="{{ brand_title }}" />
     {% if brand_logo_url %}<meta name="dar-brand-logo" content="{{ brand_logo_url }}" />{% endif %}
     {% comment %}

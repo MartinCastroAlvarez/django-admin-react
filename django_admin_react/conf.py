@@ -99,6 +99,25 @@ DEFAULTS: dict[str, Any] = {
     # `django_admin_react.urls` skips the inline `api/v1/` include so
     # there is no double-mount.
     "API_URL_PREFIX": None,
+    # ``LEGACY_ADMIN_URL_PREFIX`` — opt-in escape-hatch banner (#577).
+    # When set, every SPA page renders a thin notice banner at the top
+    # linking to **the same page** under the legacy Django admin's URL
+    # prefix. Useful during a progressive migration: end-users with
+    # muscle memory for ``/admin/`` (or wherever the legacy admin is
+    # mounted) can return to the classic surface in one click, and the
+    # bug list grows from "what they clicked back for." Default
+    # ``None`` keeps behaviour unchanged — no banner, no extra
+    # requests, no SPA overhead.
+    #
+    # The value matches the prefix the consumer registered the legacy
+    # admin under in ``urls.py`` — e.g. ``"admin/"`` for
+    # ``urlpatterns = [path("admin/", legacy_admin.urls), ...]``. The
+    # SPA computes the matching legacy URL by swapping its own mount
+    # for this value (both admins use the same ``app_label/model_name``
+    # URL shape, so it's a straight prefix swap with no per-route
+    # mapping). When the matching legacy route doesn't exist, the
+    # legacy admin 404s — same outcome as visiting that URL directly.
+    "LEGACY_ADMIN_URL_PREFIX": None,
     "PWA_NAME": None,
     "PWA_SHORT_NAME": None,
     "PWA_ICONS": None,
@@ -122,6 +141,7 @@ class _PackageSettings:
     PRIMARY_COLOR: str = DEFAULTS["PRIMARY_COLOR"]
     REACT_LOGIN: bool = DEFAULTS["REACT_LOGIN"]
     API_URL_PREFIX: str | None = DEFAULTS["API_URL_PREFIX"]
+    LEGACY_ADMIN_URL_PREFIX: str | None = DEFAULTS["LEGACY_ADMIN_URL_PREFIX"]
     PWA_NAME: str | None = DEFAULTS["PWA_NAME"]
     PWA_SHORT_NAME: str | None = DEFAULTS["PWA_SHORT_NAME"]
     PWA_ICONS: list[dict[str, str]] | None = DEFAULTS["PWA_ICONS"]

@@ -105,6 +105,12 @@ class SpaIndexView(View):
                 # `DJANGO_ADMIN_REACT["API_URL_PREFIX"]` to point the
                 # SPA at a separately-mounted `django-admin-rest-api`.
                 "api_prefix": _resolve_api_prefix(request),
+                # Optional escape-hatch banner prefix (#577): when the
+                # consumer set ``DJANGO_ADMIN_REACT["LEGACY_ADMIN_URL_PREFIX"]``,
+                # the SPA shows a thin notice linking the same path under
+                # that prefix. ``None`` (default) → the SPA never renders
+                # the banner and the meta tag is omitted.
+                "legacy_admin_prefix": _resolve_legacy_admin_prefix(),
                 "bundle": _load_manifest_entry(),
                 "brand_title": _resolve_brand_title(admin_site),
                 "tab_title": _resolve_tab_title(admin_site),
@@ -341,6 +347,32 @@ def _resolve_initial_theme(request: HttpRequest) -> str | None:
     """
     theme = request.COOKIES.get("dar-theme")
     return theme if theme in ("light", "dark") else None
+
+
+def _resolve_legacy_admin_prefix() -> str | None:
+    """Return the optional legacy-admin URL prefix for the escape-hatch
+    banner (#577), or ``None`` when the consumer has not enabled it.
+
+    The value is the same prefix the consumer used in ``urls.py`` for the
+    legacy admin's ``include``: e.g. ``"admin/"`` for
+    ``path("admin/", legacy_admin.urls)``. Both the SPA and the legacy
+    admin honour the same ``app_label/model_name/...`` URL shape, so the
+    SPA can compute the matching legacy URL with a single prefix swap.
+
+    Normalisation rules (mirroring ``_resolve_api_prefix`` for parity):
+
+    - Empty / non-string → return ``None`` (no banner).
+    - Strip any leading slash so the value can be appended to the
+      origin without producing ``//``.
+    - Ensure a trailing slash so the SPA can concat the remainder.
+    """
+    override = dar_conf.LEGACY_ADMIN_URL_PREFIX
+    if not isinstance(override, str) or not override.strip():
+        return None
+    value = override.strip().lstrip("/")
+    if not value.endswith("/"):
+        value = value + "/"
+    return value
 
 
 def _resolve_api_prefix(request: HttpRequest) -> str:
