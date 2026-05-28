@@ -42,6 +42,16 @@ python = "^3.10"
 # Django 5.0 → 5.2 LTS → 6.x. Bump the upper bound when 7.0 ships and
 # we've verified the package still passes its test matrix on it.
 django = ">=5.0,<7.0"
+# The JSON REST API surface (every list / detail / create / update /
+# delete / action / history / autocomplete endpoint) lives in this
+# sibling package — same `ModelAdmin` source of truth, same permissions,
+# no new features. This repo's role is the React super-layer on top of
+# it (META #544). The package is plug-and-play: it is added to
+# `INSTALLED_APPS` by `django_admin_react.apps.DjangoAdminReactConfig`,
+# and its `urls` are included by `django_admin_react.urls`. Phase 1 of
+# the migration only **adds** the dependency; the local
+# `django_admin_react/api/` tree is removed in later phases.
+django-admin-rest-api = "^0.1.0a0"
 
 [tool.poetry.group.dev.dependencies]
 # Dependabot #5: pytest's tmpdir handled symlinks unsafely
