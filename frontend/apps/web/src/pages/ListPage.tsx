@@ -33,7 +33,6 @@ import {
   useMediaQuery,
 } from '@dar/ui';
 import { FieldValueView } from '@dar/details';
-import { DateHierarchyBar } from '@dar/list';
 import { FilterBar } from '@dar/search';
 
 import { useToast } from '../toast';
@@ -241,19 +240,6 @@ export function ListPage() {
     });
   }
 
-  // date_hierarchy drill (Django parity): set the URL to an exact
-  // {year?, month?, day?} state, clearing any deeper levels. Reuses
-  // patchParams so the page also resets to 1.
-  function setDatePath(path: { year?: number | null; month?: number | null; day?: number | null }) {
-    patchParams((next) => {
-      for (const key of ['year', 'month', 'day'] as const) {
-        const v = path[key];
-        if (v === undefined || v === null) next.delete(key);
-        else next.set(key, String(v));
-      }
-    });
-  }
-
   function setPage(nextPage: number): void {
     const next = new URLSearchParams(searchParams);
     if (nextPage <= 1) next.delete('page');
@@ -429,6 +415,15 @@ export function ListPage() {
   const visibleColumnCount = columns.length;
 
   const totalPages = Math.max(1, Math.ceil(data.total / data.page_size));
+  // Object-count label, shown in the pagination row (#95): "N of M
+  // objects" when a full_count differs (filtered/estimated), else
+  // "N object(s)".
+  const countLabel =
+    data.full_count != null && data.full_count !== data.total
+      ? `${data.total.toLocaleString()} of ${data.full_count.toLocaleString()} ${
+          data.full_count === 1 ? 'object' : 'objects'
+        }`
+      : `${data.total.toLocaleString()} object${data.total === 1 ? '' : 's'}`;
   const filters = data.filters ?? [];
   // Count of list_filters currently applied (drives the empty-state copy).
   const activeFilterCount = filters.filter((f) => activeFilters[f.name]).length;
@@ -458,27 +453,35 @@ export function ListPage() {
             )}
           />
           <h1 className="text-2xl font-semibold">{listTitle}</h1>
-          <p className="text-sm text-gray-500">
-            {data.full_count != null && data.full_count !== data.total
-              ? `${data.total.toLocaleString()} of ${data.full_count.toLocaleString()} ${
-                  data.full_count === 1 ? 'object' : 'objects'
-                }`
-              : `${data.total.toLocaleString()} object${data.total === 1 ? '' : 's'}`}
-          </p>
         </div>
-        {data.permissions.add && (
-          <Link
-            to={withPreservedFilters(`/${appLabel}/${modelName}/add`, searchParams.toString())}
-            className="shrink-0 rounded-md border border-primary bg-primary px-3 py-2 text-sm font-medium text-white hover:opacity-90"
+        {/* Customize sits to the LEFT of the + Add button (#94). */}
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setColsOpen(true)}
+            aria-haspopup="dialog"
+            aria-label="Customize columns"
+            title="Customize columns"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-gray-300 px-3 py-2 text-sm hover:bg-gray-100"
           >
-            + Add {data.verbose_name ? capitalize(data.verbose_name) : modelName}
-          </Link>
-        )}
+            <Settings2 className="h-4 w-4" aria-hidden />
+            Customize
+            {hiddenCols.size > 0 && (
+              <span className="ml-0.5 rounded-full bg-gray-500 px-1.5 py-0.5 text-xs text-white">
+                {hiddenCols.size} hidden
+              </span>
+            )}
+          </button>
+          {data.permissions.add && (
+            <Link
+              to={withPreservedFilters(`/${appLabel}/${modelName}/add`, searchParams.toString())}
+              className="rounded-md border border-primary bg-primary px-3 py-2 text-sm font-medium text-white hover:opacity-90"
+            >
+              + Add {data.verbose_name ? capitalize(data.verbose_name) : modelName}
+            </Link>
+          )}
+        </div>
       </header>
-
-      {data.date_hierarchy && (
-        <DateHierarchyBar dh={data.date_hierarchy} onNavigate={setDatePath} />
-      )}
 
       {/* Search + inline per-filter dropdowns + toolbar actions, via the
           @dar/search FilterBar (replaces the old filter modal + chips). */}
@@ -530,35 +533,17 @@ export function ListPage() {
           ) : null
         }
         trailing={
-          <>
-            {activeFilterCount > 0 && (
-              <button
-                type="button"
-                onClick={() => patchParams((next) => filters.forEach((f) => next.delete(f.name)))}
-                title="Clear all filters"
-                className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-100"
-              >
-                <X className="h-4 w-4" aria-hidden />
-                Clear all
-              </button>
-            )}
+          activeFilterCount > 0 ? (
             <button
               type="button"
-              onClick={() => setColsOpen(true)}
-              aria-haspopup="dialog"
-              aria-label="Customize columns"
-              title="Customize columns"
+              onClick={() => patchParams((next) => filters.forEach((f) => next.delete(f.name)))}
+              title="Clear all filters"
               className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-100"
             >
-              <Settings2 className="h-4 w-4" aria-hidden />
-              Customize
-              {hiddenCols.size > 0 && (
-                <span className="ml-0.5 rounded-full bg-gray-500 px-1.5 py-0.5 text-xs text-white">
-                  {hiddenCols.size} hidden
-                </span>
-              )}
+              <X className="h-4 w-4" aria-hidden />
+              Clear all
             </button>
-          </>
+          ) : null
         }
       />
 
@@ -661,7 +646,12 @@ export function ListPage() {
           />
         </Card>
       )}
-      <Pagination page={data.page} totalPages={totalPages} onChange={setPage} />
+      <Pagination
+        page={data.page}
+        totalPages={totalPages}
+        countLabel={countLabel}
+        onChange={setPage}
+      />
 
       {pendingAction && (
         <Modal
@@ -794,10 +784,12 @@ function emptyLabel(hasQuery: boolean, chipCount: number): string {
 interface PaginationProps {
   page: number;
   totalPages: number;
+  /** "N object(s)" — shown before the page indicator (#95). */
+  countLabel: string;
   onChange: (next: number) => void;
 }
 
-function Pagination({ page, totalPages, onChange }: PaginationProps) {
+function Pagination({ page, totalPages, countLabel, onChange }: PaginationProps) {
   const prevDisabled = page <= 1;
   const nextDisabled = page >= totalPages;
   const buttonClass = (disabled: boolean): string =>
@@ -813,6 +805,12 @@ function Pagination({ page, totalPages, onChange }: PaginationProps) {
   return (
     <nav className="flex items-center justify-between text-sm text-gray-600">
       <span>
+        {countLabel}
+        {/* A vertically-centered middot separates the count from the page
+            indicator (#95) — not a period. */}
+        <span aria-hidden className="px-2 text-gray-400">
+          ·
+        </span>
         Page {page} of {totalPages}
       </span>
       <div className="flex gap-2">
