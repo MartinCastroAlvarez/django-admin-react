@@ -316,6 +316,64 @@ def test_reverse_strip_short_circuits_off_legacy_mount() -> None:
     assert out == ""
 
 
+def test_reverse_strip_template_has_no_leaking_hash_comments() -> None:
+    """Regression for #596: a multi-line `{# ... #}` comment in the
+    strip template leaked the `{#` / `#}` tokens onto the page as
+    literal text (Django's `{# #}` is single-line only). The block-
+    level `{% comment %}...{% endcomment %}` form must be used."""
+    out = _render_experience_strip(
+        "/admin/auth/user/",
+        {
+            "LEGACY_ADMIN_URL_PREFIX": "admin/",
+            "REACT_ADMIN_URL_PREFIX": "admin2/",
+        },
+    )
+    # The strip itself rendered (sanity check) AND no `{#` / `#}`
+    # made it into the output as literal text.
+    assert 'Open this page in /admin2/' in out
+    assert "{#" not in out
+    assert "#}" not in out
+
+
+@pytest.mark.django_db
+def test_reverse_strip_renders_above_admin_header_not_in_content(
+    superuser_client: Client,
+) -> None:
+    """Regression for #595: the strip used to be injected inside
+    `{% block content %}`, which Django's `change_list.html`,
+    `change_form.html`, `index.html`, and `login.html` all override
+    WITHOUT `{{ block.super }}` — silently discarding the strip on
+    almost every page a user actually visits. Moved into
+    `{% block header %}` (defined once in `admin/base.html`, not
+    overridden by those templates), which renders the strip
+    consistently across the whole admin surface."""
+    with override_settings(
+        DJANGO_ADMIN_REACT={
+            "LEGACY_ADMIN_URL_PREFIX": "admin/",
+            "REACT_ADMIN_URL_PREFIX": "admin2/",
+        },
+    ):
+        _reload_conf()
+        try:
+            # Hit the legacy admin index — a page whose Django template
+            # overrides `{% block content %}` without super (#595 repro).
+            # In the test_project the legacy admin mounts at `/admin/`.
+            response = superuser_client.get("/admin/")
+            body = response.content.decode("utf-8")
+            # Strip rendered:
+            assert 'aria-label="Experience toggle"' in body
+            # Strip is above the admin header markup (`<div id="header">`
+            # in Django's `admin/base.html`), confirming it's in the
+            # `header` block, not the `content` block.
+            strip_idx = body.index('aria-label="Experience toggle"')
+            header_idx = body.index('id="header"')
+            assert strip_idx < header_idx, (
+                "Strip must render above #header, not inside content"
+            )
+        finally:
+            _reload_conf()
+
+
 # --------------------------------------------------------------------------- #
 # Bundle wiring                                                               #
 # --------------------------------------------------------------------------- #
