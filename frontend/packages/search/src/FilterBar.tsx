@@ -9,7 +9,15 @@
 // trailing slot is pinned right (the page composes it so the row ends in
 // "Clear all" then "Customize").
 
-import { useEffect, useState, type KeyboardEvent, type ReactNode } from 'react';
+import {
+  Children,
+  cloneElement,
+  isValidElement,
+  useEffect,
+  useState,
+  type KeyboardEvent,
+  type ReactNode,
+} from 'react';
 import { Check, ChevronDown } from 'lucide-react';
 
 import type { FilterDescriptor, FilterOption } from '@dar/data';
@@ -104,7 +112,29 @@ export function FilterBar({
           onChange={(v) => onFilterChange(f.name, v)}
         />
       ))}
-      {trailing ? <div className="ml-auto flex flex-wrap items-center gap-2">{trailing}</div> : null}
+      {/* Trailing slot (#554, #570): rendered as DIRECT children of the
+          outer flex-wrap container — not inside a sub-wrapper — so the
+          trailing buttons participate in the same wrap pass as the
+          filter pills and stay glued to the end of the last pill row.
+          `ml-auto` is injected on the first non-null trailing child to
+          push the cluster to the row's right edge; if a wrap occurs the
+          trailing items wrap WITH the pills, never as a separate row.
+          A sub-wrapper here would behave as one flex item and produce
+          the "buttons on their own line" symptom #570 reported. */}
+      {(() => {
+        const items = Children.toArray(trailing).filter(Boolean);
+        let firstReal = true;
+        return items.map((child, i) => {
+          if (!isValidElement<{ className?: string }>(child)) return child;
+          const isFirst = firstReal;
+          firstReal = false;
+          const extra = isFirst ? ' ml-auto' : '';
+          return cloneElement(child, {
+            className: `${child.props.className ?? ''}${extra}`,
+            key: child.key ?? i,
+          });
+        });
+      })()}
     </div>
   );
 }
