@@ -83,6 +83,21 @@ body,
 .dark .hover\:bg-gray-100:hover {
   background-color: #1f2937 !important;
 }
+/* Hover text-color remaps (#589). Without these, a JSX-side
+   `hover:text-gray-900` (designed against the light surface) resolves
+   to #111827 on :hover under .dark — which is nearly identical to the
+   .dark surface itself, so the text fades INTO the background on
+   hover. Remap the few hover text utilities the app uses so :hover
+   always *increases* contrast against the dark surface, never reduces. */
+.dark .hover\:text-gray-900:hover,
+.dark .hover\:text-gray-800:hover,
+.dark .hover\:text-gray-700:hover {
+  color: #f9fafb !important;
+}
+.dark .hover\:text-gray-200:hover,
+.dark .hover\:text-gray-100:hover {
+  color: #ffffff !important;
+}
 /* Form controls have no explicit bg utility (the @dar/ui Input + the
    filter selects render on the browser-default white), so the bg-white
    remap above misses them — they'd stay white in dark mode. Style them

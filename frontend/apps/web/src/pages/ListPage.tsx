@@ -29,6 +29,7 @@ import {
   Pagination,
   Popover,
   RecordCardList,
+  ResetButton,
   Table,
   useMediaQuery,
 } from '@dar/ui';
@@ -579,23 +580,23 @@ export function ListPage() {
           ) : null
         }
         trailing={
-          // Filter-row trailing slot (#554): "Clear all" (only when at
-          // least one filter is selected — nothing to clear, no button)
-          // and "Customize" (always visible — it's the column-customizer
-          // affordance, independent of filter state) as the last two
-          // buttons on the row, in that order.
+          // Filter-row trailing slot (#554): "Clear all" + "Customize"
+          // as the last two buttons on the row, in that order.
+          // "Clear all" is the shared <ResetButton> primitive from
+          // @dar/ui (#590) — same component the Layout modal uses for
+          // its "Reset" affordance, with the label + icon overridden
+          // for filter-row muscle memory. Renders disabled (not
+          // hidden) when no filters are applied so the affordance
+          // stays discoverable.
           <>
-            {activeFilterCount > 0 && (
-              <button
-                type="button"
-                onClick={() => patchParams((next) => filters.forEach((f) => next.delete(f.name)))}
-                title="Clear all filters"
-                className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-gray-300 px-3 py-1.5 text-sm hover:bg-gray-100"
-              >
-                <X className="h-4 w-4" aria-hidden />
-                Clear all
-              </button>
-            )}
+            <ResetButton
+              isDirty={activeFilterCount > 0}
+              onReset={() => patchParams((next) => filters.forEach((f) => next.delete(f.name)))}
+              label="Clear all"
+              disabledHint="No filters applied"
+              icon={<X className="h-4 w-4" aria-hidden />}
+              title="Clear all filters"
+            />
             <button
               type="button"
               onClick={() => setColsOpen(true)}
@@ -792,6 +793,23 @@ export function ListPage() {
             visibleColumnCount={visibleColumnCount}
             onToggle={toggleColumn}
             onReorder={setColOrder}
+            // The layout is "customised" when either preference has
+            // any state — a non-empty saved order or any hidden col.
+            // Both persist via localStorage (`dar:colorder:v1:*` and
+            // the columnsKey set); resetting drops both back to the
+            // empty / default state so the ModelAdmin's registered
+            // order + visibility take over again on the next render
+            // (#590).
+            isCustomised={colOrder.length > 0 || hiddenCols.size > 0}
+            onReset={() => {
+              // `usePersistedSet`'s setter takes a functional updater,
+              // not the raw next-value (unlike `useState`); returning a
+              // fresh empty Set clears every saved-hidden entry. The
+              // `colOrder` setter from `usePersistedState` is the
+              // plain useState variant, so it accepts the raw next.
+              setColOrder([]);
+              setHiddenCols(() => new Set<string>());
+            }}
           />
         </Suspense>
       )}

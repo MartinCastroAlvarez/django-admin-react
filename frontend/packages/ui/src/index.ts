@@ -45,3 +45,6 @@ export type { BreadcrumbItem, BreadcrumbProps } from './Breadcrumb';
 
 export { Popover } from './Popover';
 export type { PopoverProps } from './Popover';
+
+export { ResetButton } from './ResetButton';
+export type { ResetButtonProps } from './ResetButton';
