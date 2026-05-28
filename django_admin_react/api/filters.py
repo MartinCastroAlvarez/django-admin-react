@@ -60,7 +60,7 @@ logger = logging.getLogger(__name__)
 _FK_FILTER_MAX_OPTIONS = 25
 
 
-def _entry_spec(entry: Any) -> tuple[str | None, type | None]:
+def _entry_spec(entry: object) -> tuple[str | None, type | None]:
     """Normalize a `list_filter` entry to ``(field_name, filter_cls)``.
 
     Django accepts entries in three forms:
@@ -124,7 +124,7 @@ def _resolve_field_path(model: type[Model], path: str) -> Field | None:
     return field
 
 
-def _spec_for_boolean(field_name: str, field: Any) -> dict[str, Any]:
+def _spec_for_boolean(field_name: str, field: Field) -> dict[str, Any]:
     return {
         "name": field_name,
         "label": str(getattr(field, "verbose_name", field_name) or field_name).strip(),
@@ -132,7 +132,7 @@ def _spec_for_boolean(field_name: str, field: Any) -> dict[str, Any]:
     }
 
 
-def _spec_for_choices(field_name: str, field: Any) -> dict[str, Any]:
+def _spec_for_choices(field_name: str, field: Field) -> dict[str, Any]:
     raw_choices = list(getattr(field, "choices", None) or [])
     return {
         "name": field_name,
@@ -213,7 +213,7 @@ def _spec_for_fk(
     return payload
 
 
-def _spec_for_date(field_name: str, field: Any) -> dict[str, Any]:
+def _spec_for_date(field_name: str, field: Field) -> dict[str, Any]:
     return {
         "name": field_name,
         "label": str(getattr(field, "verbose_name", field_name) or field_name).strip(),
