@@ -543,14 +543,14 @@ django-admin-rest-api = ">=0.1.0a0"
 
 [[package]]
 name = "django-admin-rest-api"
-version = "1.0.0"
+version = "1.0.1"
 description = "A JSON REST API for the Django admin — same permissions, same ModelAdmin, no new features. Powers django-admin-react and django-admin-mcp."
 optional = false
 python-versions = "<4.0,>=3.10"
 groups = ["main"]
 files = [
-    {file = "django_admin_rest_api-1.0.0-py3-none-any.whl", hash = "sha256:c9ca943ecbb160a1245deebeeaf58e2957fbffc7dfc08d5450e40da370bd0bcf"},
-    {file = "django_admin_rest_api-1.0.0.tar.gz", hash = "sha256:7b6a38a3b478b83008b86e6d1ab8042568a3dc341c8982f2f69f44de2141de32"},
+    {file = "django_admin_rest_api-1.0.1-py3-none-any.whl", hash = "sha256:d373afbe3c702735c9af94f38d6c702582ea477c4534433d5d83c8802551a1f9"},
+    {file = "django_admin_rest_api-1.0.1.tar.gz", hash = "sha256:fdba846d6a3cb806a3d9fe06d53f8367eac75d6fbbce5e46e1941604b5451ac1"},
 ]
 
 [package.dependencies]
@@ -1748,4 +1748,4 @@ zstd = ["backports-zstd (>=1.0.0) ; python_version < \"3.14\""]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.10"
-content-hash = "785a373bbc71ac835275fe18e85a59c427975a3b3f9fe096f2024ef1e04ff986"
+content-hash = "461dce0eac72513bfdc397df99d026fc91a5b3cdee66237046e2741972a04847"
