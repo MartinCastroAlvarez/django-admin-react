@@ -52,6 +52,15 @@ django = ">=5.0,<7.0"
 # the migration only **adds** the dependency; the local
 # `django_admin_react/api/` tree is removed in later phases.
 django-admin-rest-api = "^0.1.0a0"
+# `django-admin-mcp-api` (sibling published to PyPI as part of the same
+# three-repo split, #544): an MCP-protocol adapter over the REST API so
+# agents reach the SAME `ModelAdmin`-driven surface. Wire-protocol-only
+# layer — adds NO new functionality, permissions, or validation; reuses
+# the rest-api package transitively. Phase 1 just lands the dependency
+# alongside `django-admin-rest-api`; later phases ship the joint
+# `INSTALLED_APPS` + URL include guidance, so a consumer's `pip install
+# django-admin-react` gives them the React SPA AND the MCP API server.
+django-admin-mcp-api = "^0.1.0a0"
 
 [tool.poetry.group.dev.dependencies]
 # Dependabot #5: pytest's tmpdir handled symlinks unsafely

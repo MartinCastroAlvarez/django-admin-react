@@ -526,6 +526,22 @@ argon2 = ["argon2-cffi (>=19.1.0)"]
 bcrypt = ["bcrypt"]
 
 [[package]]
+name = "django-admin-mcp-api"
+version = "0.1.0a0"
+description = "MCP (Model Context Protocol) adapter for django-admin-rest-api. A wire-protocol-only layer that lets agents reach the existing REST API — no new functionality, permissions, or validation."
+optional = false
+python-versions = "<4.0,>=3.10"
+groups = ["main"]
+files = [
+    {file = "django_admin_mcp_api-0.1.0a0-py3-none-any.whl", hash = "sha256:a590f087252325a522668a295fbfb8c2f605ee7a7eacfdb5f024daa80f546319"},
+    {file = "django_admin_mcp_api-0.1.0a0.tar.gz", hash = "sha256:baea2abdc81838afa4f7c0ac4779c691b5cb257ea41fbe45279afdf6eb707775"},
+]
+
+[package.dependencies]
+django = ">=5.0,<7.0"
+django-admin-rest-api = ">=0.1.0a0"
+
+[[package]]
 name = "django-admin-rest-api"
 version = "0.1.0a0"
 description = "A JSON REST API for the Django admin — same permissions, same ModelAdmin, no new features. Powers django-admin-react and django-admin-mcp."
@@ -1732,4 +1748,4 @@ zstd = ["backports-zstd (>=1.0.0) ; python_version < \"3.14\""]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.10"
-content-hash = "fa8f4152436c9e04048562fbc9b65dfce41135243b0570699ac42b8bf1a715eb"
+content-hash = "305484c204a9f766d6408518d99946a896edabadeca0aa35c74d37174456e25d"
