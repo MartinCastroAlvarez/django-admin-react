@@ -51,6 +51,28 @@ export function App() {
               detail with pk="add". */}
             <Route path=":appLabel/:modelName/add" element={<CreatePage />} />
             <Route path=":appLabel/:modelName/:pk" element={<DetailPage />} />
+            {/* Django-admin URL aliases (#601). When the SPA is mounted
+                at the legacy admin's prefix (after a /admin/ ↔ /admin-old/
+                swap), bookmarked + copy-pasted legacy URLs land here.
+                Treat each as an equivalent match — same DetailPage
+                component, just opened with the right initial mode /
+                panel so the user lands where the link said they would.
+                Trailing slashes are normalised by React Router v6 (no
+                extra route needed for "<pk>/change/" vs "<pk>/change"). */}
+            <Route
+              path=":appLabel/:modelName/:pk/change"
+              element={<DetailPage initialEditing />}
+            />
+            <Route
+              path=":appLabel/:modelName/:pk/history"
+              element={<DetailPage initialHistoryOpen />}
+            />
+            {/* /delete/ from the legacy admin — open the detail page and
+                let the operator click the existing Delete button. No
+                auto-open of the confirm modal (the SPA's Delete flow
+                already fetches a cascade preview on open; an
+                auto-triggered modal would surprise the user). */}
+            <Route path=":appLabel/:modelName/:pk/delete" element={<DetailPage />} />
             <Route
               path="*"
               element={<div className="p-6 text-sm text-gray-500">Page not found.</div>}

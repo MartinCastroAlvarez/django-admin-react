@@ -167,7 +167,22 @@ function FieldsetSection({
   );
 }
 
-export function DetailPage() {
+export interface DetailPageProps {
+  /** Open the page directly in edit mode (Django-admin URL alias
+   *  `/<app>/<model>/<pk>/change/`, #601). Also still triggered by
+   *  the existing `?edit=1` query param from "Save and continue
+   *  editing" (#154). */
+  initialEditing?: boolean;
+  /** Open the History modal on first paint (Django-admin URL alias
+   *  `/<app>/<model>/<pk>/history/`, #601). The user can still close
+   *  it; this just sets the initial state. */
+  initialHistoryOpen?: boolean;
+}
+
+export function DetailPage({
+  initialEditing = false,
+  initialHistoryOpen = false,
+}: DetailPageProps = {}) {
   const params = useParams<{ appLabel: string; modelName: string; pk: string }>();
   const appLabel = params.appLabel ?? '';
   const modelName = params.modelName ?? '';
@@ -180,8 +195,14 @@ export function DetailPage() {
 
   // Open straight in edit mode when arriving via "Save and continue
   // editing" from the add form (`?edit=1`); otherwise start read-only.
-  const [editing, setEditing] = useState(() => searchParams.get('edit') === '1');
-  const [historyOpen, setHistoryOpen] = useState(false);
+  // Initial mode is the OR of (a) the Django-admin URL alias the router
+  // matched and (b) the existing `?edit=1` "Save and continue editing"
+  // round-trip — either drops the user in edit mode on first paint
+  // (#154, #601).
+  const [editing, setEditing] = useState(
+    () => initialEditing || searchParams.get('edit') === '1',
+  );
+  const [historyOpen, setHistoryOpen] = useState(initialHistoryOpen);
   const { plural: modelPlural } = useModelMeta(appLabel, modelName);
 
   // Detail-page action buttons (#571): per-object actions only, via
