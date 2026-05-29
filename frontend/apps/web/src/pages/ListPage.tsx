@@ -519,18 +519,53 @@ export function ListPage() {
           />
           <h1 className="text-2xl font-semibold">{listTitle}</h1>
         </div>
-        {/* Header right-side: only the +Add primary action lives here.
-            Customize moved to the FilterBar trailing slot in #554 so the
-            filter row is one self-contained unit (… filter chips |
-            Clear all | Customize) — no second toolbar row, no dangling
-            chrome. */}
-        <div className="flex shrink-0 items-center gap-2">
+        {/* Header right-side toolbar (#608): one row holds every page-
+            level affordance — Clear all (when filters are active),
+            Refresh, Customize, then the primary `+ <Entity>` button.
+            Previously these were split between the page header (Add)
+            and the FilterBar trailing slot (Clear all / Refresh /
+            Customize), which read as two toolbars; consolidating into
+            one row matches the detail-page header layout (#572) and
+            removes the second row of chrome.
+            The `+ Add` label dropped the word "Add" — the leading `+`
+            already signals "create", so "Add" was redundant (#608). */}
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+          {activeFilterCount > 0 ? (
+            <ResetButton
+              isDirty
+              onReset={() =>
+                patchParams((next) => filters.forEach((f) => next.delete(f.name)))
+              }
+              label="Clear all"
+              icon={<X className="h-4 w-4" aria-hidden />}
+              title="Clear all filters"
+            />
+          ) : null}
+          <RefreshButton
+            onRefresh={refresh}
+            tooltip="Refresh"
+            icon={<RefreshCw className="h-4 w-4" aria-hidden />}
+          />
+          <button
+            type="button"
+            onClick={() => setColsOpen(true)}
+            aria-haspopup="dialog"
+            aria-label="Customize columns"
+            title={
+              hiddenCols.size > 0
+                ? `Customize columns (${hiddenCols.size} hidden)`
+                : 'Customize columns'
+            }
+            className="inline-flex shrink-0 items-center justify-center rounded-md border border-gray-300 px-2 py-1.5 text-sm hover:bg-gray-100"
+          >
+            <Settings2 className="h-4 w-4" aria-hidden />
+          </button>
           {data.permissions.add && (
             <Link
               to={withPreservedFilters(`/${appLabel}/${modelName}/add`, searchParams.toString())}
               className="rounded-md border border-primary bg-primary px-3 py-2 text-sm font-medium text-white hover:opacity-90"
             >
-              + Add {data.verbose_name ? capitalize(data.verbose_name) : modelName}
+              + {data.verbose_name ? capitalize(data.verbose_name) : modelName}
             </Link>
           )}
         </div>
@@ -597,52 +632,9 @@ export function ListPage() {
             </Popover>
           ) : null
         }
-        trailing={
-          // Filter-row trailing slot (#554): "Clear all" + Refresh +
-          // Customize, in that order, as the last three buttons on
-          // the row. "Clear all" hides entirely when no filters apply
-          // (owner directive, v1.3.3) — the filter pills themselves
-          // signal there's nothing to clear, so a disabled button
-          // would be redundant chrome (CLAUDE.md §7). The Customize
-          // affordance is icon-only (the cog speaks for itself
-          // alongside Refresh — text + count chip were noise on a
-          // row that's already crowded).
-          <>
-            {activeFilterCount > 0 ? (
-              <ResetButton
-                isDirty
-                onReset={() =>
-                  patchParams((next) => filters.forEach((f) => next.delete(f.name)))
-                }
-                label="Clear all"
-                icon={<X className="h-4 w-4" aria-hidden />}
-                title="Clear all filters"
-              />
-            ) : null}
-            {/* Refresh (#592): refetch the changelist + filter counts
-                with the current filter / search / ordering / page
-                state preserved. Between Clear all and Customize. */}
-            <RefreshButton
-              onRefresh={refresh}
-              tooltip="Refresh"
-              icon={<RefreshCw className="h-4 w-4" aria-hidden />}
-            />
-            <button
-              type="button"
-              onClick={() => setColsOpen(true)}
-              aria-haspopup="dialog"
-              aria-label="Customize columns"
-              title={
-                hiddenCols.size > 0
-                  ? `Customize columns (${hiddenCols.size} hidden)`
-                  : 'Customize columns'
-              }
-              className="inline-flex shrink-0 items-center justify-center rounded-md border border-gray-300 px-2 py-1.5 text-sm hover:bg-gray-100"
-            >
-              <Settings2 className="h-4 w-4" aria-hidden />
-            </button>
-          </>
-        }
+        // FilterBar's `trailing` slot retired in v1.4.5 / #608 — Clear
+        // all / Refresh / Customize live in the page header now so the
+        // SPA shows one toolbar per page, not two.
       />
 
       {editCount > 0 && (
