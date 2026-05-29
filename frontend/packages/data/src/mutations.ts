@@ -63,7 +63,32 @@ export function fetchDeletePreview(args: DeletePreviewArgs): Promise<DeletePrevi
   return args.client.deletePreview(args.appLabel, args.modelName, args.pk);
 }
 
-/** Run one object-level change-page action (#236). */
-export function runObjectAction(args: RunObjectActionArgs): Promise<ObjectActionRunResponse> {
-  return args.client.runObjectAction(args.appLabel, args.modelName, args.pk, args.name);
+/**
+ * Run one detail-page action on a single object.
+ *
+ * Reuses the existing changelist actions runner (#603 revised, v1.4.8):
+ * `data.object_actions` on the detail response is now sourced from the
+ * standard `ModelAdmin.actions` — same descriptor builder as the list
+ * response — so the SPA reuses the same `POST <app>/<model>/actions/
+ * <name>/` runner with `pks=[<this pk>]`. No dedicated per-object
+ * endpoint, no `django-object-actions` integration.
+ *
+ * Translates the changelist response shape (`{executed, messages,
+ * redirect?}`) into the legacy `{ok, message?, redirect?}` callers
+ * already consume — same external contract, simpler wiring.
+ */
+export async function runObjectAction(
+  args: RunObjectActionArgs,
+): Promise<ObjectActionRunResponse> {
+  const res = await args.client.runAction(args.appLabel, args.modelName, args.name, [args.pk]);
+  // First `message_user` message becomes the legacy `message` field —
+  // the SPA toasts it on success. Additional messages stay reachable
+  // via the full ActionRunResponse if a caller wants to upgrade off
+  // the legacy shape.
+  const message = res.messages && res.messages.length > 0 ? res.messages[0]?.message : undefined;
+  return {
+    ok: res.executed,
+    ...(message !== undefined ? { message } : {}),
+    ...(res.redirect !== undefined ? { redirect: res.redirect } : {}),
+  };
 }
