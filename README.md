@@ -21,7 +21,7 @@ urlpatterns = [
 
 **One `INSTALLED_APPS` line + one URL include is the entire integration.** `pip install django-admin-react` transitively pulls in the [JSON API](https://pypi.org/project/django-admin-rest-api/) and the [MCP adapter](https://pypi.org/project/django-admin-mcp-api/); `django_admin_react.urls` includes the API endpoints at `<mount>/api/v1/…`, so the SPA finds its wire surface with zero configuration. (Mount the API a second time at your own prefix only if a non-SPA client also needs it.)
 
-> **Beta — v1.0.0.** Available on PyPI; the SPA + the API
+> **Production / Stable.** Available on PyPI; the SPA + the API
 > ([`django-admin-rest-api`](https://pypi.org/project/django-admin-rest-api/))
 > + the MCP adapter
 > ([`django-admin-mcp-api`](https://pypi.org/project/django-admin-mcp-api/))
