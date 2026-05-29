@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "django-admin-react"
-version = "1.4.5"
+version = "1.4.6"
 description = "A drop-in React single-page admin for Django, driven entirely by ModelAdmin."
 authors = ["django-admin-react contributors"]
 license = "MIT"
@@ -49,7 +49,7 @@ django = ">=5.0,<7.0"
 # React SPA super-layer over `django-admin-rest-api`. The package's URLs
 # are included by `django_admin_react.urls`, and consumers add
 # `"django_admin_rest_api"` to `INSTALLED_APPS` alongside this package.
-django-admin-rest-api = "^1.0.3"
+django-admin-rest-api = "^1.0.4"
 # `django-admin-mcp-api` — MCP-protocol adapter over the same REST API
 # so agents reach the SAME `ModelAdmin`-driven surface. Wire-protocol-only
 # layer; adds NO new functionality, permissions, or validation.
