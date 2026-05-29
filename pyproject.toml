@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "django-admin-react"
-version = "1.4.3"
+version = "1.4.4"
 description = "A drop-in React single-page admin for Django, driven entirely by ModelAdmin."
 authors = ["django-admin-react contributors"]
 license = "MIT"
@@ -53,7 +53,12 @@ django-admin-rest-api = "^1.0.3"
 # `django-admin-mcp-api` — MCP-protocol adapter over the same REST API
 # so agents reach the SAME `ModelAdmin`-driven surface. Wire-protocol-only
 # layer; adds NO new functionality, permissions, or validation.
-django-admin-mcp-api = "^0.1.0a0"
+# Constraint widened in v1.4.4 (#605) from the original `^0.1.0a0`
+# (which caps at `<0.2.0`) to `>=1.0.0,<2.0.0` so consumers can pin
+# the stable `1.x` mcp line. The wire contract is unchanged across
+# the 0.1.0a0 → 1.x bump; the version bump is a stability signal,
+# not an API break.
+django-admin-mcp-api = ">=1.0.0,<2.0.0"
 
 [tool.poetry.group.dev.dependencies]
 # Dependabot #5: pytest's tmpdir handled symlinks unsafely
