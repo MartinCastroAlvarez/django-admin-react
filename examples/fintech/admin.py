@@ -23,6 +23,38 @@ class TransactionAdmin(admin.ModelAdmin):
     date_hierarchy = "posted_at"
     autocomplete_fields = ("account",)
     readonly_fields = ("reference",)
+    # Stock Django admin actions (`@admin.action`). They surface on the
+    # changelist (multi-pk runs) AND the SPA's detail page header
+    # (single-pk runs) — no `django-object-actions` mixin, no
+    # `change_actions = [...]` redeclaration. One source of truth for
+    # everything the consumer wants to expose as an action.
+    actions = ("mark_reconciled", "recompute_reference")
+
+    @admin.action(description="Mark as reconciled")
+    def mark_reconciled(self, request, queryset):
+        """Tag every row in the queryset as reconciled.
+
+        Demo no-op: the model has no `reconciled` flag yet — this
+        exists so the SPA's detail page has a stock-Django-admin
+        action to render. A real ModelAdmin would update the row
+        and message the user.
+        """
+        count = queryset.count()
+        self.message_user(request, f"Marked {count} transaction(s) as reconciled.")
+
+    @admin.action(description="Recompute reference")
+    def recompute_reference(self, request, queryset):
+        """Roll the ``reference`` field on each row in the queryset.
+
+        Demo: bumps ``reference`` to ``TXN-RECOMP-<stamp>-<i>`` so the
+        operator can see the action ran end-to-end on the SPA.
+        """
+        from datetime import datetime, timezone as tz
+        stamp = datetime.now(tz.utc).strftime("%Y%m%d%H%M%S")
+        for i, row in enumerate(queryset):
+            row.reference = f"TXN-RECOMP-{stamp}-{i:02d}"
+            row.save(update_fields=["reference"])
+        self.message_user(request, f"Recomputed reference on {queryset.count()} row(s).")
 
 
 @admin.register(Statement)

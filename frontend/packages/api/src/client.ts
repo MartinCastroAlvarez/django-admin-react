@@ -18,7 +18,6 @@ import type {
   HistoryResponse,
   ListResponse,
   LoginResponse,
-  ObjectActionRunResponse,
   RecentActionsResponse,
   RegistryResponse,
   UpdatePayload,
@@ -336,25 +335,13 @@ export class ApiClient {
     );
   }
 
-  /**
-   * Run one object-level change-page action (#236) against a single
-   * object (`POST <app>/<model>/<pk>/action/<name>/`). The backend
-   * re-resolves `name` through the admin's permitted `get_change_actions`
-   * set — the SPA name is never trusted as a callable lookup. CSRF is
-   * sent like other unsafe calls. Returns `{ok, message?, redirect?}`.
-   */
-  runObjectAction(
-    appLabel: string,
-    modelName: string,
-    pk: string | number,
-    name: string,
-  ): Promise<ObjectActionRunResponse> {
-    return this.request<ObjectActionRunResponse>(
-      'POST',
-      `${appLabel}/${modelName}/${pk}/action/${name}/`,
-      {},
-    );
-  }
+  // `runObjectAction` is intentionally not on the HTTP client anymore
+  // (v1.4.8 / #603 revised). The dedicated `/<pk>/action/<name>/`
+  // endpoint was removed in api 1.0.5 — detail-page actions now go
+  // through `runAction(name, [pk])` against the existing changelist
+  // runner. The legacy `runObjectAction` helper still exists in
+  // `@dar/data`'s mutations.ts, but it delegates to `runAction`
+  // internally rather than hitting a separate endpoint.
 
   /**
    * Typeahead for a high-cardinality FK picker (contract §3.2). The
