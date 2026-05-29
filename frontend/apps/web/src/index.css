@@ -98,6 +98,38 @@ body,
 .dark .hover\:text-gray-100:hover {
   color: #fff !important;
 }
+
+/* Frozen-column row-state propagation (#613). Sticky body cells need
+   an explicit background-color so scrolling content doesn't bleed
+   through — but that fixed colour then OVERRIDES the row's :hover /
+   selected highlight, leaving the frozen prefix visually disconnected
+   from the rest of the row. Fix: drive the cell bg from a CSS custom
+   property declared on the <tr>, and flip the property on :hover /
+   data-selected. One declaration per state, one rule per cell —
+   easy to extend if more row states are added (striping etc.). */
+.dar-table tbody tr {
+  --dar-row-bg: #fff;
+}
+.dar-table tbody tr:hover {
+  --dar-row-bg: #f9fafb; /* matches Tailwind hover:bg-gray-50 */
+}
+.dar-table tbody tr[data-selected='true'] {
+  --dar-row-bg: #eff6ff; /* light blue-50 — selection */
+
+  background-color: var(--dar-row-bg);
+}
+.dar-sticky-cell {
+  background-color: var(--dar-row-bg);
+}
+.dark .dar-table tbody tr {
+  --dar-row-bg: #111827; /* same as the bg-white .dark remap */
+}
+.dark .dar-table tbody tr:hover {
+  --dar-row-bg: #1f2937; /* same as hover:bg-gray-50 .dark remap */
+}
+.dark .dar-table tbody tr[data-selected='true'] {
+  --dar-row-bg: #1e3a8a;
+}
 /* Form controls have no explicit bg utility (the @dar/ui Input + the
    filter selects render on the browser-default white), so the bg-white
    remap above misses them — they'd stay white in dark mode. Style them

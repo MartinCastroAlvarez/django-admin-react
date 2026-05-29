@@ -204,6 +204,16 @@ export function Table<Row>({
       ? ''
       : `${base} z-10 ${key === lastStickyKey ? 'shadow-[2px_0_0_-1px_rgba(0,0,0,0.06)]' : ''}`;
   }
+  // Body-cell sticky background tracks the row's :hover / selection
+  // state via the `--dar-row-bg` custom property (apps/web/src/index.css
+  // #613). Header cells stay `bg-gray-50` — header has no hover and
+  // selection doesn't propagate up to <thead>, so the simpler
+  // `stickyClass` flow is fine there.
+  function stickyBodyClass(key: string): string {
+    return stickyLefts[key] === undefined
+      ? ''
+      : `dar-sticky-cell z-10 ${key === lastStickyKey ? 'shadow-[2px_0_0_-1px_rgba(0,0,0,0.06)]' : ''}`;
+  }
 
   const startResize = (key: string, e: ReactMouseEvent): void => {
     e.preventDefault();
@@ -227,7 +237,7 @@ export function Table<Row>({
 
   return (
     <div className="overflow-x-auto" aria-busy={loading || undefined}>
-      <table className={`min-w-full text-sm ${hasWidths ? 'table-fixed' : ''}`}>
+      <table className={`dar-table min-w-full text-sm ${hasWidths ? 'table-fixed' : ''}`}>
         {hasWidths && (
           <colgroup>
             {selectable && <col style={{ width: '2.5rem' }} />}
@@ -338,7 +348,7 @@ export function Table<Row>({
                 <tr key={`dar-skeleton-${i}`}>
                   {selectable && (
                     <td
-                      className={`w-10 px-4 py-2 ${stickyClass('__select', 'bg-white')}`}
+                      className={`w-10 px-4 py-2 ${stickyBodyClass('__select')}`}
                       style={stickyStyle('__select')}
                     >
                       <Skeleton className="h-4 w-4" />
@@ -347,7 +357,7 @@ export function Table<Row>({
                   {columns.map((col) => (
                     <td
                       key={col.key}
-                      className={`px-4 py-2 ${ALIGN_CLASSES[col.align ?? 'left']} ${col.sticky ? stickyClass(col.key, 'bg-white') : ''}`}
+                      className={`px-4 py-2 ${ALIGN_CLASSES[col.align ?? 'left']} ${col.sticky ? stickyBodyClass(col.key) : ''}`}
                       style={col.sticky ? stickyStyle(col.key) : undefined}
                     >
                       <Skeleton className="h-4 w-full max-w-[12rem]" />
@@ -357,15 +367,21 @@ export function Table<Row>({
               ))
             : rows.map((row) => {
                 const key = rowKey(row);
+                const isSelected = selectable && selected.has(key);
                 return (
                   <tr
                     key={key}
                     onClick={onRowClick ? () => onRowClick(row) : undefined}
+                    // `data-selected` propagates the checkbox state to
+                    // both the row's bg AND the frozen-cells' bg via
+                    // the `--dar-row-bg` custom property (apps/web/
+                    // src/index.css #613).
+                    data-selected={isSelected ? 'true' : undefined}
                     className={onRowClick ? 'cursor-pointer hover:bg-gray-50' : ''}
                   >
                     {selectable && (
                       <td
-                        className={`w-10 px-4 py-2 ${stickyClass('__select', 'bg-white')}`}
+                        className={`w-10 px-4 py-2 ${stickyBodyClass('__select')}`}
                         style={stickyStyle('__select')}
                         onClick={(e) => e.stopPropagation()}
                       >
@@ -379,7 +395,7 @@ export function Table<Row>({
                     {columns.map((col, ci) => (
                       <td
                         key={col.key}
-                        className={`px-4 py-2 ${ALIGN_CLASSES[col.align ?? 'left']} ${col.sticky ? stickyClass(col.key, 'bg-white') : ''}`}
+                        className={`px-4 py-2 ${ALIGN_CLASSES[col.align ?? 'left']} ${col.sticky ? stickyBodyClass(col.key) : ''}`}
                         style={col.sticky ? stickyStyle(col.key) : undefined}
                       >
                         {/* Cap very wide cells and truncate with an
