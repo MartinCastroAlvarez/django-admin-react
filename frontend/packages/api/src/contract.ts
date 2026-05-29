@@ -257,12 +257,28 @@ export interface FilterDescriptor {
   selected?: string | null;
 }
 
-/** One bulk action surfaced from `ModelAdmin.actions`. */
+/**
+ * One action surfaced from `ModelAdmin.actions`. The API classifies
+ * each registered callable by signature (api 1.0.6+, #603 revised):
+ *
+ * - `batch` — third parameter is the changelist queryset
+ *   (stock Django `def my_action(self, request, queryset)`). Renders
+ *   on the **changelist** with multi-select.
+ * - `detail` — third parameter is a single object id (parameter
+ *   named `obj_id` / `pk` / etc., or annotated `str` / `int` /
+ *   `Model`). Renders on the **single-object detail page**.
+ *
+ * Older API versions (<1.0.6) omit the `target` field; callers
+ * should default to `'batch'` for back-compat.
+ */
 export interface ActionDescriptor {
   name: string;
   label: string;
   description: string;
   requires_confirmation?: boolean;
+  /** Render surface for this action (api 1.0.6+). Absent on older
+   *  servers; treat as `'batch'` (the legacy/stock Django shape). */
+  target?: 'batch' | 'detail';
 }
 
 /** Result of running a bulk action (contract §5.4). */
@@ -284,16 +300,15 @@ export interface ActionRunResponse {
 }
 
 /**
- * One object-level change-page action (#236) — the django-object-actions
- * `change_actions` affordance, surfaced on the detail response only when
- * the admin opts in (duck-typed; no hard dependency). The SPA renders a
- * button per entry next to Edit/Delete.
+ * One detail-page action descriptor. As of api 1.0.6+ (#603 revised),
+ * `data.object_actions` on the detail response uses the same
+ * descriptor shape as `data.actions` on the list response — the API
+ * builds both from `actions_payload(...)` and classifies each by
+ * signature (`target: 'batch' | 'detail'`). `ObjectActionDescriptor`
+ * is kept as an alias for backwards-compat with the v1.0.2 → v1.4.7
+ * `<ObjectActionButton>` consumer that still imports the name.
  */
-export interface ObjectActionDescriptor {
-  name: string;
-  label: string;
-  description?: string;
-}
+export type ObjectActionDescriptor = ActionDescriptor;
 
 /**
  * Result of running one object action

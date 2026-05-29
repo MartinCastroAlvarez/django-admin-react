@@ -422,18 +422,38 @@ class InvoiceAdmin(admin.ModelAdmin):
 
 ### Add custom admin actions
 
+One `actions = (...)` declaration. The API classifies each callable by signature and the SPA renders it on the right surface — **changelist** (multi-select bulk run) or **detail page** (single-object button) — automatically:
+
 ```python
 class InvoiceAdmin(admin.ModelAdmin):
-    actions = ["mark_paid"]
+    actions = ("mark_paid", "regenerate_pdf")
 
+    # Third parameter is `queryset` → batch shape.
+    # Renders on the changelist with multi-select.
     @admin.action(description="Mark selected as paid")
     def mark_paid(self, request, queryset):
         queryset.update(status="paid", paid_at=timezone.now())
+
+    # Third parameter named `obj_id` (or annotated `str`/`int`/Model)
+    # → detail shape. Renders as a button on the single-invoice
+    # detail page header.
+    @admin.action(description="Regenerate PDF")
+    def regenerate_pdf(self, request, obj_id: str):
+        invoice = self.model.objects.get(pk=obj_id)
+        invoice.regenerate_pdf()
+        self.message_user(request, f"Regenerated PDF for #{invoice.pk}.")
 ```
 
-The SPA renders a bulk-actions menu and posts to the same
-`ModelAdmin.actions` machinery — same signatures, same audit
-trail.
+Classifier rules (api 1.0.6+):
+
+| Third parameter | Target | Where it renders |
+|---|---|---|
+| name `queryset` / `qs`, or `QuerySet` annotation | `batch` | Changelist multi-select |
+| name `obj_id` / `object_id` / `pk` / `id` / `object_pk` | `detail` | Detail page header |
+| annotation `str` / `int` / `Model` subclass | `detail` | Detail page header |
+| anything else | `batch` (default, preserves stock Django) | Changelist multi-select |
+
+Same `@admin.action` decorator on both. Same `ModelAdmin.actions` tuple. Same audit trail. **No `django-object-actions`, no `change_actions = (...)` redeclaration** — the signature is the wire.
 
 ### Per-row permission gating
 
@@ -538,14 +558,11 @@ customisations.
 
 ---
 
-## Feature status (alpha — currently `0.2.0a*` on PyPI)
+## Feature status
 
-The **backend** — the `ModelAdmin`-driven REST API — is the stable,
-complete surface and the table below tracks it. The **React SPA** that
-consumes it is in active development; to keep this README from drifting,
-per-feature *SPA* (UI) status is **not** duplicated here — it is tracked
-live in the [frontend implementation tracker (#160)](https://github.com/MartinCastroAlvarez/django-admin-react/issues/160)
-and the [project board](https://github.com/users/MartinCastroAlvarez/projects/3).
+All three packages are **Production / Stable** on PyPI. The
+`ModelAdmin`-driven REST API + the React SPA + the MCP adapter
+all share the v1 wire contract. Per-feature live status below.
 
 | `ModelAdmin` surface                                   | Backend (REST API)                                              |
 | ------------------------------------------------------ | --------------------------------------------------------------- |
@@ -554,7 +571,7 @@ and the [project board](https://github.com/users/MartinCastroAlvarez/projects/3)
 | `list_filter` (boolean / choice / FK / date / Simple)  | ✅                                                              |
 | `date_hierarchy`                                       | ✅                                                              |
 | `list_editable` + bulk PATCH                           | ✅                                                              |
-| `actions` (custom + bulk runner)                       | ✅                                                              |
+| `actions` — batch + detail (signature-classified)      | ✅                                                              |
 | `autocomplete_fields` / `raw_id_fields`                | ✅                                                              |
 | `ManyToManyField` read + write                         | ✅                                                              |
 | `inlines` (TabularInline / StackedInline) — read + write | ✅                                                            |
@@ -569,9 +586,7 @@ and the [project board](https://github.com/users/MartinCastroAlvarez/projects/3)
 | OpenAPI 3.1 schema at `/api/v1/schema/`                | ✅                                                              |
 | PWA manifest + service worker (cache-purge on logout)  | ✅                                                              |
 
-✅ = shipped in the current alpha. 🟡 = not yet built (tracked). This
-column is the **backend** capability only — for which surfaces the React
-UI renders today, see the [frontend tracker (#160)](https://github.com/MartinCastroAlvarez/django-admin-react/issues/160).
+✅ = shipped. 🟡 = not yet built (tracked).
 
 ---
 

@@ -291,7 +291,20 @@ export function DetailPage({
                 action the user isn't allowed to. On success we re-fetch the
                 detail payload (computed/readonly fields may have changed) and
                 navigate if the action returned a redirect. No full reload. */}
-            {(data.object_actions ?? []).map((action) => (
+            {/* Render ONLY `target === 'detail'` actions here
+                (api 1.0.6+ #603 revised). The same `data.object_actions`
+                wire field carries every `ModelAdmin.actions` entry; the
+                signature-inspection classifier on the API marks the
+                ones whose third parameter is a single object id as
+                `detail` and the queryset-shaped ones as `batch`. The
+                changelist runner endpoint handles both shapes, but we
+                only want the single-pk-callable ones reachable from
+                the detail page header. Back-compat: a pre-1.0.6 API
+                omits `target` — fall through to NOT showing anything
+                (the legacy/stock Django shape was batch-only). */}
+            {(data.object_actions ?? [])
+              .filter((action) => action.target === 'detail')
+              .map((action) => (
               <ObjectActionButton
                 key={action.name}
                 action={action}
