@@ -272,6 +272,20 @@ function LockedRow({
       className="flex items-center gap-2 rounded border border-transparent bg-gray-50 px-1 py-1"
       aria-label={`${label} (locked)`}
     >
+      {/* Non-interactive drag-handle placeholder so the locked row's
+          checkbox + label align with the sortable rows below
+          (which have a real handle button at the start). Matches the
+          handle button's exact box: `p-0.5` padding + `h-4 w-4` icon
+          = a 20×20 px slot. Rendered faded (text-gray-300) to signal
+          "this column would be draggable if it weren't locked"
+          without inviting clicks. aria-hidden so screen readers
+          skip it. */}
+      <span
+        aria-hidden
+        className="inline-flex h-5 w-5 shrink-0 cursor-not-allowed items-center justify-center p-0.5 text-gray-300"
+      >
+        <GripVertical className="h-4 w-4" aria-hidden />
+      </span>
       {onUnlock ? (
         <button
           type="button"
