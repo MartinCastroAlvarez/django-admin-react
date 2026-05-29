@@ -424,38 +424,49 @@ class InvoiceAdmin(admin.ModelAdmin):
 
 ### Add custom admin actions
 
-One `actions = (...)` declaration. The API classifies each callable by signature and the SPA renders it on the right surface — **changelist** (multi-select bulk run) or **detail page** (single-object button) — automatically:
+Declare actions the stock-Django way; the SPA surfaces them in both places automatically. **One `@admin.action` declaration → two surfaces:** the changelist multi-select dropdown **and** a per-object button on the detail page. No `django-object-actions`, no `change_actions = (...)` redeclaration, no parameter-name gymnastics:
+
+```python
+class InvoiceAdmin(admin.ModelAdmin):
+    actions = ("mark_paid",)
+
+    @admin.action(description="Mark selected as paid")
+    def mark_paid(self, request, queryset):
+        queryset.update(status="paid", paid_at=timezone.now())
+```
+
+That single declaration shows up in the changelist's bulk-actions dropdown (operating on every selected row) **and** as a button on the detail page (operating on the single visible row, dispatched as a one-row queryset).
+
+#### Optional: detail-only actions
+
+If you want an action to render **only** on the detail page (not in the changelist dropdown), give its third parameter a single-object shape — name it `obj_id` / `object_id` / `pk` / `id` / `object_pk`, or annotate it `str` / `int` / a `Model` subclass. The API's signature classifier (api 1.0.6+) marks those as `target: "detail"`:
 
 ```python
 class InvoiceAdmin(admin.ModelAdmin):
     actions = ("mark_paid", "regenerate_pdf")
 
-    # Third parameter is `queryset` → batch shape.
-    # Renders on the changelist with multi-select.
     @admin.action(description="Mark selected as paid")
     def mark_paid(self, request, queryset):
-        queryset.update(status="paid", paid_at=timezone.now())
+        ...  # changelist + detail (batch shape)
 
-    # Third parameter named `obj_id` (or annotated `str`/`int`/Model)
-    # → detail shape. Renders as a button on the single-invoice
-    # detail page header.
     @admin.action(description="Regenerate PDF")
     def regenerate_pdf(self, request, obj_id: str):
         invoice = self.model.objects.get(pk=obj_id)
         invoice.regenerate_pdf()
-        self.message_user(request, f"Regenerated PDF for #{invoice.pk}.")
+        # detail page only — the stock Django changelist runner
+        # expects a queryset, so this shape won't run from there.
 ```
 
 Classifier rules (api 1.0.6+):
 
 | Third parameter | Target | Where it renders |
 |---|---|---|
-| name `queryset` / `qs`, or `QuerySet` annotation | `batch` | Changelist multi-select |
-| name `obj_id` / `object_id` / `pk` / `id` / `object_pk` | `detail` | Detail page header |
-| annotation `str` / `int` / `Model` subclass | `detail` | Detail page header |
-| anything else | `batch` (default, preserves stock Django) | Changelist multi-select |
+| name `queryset` / `qs`, or `QuerySet` annotation | `batch` (default) | Changelist multi-select **and** detail page |
+| name `obj_id` / `object_id` / `pk` / `id` / `object_pk` | `detail` | Detail page only |
+| annotation `str` / `int` / `Model` subclass | `detail` | Detail page only |
+| anything else | `batch` (default, preserves stock Django) | Changelist multi-select **and** detail page |
 
-Same `@admin.action` decorator on both. Same `ModelAdmin.actions` tuple. Same audit trail. **No `django-object-actions`, no `change_actions = (...)` redeclaration** — the signature is the wire.
+Same `@admin.action` decorator regardless. Same `ModelAdmin.actions` tuple. Same audit trail. The signature picks the surface; the default surfaces on both.
 
 ### Per-row permission gating
 

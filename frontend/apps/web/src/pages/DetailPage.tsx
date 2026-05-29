@@ -291,19 +291,18 @@ export function DetailPage({
                 action the user isn't allowed to. On success we re-fetch the
                 detail payload (computed/readonly fields may have changed) and
                 navigate if the action returned a redirect. No full reload. */}
-            {/* Render ONLY `target === 'detail'` actions here
-                (api 1.0.6+ #603 revised). The same `data.object_actions`
-                wire field carries every `ModelAdmin.actions` entry; the
-                signature-inspection classifier on the API marks the
-                ones whose third parameter is a single object id as
-                `detail` and the queryset-shaped ones as `batch`. The
-                changelist runner endpoint handles both shapes, but we
-                only want the single-pk-callable ones reachable from
-                the detail page header. Back-compat: a pre-1.0.6 API
-                omits `target` — fall through to NOT showing anything
-                (the legacy/stock Django shape was batch-only). */}
+            {/* Render every entry in `data.object_actions` here, batch
+                AND detail (#618). The API's signature classifier marks
+                queryset-shaped actions as `batch` and obj_id-shaped ones
+                as `detail`; the runner endpoint dispatches both correctly
+                — batch is invoked as `action(modeladmin, request,
+                queryset_of_one)` for the detail page's single pk, detail
+                is invoked as `action(modeladmin, request, str(pk))` once.
+                One `@admin.action` declaration → two surfaces: dropdown
+                on the changelist, button on the detail page. A pre-1.0.6
+                API omits `target` entirely; those descriptors still
+                render here unfiltered. */}
             {(data.object_actions ?? [])
-              .filter((action) => action.target === 'detail')
               .map((action) => (
               <ObjectActionButton
                 key={action.name}
