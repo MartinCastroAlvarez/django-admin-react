@@ -10,7 +10,14 @@
 // Edit/Delete are gated by the `permissions` block the API returns.
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ChevronDown, Clock, ExternalLink, RefreshCw } from 'lucide-react';
+import {
+  ChevronDown,
+  Clock,
+  ExternalLink,
+  Pencil,
+  RefreshCw,
+  Trash2,
+} from 'lucide-react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
 import {
@@ -255,9 +262,15 @@ export function DetailPage({
             <button
               type="button"
               onClick={() => setHistoryOpen(true)}
-              className="inline-flex items-center gap-1.5 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+              aria-label="History"
+              title="History"
+              // Icon-only (#608) — the clock icon already speaks for
+              // itself alongside the other small icon-only buttons
+              // (Refresh, the per-object actions); the "History"
+              // label was redundant chrome on a crowded header.
+              className="inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-2 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
             >
-              <Clock className="h-4 w-4" aria-hidden /> History
+              <Clock className="h-4 w-4" aria-hidden />
             </button>
             {data.view_on_site_url && (
               <a
@@ -307,7 +320,9 @@ export function DetailPage({
             />
             {canChange && (
               <Button variant="primary" onClick={() => setEditing(true)}>
-                Edit
+                <span className="inline-flex items-center gap-1.5">
+                  <Pencil className="h-4 w-4" aria-hidden /> Edit
+                </span>
               </Button>
             )}
             {canDelete && (
@@ -859,7 +874,9 @@ function DeleteButton({ label, loadPreview, onConfirm }: DeleteButtonProps) {
   return (
     <>
       <Button variant="danger" onClick={() => setOpen(true)}>
-        Delete
+        <span className="inline-flex items-center gap-1.5">
+          <Trash2 className="h-4 w-4" aria-hidden /> Delete
+        </span>
       </Button>
       {open && (
         <Modal
