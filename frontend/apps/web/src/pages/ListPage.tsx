@@ -474,7 +474,15 @@ export function ListPage() {
   const filters = data.filters ?? [];
   // Count of list_filters currently applied (drives the empty-state copy).
   const activeFilterCount = filters.filter((f) => activeFilters[f.name]).length;
-  const actions = data.actions ?? [];
+  // Changelist actions = only those classified `batch` by the API
+  // (api 1.0.6+ #603 revised). `detail`-target actions live on the
+  // single-object page; rendering them here would let the operator
+  // run a single-pk-shaped callable across a multi-row selection,
+  // which would 400. Back-compat: pre-1.0.6 API omits `target`;
+  // treat the absence as `batch` so older servers keep working.
+  const actions = (data.actions ?? []).filter(
+    (a) => a.target === undefined || a.target === 'batch',
+  );
   const canRunActions = actions.length > 0 && data.permissions.change;
 
   // Select-all-across-pages (#386). The total matching the current filter
