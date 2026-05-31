@@ -20,7 +20,7 @@ import { Breadcrumb, Button, Card, EmptyState } from '@dar/ui';
 import { FieldInput } from '@dar/form';
 
 import { RecordSkeleton } from '../components/RecordSkeleton';
-import { slugify } from '../slugify';
+import { applyPrepopulate } from './prepopulate';
 import { useModelMeta } from '../useModelMeta';
 import { useToast } from '../toast';
 import { useUnsavedGuard } from '../useUnsavedGuard';
@@ -184,16 +184,13 @@ function CreateForm({ schema, onCreate, onCancel }: CreateFormProps) {
 
   function handleFieldChange(name: string, v: WriteValue): void {
     setValues((prev) => {
-      const next = { ...prev, [name]: v };
       // A direct edit of a target field opts it out of further auto-fill.
       if (prepopTargets.has(name)) editedTargets.current.add(name);
-      for (const [target, sources] of Object.entries(prepopulated)) {
-        if (editedTargets.current.has(target)) continue;
-        if (!sources.includes(name)) continue;
-        const joined = sources.map((s) => (next[s] == null ? '' : String(next[s]))).join(' ');
-        next[target] = slugify(joined);
-      }
-      return next;
+      return applyPrepopulate({
+        values: { ...prev, [name]: v },
+        prepopulated,
+        editedTargets: editedTargets.current,
+      });
     });
   }
 
