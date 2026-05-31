@@ -38,9 +38,12 @@ export type FieldType =
  * `raw_id_fields` (#251). `password` is a security boundary, not a layout
  * choice: it marks a field the admin routed through `PasswordInput`, whose
  * stored value the backend redacts from the payload (matching Django's
- * `render_value=False`) — the SPA masks the input (#504).
+ * `render_value=False`) — the SPA masks the input (#504). `shuttle_h` /
+ * `shuttle_v` come from `filter_horizontal` / `filter_vertical` (#627) —
+ * the SPA renders Django's two-pane "available / chosen" widget for the
+ * M2M field, with horizontal or vertical orientation respectively.
  */
-export type WidgetHint = 'radio' | 'raw_id' | 'password';
+export type WidgetHint = 'radio' | 'raw_id' | 'password' | 'shuttle_h' | 'shuttle_v';
 
 export interface Permissions {
   view: boolean;
