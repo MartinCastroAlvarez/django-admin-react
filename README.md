@@ -790,11 +790,65 @@ HTML admin. The wire shape is identical regardless of locale —
 only the human-readable strings change.
 
 **The SPA's own chrome strings** ("Add", "Search", "Save and
-continue editing", "Loading…") are still hard-coded English. A
-message-catalog refresh + `config.language` wire field is tracked
-in [#630](https://github.com/MartinCastroAlvarez/django-admin-react/issues/630). Until that lands, non-English-primary shops
-get translated `verbose_name` / `help_text` (via `LocaleMiddleware`)
-but English chrome around them.
+continue editing", "Loading…") flow through the same locale (#630,
+since 1.7.0). Shipped catalogs: English (source-as-key), Spanish,
+Portuguese / pt-BR, French. Adding a new language: drop a JSON file
+under `frontend/packages/ui/src/i18n/`, import it in
+`frontend/packages/ui/src/i18n.ts`, ship.
+
+### Custom widgets (`formfield_overrides` + `registerFieldWidget`)
+
+When your `ModelAdmin` routes a field through a custom widget —
+`formfield_overrides = {MyJSONField: {"widget": MyCustomWidget}}`,
+or a custom `Form` class declaring widgets directly, or a
+third-party widget library — the API surfaces it as
+`widget: "custom"` + `widget_class: "<dotted.Python.Path>"`
+(`django-admin-rest-api` 1.3.0+). The SPA dispatches the render to
+a consumer-registered widget via a small plugin protocol (#625).
+
+Register your widget BEFORE the SPA bundle runs — in your custom
+`change_form_template`, a shared base template, or any `<script>`
+tag that loads ahead of the SPA's bundle:
+
+```html
+<!-- in your Django template -->
+<script>
+  window.darFieldWidgets = window.darFieldWidgets ?? {};
+  window.darFieldWidgets['mypkg.widgets.MarkdownEditor'] = {
+    mount(container, props) {
+      // Read `props.value` for the current value.
+      // Call `props.onChange(next)` when the operator edits.
+      // Render whatever — vanilla JS, jQuery, mini-React, …
+      const textarea = document.createElement('textarea');
+      textarea.value = props.value ?? '';
+      textarea.addEventListener('input', (e) => props.onChange(e.target.value));
+      container.appendChild(textarea);
+      // (Optional) return a cleanup fn called on SPA unmount.
+      return () => textarea.remove();
+    },
+  };
+</script>
+```
+
+The `props` object passed to `mount` has:
+
+| Prop | Type | Description |
+|---|---|---|
+| `value` | `WriteValue` | Current draft value (live — read each access via getter). |
+| `onChange` | `(next) => void` | Call to emit a new value; the SPA re-renders. |
+| `error` | `string[] \| undefined` | Per-field validation errors from the last save attempt. |
+| `widgetClass` | `string` | The dotted class path (handy if a single mount fn handles related widgets). |
+
+When no registration matches the `widget_class` on the wire, the
+SPA falls back to a default text input + a small amber note
+(`Custom widget <class> is not registered; using the default text
+input.`). The operator can still complete the form; the gap is
+explicit and recoverable, not a silent break.
+
+If you'd rather skip the consumer-side widget for a model and keep
+it on the legacy `/admin/`, the
+[experience-toggle strip](#experience-toggle-strip-optional) +
+`LEGACY_ADMIN_URL_PREFIX` give consumers a one-click hop back.
 
 ---
 

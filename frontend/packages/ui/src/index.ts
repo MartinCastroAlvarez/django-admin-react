@@ -58,3 +58,9 @@ export type { RefreshButtonProps } from './RefreshButton';
 // The active catalog is hydrated once at boot from
 // `<meta name="dar-language">`; see `loadCatalog` in main.tsx.
 export { t, loadCatalog } from './i18n';
+
+// Custom widget plugin protocol (#625). Lets a consumer register a
+// mount fn for the SPA to call when it encounters a custom widget
+// (formfield_overrides / formfield_for_dbfield / custom Form).
+export { registerFieldWidget, lookupFieldWidget } from './custom-widget';
+export type { CustomWidgetProps, CustomWidgetSpec } from './custom-widget';

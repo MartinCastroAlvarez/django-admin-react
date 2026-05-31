@@ -13,9 +13,10 @@ import { Plus } from 'lucide-react';
 
 import type { FieldDescriptor, FieldValue, WriteValue } from '@dar/data';
 import { FieldValueView } from '@dar/details';
-import { Checkbox } from '@dar/ui';
+import { Checkbox, lookupFieldWidget, t } from '@dar/ui';
 
 import { AutocompleteInput } from './AutocompleteInput';
+import { CustomWidgetMount } from './CustomWidgetMount';
 import { RelatedAddModal } from './RelatedAddModal';
 import { ShuttleSelect } from './ShuttleSelect';
 
@@ -70,6 +71,49 @@ export function FieldInput({ name, field, value, error, onChange }: FieldInputPr
         className={base}
       />
     );
+  } else if (field.widget === 'custom' && field.widget_class) {
+    // Custom widget plugin protocol (#625). The API (1.3.0+) marks
+    // any field whose bound form widget class lives outside
+    // ``django.*`` with ``widget: "custom"`` + the widget's dotted
+    // Python path. Consumers register a vanilla mount fn for that
+    // class via ``registerFieldWidget(class, {mount})``; the SPA's
+    // ``CustomWidgetMount`` adapter bridges React → the mount fn's
+    // imperative DOM world.
+    //
+    // If no registration matches, render the default control for the
+    // field's type with a small inline note so the operator isn't
+    // stuck — they can still type something into the field; the
+    // consumer's missing widget is a deployment gap, not a hard
+    // block. The note links to the legacy admin which has the real
+    // widget rendered server-side.
+    const widgetSpec = lookupFieldWidget(field.widget_class);
+    if (widgetSpec) {
+      control = (
+        <CustomWidgetMount
+          spec={widgetSpec}
+          widgetClass={field.widget_class}
+          value={value}
+          onChange={onChange}
+          error={error}
+        />
+      );
+    } else {
+      control = (
+        <div className="space-y-1">
+          <input
+            id={id}
+            type="text"
+            value={value == null ? '' : String(value)}
+            onChange={(e) => onChange(e.target.value)}
+            className={base}
+          />
+          <p className="text-xs text-amber-700">
+            {t('Custom widget')} <code className="font-mono">{field.widget_class}</code>{' '}
+            {t('is not registered; using the default text input.')}
+          </p>
+        </div>
+      );
+    }
   } else if (field.widget === 'raw_id' && field.type === 'foreignkey') {
     // raw_id_fields (#626 / #251). The consumer explicitly OPTED OUT
     // of an autocomplete picker — typically because the FK target has
