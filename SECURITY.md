@@ -182,7 +182,7 @@ Every endpoint added must include all of these tests before merging:
   (`POETRY_PYPI_TOKEN_PYPI`), never in any file in the repo. The token
   is **never** echoed or logged by `scripts/deploy.sh`.
 - Releases require a **human maintainer**. The publish is driven by the
-  `release.yml` workflow (OIDC Trusted Publishing — no stored token);
+  `publish.yml` workflow (OIDC Trusted Publishing — no stored token);
   the maintainer triggers it by publishing a GitHub Release.
 - TestPyPI may be used for verification by the maintainer with a
   separate token; same hygiene rules apply.

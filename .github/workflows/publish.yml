@@ -1,4 +1,4 @@
-name: release
+name: publish
 
 # Automated PyPI publishing for django-admin-react.
 #
@@ -37,7 +37,7 @@ name: release
 #      "Trusted Publisher":
 #        Owner:        MartinCastroAlvarez
 #        Repository:   django-admin-react
-#        Workflow:     release.yml
+#        Workflow:     publish.yml
 #        Environment:  pypi
 #   2. GitHub → repo Settings → Environments → create `pypi` (optionally
 #      add required reviewers so a release is approval-gated), and

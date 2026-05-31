@@ -13,7 +13,7 @@ GitHub Actions workflows for django-admin-react.
   checks **required** is an owner branch-protection action (#452 / #331).
 - **`codeql.yml`** — CodeQL static analysis (Python + JS/TS) on push/PR and a
   weekly schedule. This is the project's security dataflow scanner.
-- **`release.yml`** — automated PyPI publishing. Triggered when a GitHub
+- **`publish.yml`** — automated PyPI publishing. Triggered when a GitHub
   Release is **published** (a human authorises every release; the Release
   notes are the changelog entry), or manually via `workflow_dispatch` for a
   TestPyPI dry-run. Uses **PyPI Trusted Publishing (OIDC)** — no stored
