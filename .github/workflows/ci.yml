@@ -50,8 +50,20 @@ concurrency:
 
 jobs:
   backend:
-    name: Backend (pytest)
+    name: Backend (pytest py${{ matrix.python }} / Django ${{ matrix.django }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # Django 4.2 LTS is supported through April 2026 (#622). Add it
+        # alongside 5.x and 6.0 so the package keeps working for the
+        # majority of installed Django by deployment count.
+        python: ["3.12"]
+        django: ["4.2", "5.2"]
+        # 4.2 added Python 3.13 support in 4.2.16 but pip may resolve to
+        # an earlier 4.2.x; skip 3.13 + 4.2 conservatively. (We only
+        # exercise py3.12 here today; the matrix is set up for an easy
+        # future expansion.)
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -59,7 +71,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@0b93645e9fea7318ecaed2b359559ac225c90a2b # v5.3.0
         with:
-          python-version: "3.12"
+          python-version: ${{ matrix.python }}
 
       - name: Install Poetry
         # Poetry is pinned to the version that generated poetry.lock (see
@@ -71,6 +83,9 @@ jobs:
 
       - name: Install dependencies (locked)
         run: poetry install --no-interaction
+
+      - name: Pin Django to the matrix version
+        run: poetry run pip install "django~=${{ matrix.django }}.0"
 
       # pytest with coverage (per pyproject `addopts`), including
       # tests/test_security.py. `filterwarnings = ["error"]` means a new
