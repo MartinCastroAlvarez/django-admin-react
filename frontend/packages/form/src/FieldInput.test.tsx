@@ -225,3 +225,137 @@ describe('FieldInput — related "+add" affordance (#383)', () => {
     expect(screen.queryByRole('button', { name: /Add/ })).not.toBeInTheDocument();
   });
 });
+
+describe('FieldInput raw_id widget (#626)', () => {
+  it('renders a plain text input — NOT the autocomplete picker', () => {
+    render(
+      <FieldInput
+        name="owner"
+        field={field({
+          type: 'foreignkey',
+          widget: 'raw_id',
+          to: { app_label: 'auth', model_name: 'user' },
+        })}
+        value={null}
+        error={undefined}
+        onChange={() => {}}
+      />,
+    );
+    const input = screen.getByLabelText('F') as HTMLInputElement;
+    expect(input).toHaveAttribute('type', 'text');
+    // Defining feature: no autocomplete + numeric inputMode for the pk.
+    expect(input).toHaveAttribute('inputmode', 'numeric');
+  });
+
+  it('reports the typed pk via onChange', () => {
+    const onChange = vi.fn();
+    render(
+      <FieldInput
+        name="owner"
+        field={field({
+          type: 'foreignkey',
+          widget: 'raw_id',
+          to: { app_label: 'auth', model_name: 'user' },
+        })}
+        value={null}
+        error={undefined}
+        onChange={onChange}
+      />,
+    );
+    fireEvent.change(screen.getByLabelText('F'), { target: { value: '42' } });
+    expect(onChange).toHaveBeenCalledWith('42');
+  });
+
+  it('emits null when the operator clears a previously-filled pk', () => {
+    const onChange = vi.fn();
+    render(
+      <FieldInput
+        name="owner"
+        field={field({
+          type: 'foreignkey',
+          widget: 'raw_id',
+          to: { app_label: 'auth', model_name: 'user' },
+        })}
+        value={'42'}
+        error={undefined}
+        onChange={onChange}
+      />,
+    );
+    fireEvent.change(screen.getByLabelText('F'), { target: { value: '' } });
+    expect(onChange).toHaveBeenCalledWith(null);
+  });
+
+  it('shows a Lookup link to the FK target changelist (opens in a new tab)', () => {
+    render(
+      <FieldInput
+        name="owner"
+        field={field({
+          type: 'foreignkey',
+          widget: 'raw_id',
+          to: { app_label: 'auth', model_name: 'user' },
+        })}
+        value={null}
+        error={undefined}
+        onChange={() => {}}
+      />,
+    );
+    const lookup = screen.getByRole('link', { name: /Look up related object/ });
+    expect(lookup).toHaveAttribute('href', '../../auth/user/');
+    expect(lookup).toHaveAttribute('target', '_blank');
+    expect(lookup).toHaveAttribute('rel', expect.stringContaining('noopener') as unknown as string);
+  });
+
+  it('omits the Lookup link when the FK target is not admin-registered (no `to`)', () => {
+    render(
+      <FieldInput
+        name="owner"
+        field={field({ type: 'foreignkey', widget: 'raw_id' })}
+        value={null}
+        error={undefined}
+        onChange={() => {}}
+      />,
+    );
+    expect(screen.queryByRole('link', { name: /Look up/ })).not.toBeInTheDocument();
+  });
+});
+
+describe('FieldInput radio widget (#626)', () => {
+  const choices = [
+    { value: 'draft', label: 'Draft' },
+    { value: 'published', label: 'Published' },
+    { value: 'archived', label: 'Archived' },
+  ];
+
+  it('renders one radio input per choice, grouped under a radiogroup', () => {
+    render(
+      <FieldInput
+        name="status"
+        field={field({ type: 'choice', widget: 'radio', choices })}
+        value={'published'}
+        error={undefined}
+        onChange={() => {}}
+      />,
+    );
+    expect(screen.getByRole('radiogroup')).toBeInTheDocument();
+    expect(screen.getAllByRole('radio')).toHaveLength(3);
+    // The currently-selected option is checked.
+    const checked = screen.getAllByRole('radio').find((r) => (r as HTMLInputElement).checked);
+    expect(checked).toBeDefined();
+    expect((checked as HTMLInputElement).value).toBe('published');
+  });
+
+  it('emits the original (untyped) choice value via onChange', () => {
+    const onChange = vi.fn();
+    render(
+      <FieldInput
+        name="status"
+        field={field({ type: 'choice', widget: 'radio', choices })}
+        value={null}
+        error={undefined}
+        onChange={onChange}
+      />,
+    );
+    fireEvent.click(screen.getByLabelText('Archived'));
+    expect(onChange).toHaveBeenCalledWith('archived');
+  });
+});
