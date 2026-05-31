@@ -509,6 +509,65 @@ def test_primary_color_non_hex_value_cannot_inject_css(superuser_client: Client)
 
 
 @pytest.mark.django_db
+def test_primary_color_falls_back_to_admin_site_attr(superuser_client: Client) -> None:
+    """When `PRIMARY_COLOR` is unset, the SPA reads `site_primary_color`
+    off the AdminSite — mirrors `site_header` / `site_logo` so a consumer
+    with a custom AdminSite can brand from one place (#631)."""
+    with override_settings(DJANGO_ADMIN_REACT={}):
+        _reload_conf()
+        original = getattr(default_admin_site, "site_primary_color", None)
+        default_admin_site.site_primary_color = "#10b981"  # emerald
+        try:
+            html = superuser_client.get(ROOT_URL).content.decode("utf-8")
+            assert "--dar-primary: #10b981;" in html
+        finally:
+            if original is None:
+                del default_admin_site.site_primary_color
+            else:
+                default_admin_site.site_primary_color = original
+
+
+@pytest.mark.django_db
+def test_primary_color_setting_wins_over_admin_site_attr(superuser_client: Client) -> None:
+    """Explicit `PRIMARY_COLOR` setting overrides `site_primary_color` —
+    the setting is the per-deployment override, the attr is the
+    structural default. Same precedence as `BRAND_TITLE` (#631)."""
+    with override_settings(DJANGO_ADMIN_REACT={"PRIMARY_COLOR": "#ff8800"}):
+        _reload_conf()
+        original = getattr(default_admin_site, "site_primary_color", None)
+        default_admin_site.site_primary_color = "#10b981"
+        try:
+            html = superuser_client.get(ROOT_URL).content.decode("utf-8")
+            assert "--dar-primary: #ff8800;" in html
+            assert "#10b981" not in html
+        finally:
+            if original is None:
+                del default_admin_site.site_primary_color
+            else:
+                default_admin_site.site_primary_color = original
+
+
+@pytest.mark.django_db
+def test_primary_color_admin_site_non_hex_is_rejected(superuser_client: Client) -> None:
+    """A non-hex `site_primary_color` on the AdminSite still can't inject
+    CSS — same regex gate as `PRIMARY_COLOR`. Falls through to the
+    default (#437 / #631)."""
+    with override_settings(DJANGO_ADMIN_REACT={}):
+        _reload_conf()
+        original = getattr(default_admin_site, "site_primary_color", None)
+        default_admin_site.site_primary_color = "red; } body { display: none } :root {"
+        try:
+            html = superuser_client.get(ROOT_URL).content.decode("utf-8")
+            assert "display: none" not in html
+            assert "--dar-primary: #2563eb;" in html
+        finally:
+            if original is None:
+                del default_admin_site.site_primary_color
+            else:
+                default_admin_site.site_primary_color = original
+
+
+@pytest.mark.django_db
 def test_brand_logo_url_renders_favicon_and_meta(superuser_client: Client) -> None:
     """`BRAND_LOGO_URL` populates both the `<link rel="icon">` and the
     `dar-brand-logo` meta tag the SPA reads at boot.

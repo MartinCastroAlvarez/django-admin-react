@@ -20,6 +20,12 @@ from typing import Any
 
 from django.conf import settings as django_settings
 
+# Built-in fallback for the ``--dar-primary`` accent color when the
+# consumer hasn't set ``PRIMARY_COLOR`` AND their ``AdminSite`` has no
+# ``site_primary_color`` attribute. Re-exported so ``views.py`` can
+# pick up the same constant instead of stringifying its own.
+DEFAULT_PRIMARY_COLOR = "#2563eb"
+
 DEFAULTS: dict[str, Any] = {
     "ADMIN_SITE": "django.contrib.admin.site",
     # The list page size derives from the model's
@@ -59,9 +65,16 @@ DEFAULTS: dict[str, Any] = {
     # ``--dar-primary`` CSS variable so a consumer can brand the admin with
     # no React rebuild. Must be a hex color (``#rgb`` / ``#rgba`` /
     # ``#rrggbb`` / ``#rrggbbaa``); anything else is rejected at render and
-    # falls back to this default, since the value is written into a
-    # ``<style>`` block and must not be able to inject CSS.
-    "PRIMARY_COLOR": "#2563eb",
+    # falls back to ``DEFAULT_PRIMARY_COLOR`` below, since the value is
+    # written into a ``<style>`` block and must not be able to inject CSS.
+    #
+    # ``None`` (default) means "consumer didn't explicitly set this" — the
+    # SPA reads ``site_primary_color`` off the configured ``AdminSite``
+    # next, then falls back to ``DEFAULT_PRIMARY_COLOR``. Mirrors
+    # ``BRAND_TITLE`` / ``BRAND_LOGO_URL``: setting wins as the
+    # per-deployment override, AdminSite attr is the structural default,
+    # built-in default last (#631).
+    "PRIMARY_COLOR": None,
     # ``REACT_LOGIN`` — React-rendered login is the **default** so the
     # SPA fully replaces the Django admin URL surface end-to-end (owner
     # directive 2026-05-28). ``SpaIndexView`` serves the React shell to
@@ -149,7 +162,7 @@ class _PackageSettings:
     ENABLE_PROFILING: bool = DEFAULTS["ENABLE_PROFILING"]
     BRAND_TITLE: str | None = DEFAULTS["BRAND_TITLE"]
     BRAND_LOGO_URL: str | None = DEFAULTS["BRAND_LOGO_URL"]
-    PRIMARY_COLOR: str = DEFAULTS["PRIMARY_COLOR"]
+    PRIMARY_COLOR: str | None = DEFAULTS["PRIMARY_COLOR"]
     REACT_LOGIN: bool = DEFAULTS["REACT_LOGIN"]
     API_URL_PREFIX: str | None = DEFAULTS["API_URL_PREFIX"]
     LEGACY_ADMIN_URL_PREFIX: str | None = DEFAULTS["LEGACY_ADMIN_URL_PREFIX"]
