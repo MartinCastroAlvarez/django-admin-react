@@ -115,7 +115,7 @@ class SpaIndexView(View):
                 "brand_title": _resolve_brand_title(admin_site),
                 "tab_title": _resolve_tab_title(admin_site),
                 "brand_logo_url": _resolve_brand_logo(admin_site),
-                "primary_color": _resolve_primary_color(),
+                "primary_color": _resolve_primary_color(admin_site),
                 "initial_theme": _resolve_initial_theme(request),
             },
         )
@@ -315,19 +315,34 @@ def _resolve_brand_logo(admin_site: Any) -> str | None:
 _HEX_COLOR_RE = re.compile(r"^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$")
 
 
-def _resolve_primary_color() -> str:
+def _resolve_primary_color(admin_site: Any) -> str:
     """The validated accent color injected as ``--dar-primary``.
+
+    Resolution order — matches ``BRAND_TITLE`` / ``BRAND_LOGO_URL`` so a
+    consumer with a custom ``AdminSite`` can brand the whole admin
+    (legacy + SPA) from one place without a settings entry (#631):
+
+    1. ``DJANGO_ADMIN_REACT["PRIMARY_COLOR"]`` — explicit per-deployment
+       override.
+    2. ``admin_site.site_primary_color`` — convention for shops with a
+       custom ``AdminSite`` subclass (``site_header`` / ``site_logo``
+       pattern). Stock Django has no such attribute; consumers add it.
+    3. The package default (``#2563eb``).
 
     The value lands inside a ``<style>`` block in the SPA template, where
     HTML-escaping does NOT prevent CSS injection (``}``/``;`` aren't
-    HTML-special). So only a strict hex color is allowed; anything else
-    (or a non-string) falls back to the default. This is a trust boundary
-    even though the value comes from the consumer's own settings.
+    HTML-special). So only a strict hex color is allowed at every layer;
+    anything else (or a non-string) falls through to the next step and
+    eventually the default. This is a trust boundary even though the
+    value comes from the consumer's own settings / site attribute.
     """
     configured = dar_conf.PRIMARY_COLOR
     if isinstance(configured, str) and _HEX_COLOR_RE.match(configured.strip()):
         return configured.strip()
-    return dar_conf.DEFAULTS["PRIMARY_COLOR"]
+    site_color = getattr(admin_site, "site_primary_color", None)
+    if isinstance(site_color, str) and _HEX_COLOR_RE.match(site_color.strip()):
+        return site_color.strip()
+    return dar_conf.DEFAULT_PRIMARY_COLOR
 
 
 def _resolve_initial_theme(request: HttpRequest) -> str | None:
