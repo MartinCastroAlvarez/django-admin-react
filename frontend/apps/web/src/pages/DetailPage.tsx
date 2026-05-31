@@ -50,6 +50,7 @@ import { HistoryModal } from '@dar/history';
 import { RecordSkeleton } from '../components/RecordSkeleton';
 import { useModelMeta } from '../useModelMeta';
 import { toastMessages, useToast } from '../toast';
+import { followActionRedirect } from '../action-redirect';
 import { carryPreservedFilters, listPathWithPreservedFilters } from '../changelistFilters';
 import { useUnsavedGuard } from '../useUnsavedGuard';
 
@@ -313,7 +314,19 @@ export function DetailPage({
                 }
                 onSuccess={async ({ message, messages, redirect }) => {
                   if (redirect) {
-                    navigate(redirect);
+                    // Smart-route the redirect (#620): an admin action
+                    // can hand back any URL — a same-SPA path, a legacy
+                    // `/admin/.../change/` page, a hijack URL, a signed
+                    // S3 download. React Router's `navigate` only
+                    // routes WITHIN the SPA mount, so non-SPA URLs
+                    // silently no-op'd before. `followActionRedirect`
+                    // picks `navigate` vs `window.location.assign`
+                    // based on origin + mount.
+                    const mountMeta = document
+                      .querySelector<HTMLMetaElement>('meta[name="dar-mount"]')
+                      ?.content?.trim();
+                    const mount = (mountMeta ?? '/').replace(/\/?$/, '/');
+                    followActionRedirect({ redirect, mount, navigate });
                     return;
                   }
                   await refresh();
