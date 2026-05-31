@@ -750,6 +750,52 @@ The SPA's HTTP client already sends `credentials: "include"`, so no
 frontend change is needed — only the Django-side cookie + CORS
 config above. Tracked: [#635](https://github.com/MartinCastroAlvarez/django-admin-react/issues/635).
 
+### Translated `verbose_name` / `help_text` / action descriptions (`LocaleMiddleware`)
+
+The API package surfaces whatever your `ModelAdmin` declares —
+including `gettext_lazy`-wrapped strings on `verbose_name`,
+`help_text`, `@admin.action(description=…)`, etc. For those proxies
+to resolve to the active request's language, you need Django's
+**`LocaleMiddleware`** in your stack. It's not enabled by default
+in `django-admin startproject`, and the package has no
+ModelAdmin-level workaround:
+
+```python
+# settings.py
+USE_I18N = True
+LANGUAGE_CODE = "en-us"   # or your default
+LANGUAGES = [             # the locales your translations cover
+    ("en", "English"),
+    ("es", "Español"),
+    # …
+]
+
+MIDDLEWARE = [
+    "django.middleware.security.SecurityMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.locale.LocaleMiddleware",   # ← REQUIRED for i18n
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
+]
+```
+
+With `LocaleMiddleware` in place, the API payload's
+`verbose_name` / `help_text` / `description` strings come back
+translated per the request's `Accept-Language` header (or the
+user's stored preference if you wire one), the same as Django's
+HTML admin. The wire shape is identical regardless of locale —
+only the human-readable strings change.
+
+**The SPA's own chrome strings** ("Add", "Search", "Save and
+continue editing", "Loading…") are still hard-coded English. A
+message-catalog refresh + `config.language` wire field is tracked
+in [#630](https://github.com/MartinCastroAlvarez/django-admin-react/issues/630). Until that lands, non-English-primary shops
+get translated `verbose_name` / `help_text` (via `LocaleMiddleware`)
+but English chrome around them.
+
 ---
 
 ## The API surface
