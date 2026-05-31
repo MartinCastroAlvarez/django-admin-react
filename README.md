@@ -585,7 +585,9 @@ all share the v1 wire contract. Per-feature live status below.
 | `date_hierarchy`                                       | ✅                                                              |
 | `list_editable` + bulk PATCH                           | ✅                                                              |
 | `actions` — batch + detail (signature-classified)      | ✅                                                              |
-| `autocomplete_fields` / `raw_id_fields`                | ✅                                                              |
+| `autocomplete_fields`                                  | ✅                                                              |
+| `raw_id_fields` (pk text input + lookup popup)         | 🟡 [#626](https://github.com/MartinCastroAlvarez/django-admin-react/issues/626) (API emits the hint; SPA still renders autocomplete) |
+| `radio_fields` (inline radio buttons vs `<select>`)    | 🟡 [#626](https://github.com/MartinCastroAlvarez/django-admin-react/issues/626) (API emits the hint; SPA still renders dropdown) |
 | `ManyToManyField` read + write                         | ✅                                                              |
 | `inlines` (TabularInline / StackedInline) — read + write | ✅                                                            |
 | `FileField` / `ImageField` — read                      | ✅                                                              |
@@ -600,6 +602,121 @@ all share the v1 wire contract. Per-feature live status below.
 | PWA manifest + service worker (cache-purge on logout)  | ✅                                                              |
 
 ✅ = shipped. 🟡 = not yet built (tracked).
+
+### Stock-Django `ModelAdmin` hooks that do NOT carry through to the SPA
+
+The SPA renders from the JSON wire — it never sees the consumer's
+Django HTML templates, custom widgets, or `get_urls()` views. The
+hooks below are stock-Django extension points the SPA cannot honour
+today; if your admin uses any of them, the surface behaves
+differently on the SPA than on the legacy `/admin/`. Tracking
+issues link the work to close each gap.
+
+| Stock-Django hook | SPA behaviour | Tracked |
+|---|---|---|
+| `change_form_template` / `change_list_template` / `add_form_template` / `change_password_template` / `object_history_template` overrides | Silently ignored — the SPA renders entirely from the JSON wire. | [#624](https://github.com/MartinCastroAlvarez/django-admin-react/issues/624) |
+| `formfield_overrides = {Field: {"widget": CustomWidget}}` | Custom widget invisible — the SPA picks its own control from the field's `type`. No React-side widget-registration API yet. | [#625](https://github.com/MartinCastroAlvarez/django-admin-react/issues/625) |
+| `raw_id_fields` | Falls back to the autocomplete picker (same as `autocomplete_fields`). Defeats the purpose for FKs with 10M+ rows where autocomplete `get_search_results` is too expensive. | [#626](https://github.com/MartinCastroAlvarez/django-admin-react/issues/626) |
+| `radio_fields = {"status": admin.HORIZONTAL}` | Renders a `<select>` (default choice control) instead of inline radio buttons. | [#626](https://github.com/MartinCastroAlvarez/django-admin-react/issues/626) |
+| `filter_horizontal` / `filter_vertical` (M2M shuttle widget) | Renders the generic multi-select checkbox list, not Django's two-pane shuttle. Switch the field to `autocomplete_fields` for a workable SPA UX. | [#627](https://github.com/MartinCastroAlvarez/django-admin-react/issues/627) |
+| `GenericForeignKey` / `GenericInlineModelAdmin` | Support gap — verify per-model before relying on the SPA. | [#628](https://github.com/MartinCastroAlvarez/django-admin-react/issues/628) |
+| `LANGUAGE_CODE` / `gettext` / `Accept-Language` | The SPA chrome stays English; translated `verbose_name` / `help_text` / `@admin.action(description=_("..."))` are not surfaced per-request. | [#630](https://github.com/MartinCastroAlvarez/django-admin-react/issues/630) |
+| `ModelAdmin.get_urls()` custom views | Opens as a popout (`<a target="_blank">`) into the Django-rendered HTML page — no SPA chrome, no breadcrumb. The link IS surfaced; the UX is just outside the SPA. | [#623](https://github.com/MartinCastroAlvarez/django-admin-react/issues/623) |
+| Django 4.2 LTS support | Not yet — the package pins `django >= 5.0,<7.0`. | [#622](https://github.com/MartinCastroAlvarez/django-admin-react/issues/622) |
+
+If your admin relies on any "silently ignored" hook above, the
+typical workaround is to keep that model on the legacy
+`/admin/` surface via the
+[experience-toggle strip](#experience-toggle-strip-optional) — the
+SPA + legacy admin happily coexist.
+
+---
+
+## Writing safe `list_display` callables
+
+This applies on **both** the legacy `/admin/` and the SPA — but the
+SPA renders any `format_html` / `mark_safe` value via React's
+`dangerouslySetInnerHTML`, so misuse is reflected XSS the same way
+the legacy admin would be.
+
+**Do not** interpolate user-controlled data into a `mark_safe(...)`
+string. The whole point of `mark_safe` is "I have already escaped
+this," and `f"<span>{obj.user_input}</span>"` has not — so a
+`user_input` of `<script>alert(1)</script>` runs.
+
+```python
+# WRONG — copy-paste-from-StackOverflow XSS hazard.
+@admin.display(description="Status")
+def status_badge(self, obj):
+    return mark_safe(f'<span class="badge">{obj.user_input}</span>')
+
+# RIGHT — format_html auto-escapes every interpolated arg.
+@admin.display(description="Status")
+def status_badge(self, obj):
+    return format_html('<span class="badge">{}</span>', obj.user_input)
+```
+
+Same rule for `readonly_fields` callables. See
+[#633](https://github.com/MartinCastroAlvarez/django-admin-react/issues/633)
+for the optional defense-in-depth `STRICT_HTML` setting tracking
+issue (bleach-clean every rendered HTML value with a tight allow-list).
+
+---
+
+## Hardening
+
+### Brute-force defense on `/api/v1/login/`
+
+The package's React login endpoint (`<mount>/api/v1/login/`) reuses
+Django's session auth, so the canonical brute-force defenses work
+unchanged. The recommended layer is
+[`django-axes`](https://pypi.org/project/django-axes/):
+
+```python
+# settings.py
+INSTALLED_APPS = [..., "axes", "django_admin_react", "django_admin_rest_api"]
+
+AUTHENTICATION_BACKENDS = [
+    "axes.backends.AxesStandaloneBackend",
+    "django.contrib.auth.backends.ModelBackend",
+]
+MIDDLEWARE = [..., "axes.middleware.AxesMiddleware"]
+
+AXES_FAILURE_LIMIT = 5
+AXES_COOLOFF_TIME = 1  # hour
+```
+
+Axes intercepts via `AUTHENTICATION_BACKENDS`, not URL middleware, so
+lockouts apply to both the legacy admin login and the SPA's JSON
+login automatically. Tracked: [#634](https://github.com/MartinCastroAlvarez/django-admin-react/issues/634).
+
+### Mounting the API on a different origin (CORS + cookies)
+
+`DJANGO_ADMIN_REACT["API_URL_PREFIX"]` lets the SPA point at a
+separately-mounted REST API — e.g. SPA at `admin.example.com`
+talking to an API at `api.example.com`. The session-cookie auth
+across origins needs three settings configured together; if any
+one is missing, every API call silently 401s after login.
+
+```python
+# settings.py — required when SPA and API are on different origins.
+SESSION_COOKIE_SAMESITE = "None"   # default "Lax" drops cookies cross-origin
+SESSION_COOKIE_SECURE = True       # required by browsers when SameSite=None
+CSRF_COOKIE_SAMESITE = "None"
+CSRF_COOKIE_SECURE = True
+
+# pip install django-cors-headers
+INSTALLED_APPS = [..., "corsheaders", ...]
+MIDDLEWARE = ["corsheaders.middleware.CorsMiddleware", ...]
+
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_ORIGINS = ["https://admin.example.com"]   # NEVER "*" with credentials
+CSRF_TRUSTED_ORIGINS = ["https://admin.example.com"]
+```
+
+The SPA's HTTP client already sends `credentials: "include"`, so no
+frontend change is needed — only the Django-side cookie + CORS
+config above. Tracked: [#635](https://github.com/MartinCastroAlvarez/django-admin-react/issues/635).
 
 ---
 
