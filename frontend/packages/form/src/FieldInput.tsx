@@ -69,6 +69,75 @@ export function FieldInput({ name, field, value, error, onChange }: FieldInputPr
         className={base}
       />
     );
+  } else if (field.widget === 'raw_id' && field.type === 'foreignkey') {
+    // raw_id_fields (#626 / #251). The consumer explicitly OPTED OUT
+    // of an autocomplete picker — typically because the FK target has
+    // millions of rows and `get_search_results` is too expensive.
+    // Match Django's HTML admin: a bare pk text input, plus a small
+    // "lookup" link that opens the FK target's changelist in a new
+    // tab so the operator can find the pk by sight. No autocomplete
+    // request fires. The wire ships `field.to = {app_label, model_name}`
+    // when the FK target is admin-registered (`#184` parity); when it
+    // isn't, we render the input only.
+    //
+    // M2M + `raw_id` is intentionally NOT handled here; falls through
+    // to the existing M2M branch (CSV pk list is a separate follow-up).
+    const target = field.to;
+    control = (
+      <div className="flex items-center gap-2">
+        <input
+          id={id}
+          type="text"
+          inputMode="numeric"
+          value={value == null ? '' : String(value)}
+          onChange={(e) => onChange(e.target.value === '' ? null : e.target.value)}
+          className={base}
+        />
+        {target && (
+          <a
+            // Same-window? No — popup is the legacy admin's contract.
+            // Open the changelist in a new tab; the operator copies
+            // the pk back into the input.
+            href={`../../${target.app_label}/${target.model_name}/`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="shrink-0 rounded border border-gray-300 px-2 py-1 text-xs text-gray-700 hover:bg-gray-50"
+            aria-label="Look up related object in a new tab"
+          >
+            Lookup ↗
+          </a>
+        )}
+      </div>
+    );
+  } else if (field.widget === 'radio' && field.type === 'choice' && field.choices) {
+    // radio_fields (#626 / #251). The consumer explicitly chose inline
+    // radio buttons over the default `<select>` — typically because the
+    // option set is small (2-5) and a radio bank is faster to scan than
+    // a click + dropdown. The wire ships the choices list verbatim;
+    // render one labeled radio per option. Falls through to the choice
+    // branch when `field.choices` is empty (defence — choice fields
+    // should always carry choices, but the type allows undefined).
+    const radioValue = value == null ? '' : String(value);
+    control = (
+      <div role="radiogroup" aria-labelledby={`${id}-label`} className="flex flex-wrap gap-x-4 gap-y-2">
+        {field.choices.map((c) => {
+          const key = String(c.value);
+          return (
+            <label key={key} className="flex items-center gap-1.5 text-sm">
+              <input
+                type="radio"
+                name={id}
+                value={key}
+                checked={radioValue === key}
+                onChange={() => onChange(c.value)}
+                className="h-4 w-4 text-gray-700 focus:ring-gray-500"
+              />
+              {c.label}
+            </label>
+          );
+        })}
+      </div>
+    );
   } else if (field.type === 'boolean') {
     control = (
       <Checkbox id={id} checked={value === true} onChange={(e) => onChange(e.target.checked)} />
