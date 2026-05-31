@@ -89,6 +89,11 @@ export async function runObjectAction(
   return {
     ok: res.executed,
     ...(message !== undefined ? { message } : {}),
+    // Propagate the full level-tagged messages list (#632) so the
+    // detail page can pick the toast colour per level — the legacy
+    // single-`message` field collapses every message into one string
+    // with no level information.
+    ...(res.messages !== undefined ? { messages: res.messages } : {}),
     ...(res.redirect !== undefined ? { redirect: res.redirect } : {}),
   };
 }

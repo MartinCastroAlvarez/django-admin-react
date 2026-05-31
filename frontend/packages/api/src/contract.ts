@@ -319,7 +319,13 @@ export type ObjectActionDescriptor = ActionDescriptor;
  */
 export interface ObjectActionRunResponse {
   ok: boolean;
+  /** Convenience: first `messages[]` entry's text — kept for back-compat
+   *  with v1.4.x consumers that only ever toasted one line. */
   message?: string;
+  /** Every `message_user` line with its Django level tag (#632 — needed
+   *  so the SPA can pick red / amber / blue / green per level instead of
+   *  always toasting green on the detail page). */
+  messages?: UserMessage[];
   redirect?: string;
 }
 

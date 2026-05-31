@@ -38,6 +38,7 @@ import {
   type InlineWriteItem,
   type InlineWritePayload,
   type ObjectActionDescriptor,
+  type ObjectActionRunResponse,
   type WriteValue,
 } from '@dar/data';
 import { detailCollapseKey, usePersistedState } from '@dar/customization';
@@ -48,7 +49,7 @@ import { HistoryModal } from '@dar/history';
 
 import { RecordSkeleton } from '../components/RecordSkeleton';
 import { useModelMeta } from '../useModelMeta';
-import { useToast } from '../toast';
+import { toastMessages, useToast } from '../toast';
 import { carryPreservedFilters, listPathWithPreservedFilters } from '../changelistFilters';
 import { useUnsavedGuard } from '../useUnsavedGuard';
 
@@ -310,13 +311,21 @@ export function DetailPage({
                 onRun={() =>
                   runObjectAction({ client, appLabel, modelName, pk, name: action.name })
                 }
-                onSuccess={async (message, redirect) => {
+                onSuccess={async ({ message, messages, redirect }) => {
                   if (redirect) {
                     navigate(redirect);
                     return;
                   }
                   await refresh();
-                  toast.success(message || 'Done');
+                  // Dispatch by Django level tag (#632) — error /
+                  // warning levels must NOT toast green. Falls back to a
+                  // single-line success toast for v1.4.x APIs that don't
+                  // emit `messages[]`.
+                  if (messages && messages.length > 0) {
+                    toastMessages(toast, messages);
+                  } else {
+                    toast.success(message || 'Done');
+                  }
                 }}
                 onError={(message) => toast.error(message)}
               />
@@ -444,8 +453,8 @@ function ObjectActionButton({
   onError,
 }: {
   action: ObjectActionDescriptor;
-  onRun: () => Promise<{ ok: boolean; message?: string; redirect?: string }>;
-  onSuccess: (message: string | undefined, redirect: string | undefined) => Promise<void> | void;
+  onRun: () => Promise<ObjectActionRunResponse>;
+  onSuccess: (result: ObjectActionRunResponse) => Promise<void> | void;
   onError: (message: string) => void;
 }) {
   const [busy, setBusy] = useState(false);
@@ -460,7 +469,7 @@ function ObjectActionButton({
         try {
           const result = await onRun();
           if (result.ok) {
-            await onSuccess(result.message, result.redirect);
+            await onSuccess(result);
           } else {
             onError(result.message || 'The action could not be completed.');
           }

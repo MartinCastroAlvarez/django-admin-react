@@ -32,6 +32,27 @@ export function useToast(): ToastApi {
   return ctx;
 }
 
+/**
+ * Dispatch a `message_user`-emitted message list to the toast API,
+ * picking the colour per Django's level tag (#632 — list AND detail
+ * page now share this; the detail page previously dropped the level
+ * via the legacy `runObjectAction` adapter and toasted success-green
+ * for every action even when the level was `error` / `warning`).
+ *
+ * Mirrors the legacy admin: `error` / `warning` → red, `info` /
+ * `debug` → blue, `success` (and any unknown level) → green.
+ */
+export function toastMessages(
+  toast: ToastApi,
+  messages: ReadonlyArray<{ level: string; message: string }>,
+): void {
+  for (const m of messages) {
+    if (m.level === 'error' || m.level === 'warning') toast.error(m.message);
+    else if (m.level === 'info' || m.level === 'debug') toast.info(m.message);
+    else toast.success(m.message);
+  }
+}
+
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([]);
   const idRef = useRef(0);
