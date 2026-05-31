@@ -5,12 +5,22 @@ import { BrowserRouter } from 'react-router-dom';
 import { ApiClient, ApiProvider, RegistryProvider } from '@dar/data';
 import { initTheme } from '@dar/settings';
 
+import { loadCatalog } from '@dar/ui';
+
 import { App } from './App';
 import './index.css';
 
 // Apply the saved (or system-default) light/dark theme before React
 // mounts so the first paint is already in the right theme — no flash.
 initTheme();
+
+// Hydrate the chrome message catalog from the server-rendered
+// `<meta name="dar-language">` (#630). Synchronous — the catalogs
+// are bundled into the SPA JS so the first React render already
+// carries translated strings; no fetch / loading state, no FOUC.
+loadCatalog(
+  document.querySelector<HTMLMetaElement>('meta[name="dar-language"]')?.content?.trim(),
+);
 
 // The mount is the consumer-chosen URL prefix (e.g. `/admin-react/`,
 // `/admin2/`, `/staff/`). The backend's ``SpaIndexView`` writes it to

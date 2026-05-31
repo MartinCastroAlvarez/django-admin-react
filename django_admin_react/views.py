@@ -117,6 +117,15 @@ class SpaIndexView(View):
                 "brand_logo_url": _resolve_brand_logo(admin_site),
                 "primary_color": _resolve_primary_color(admin_site),
                 "initial_theme": _resolve_initial_theme(request),
+                # SPA chrome i18n (#630). The active language code from
+                # ``LocaleMiddleware`` (or ``settings.LANGUAGE_CODE``
+                # when middleware isn't installed) — the SPA reads it
+                # from ``<meta name="dar-language">`` and hydrates the
+                # matching message catalog so its chrome strings
+                # ("Add", "Search", "Loading…") render in the user's
+                # language, matching what the API package already
+                # surfaces for ``verbose_name`` / ``help_text``.
+                "active_language": _resolve_active_language(),
             },
         )
         # The SPA shell must never be cached: it references the
@@ -343,6 +352,27 @@ def _resolve_primary_color(admin_site: Any) -> str:
     if isinstance(site_color, str) and _HEX_COLOR_RE.match(site_color.strip()):
         return site_color.strip()
     return dar_conf.DEFAULT_PRIMARY_COLOR
+
+
+def _resolve_active_language() -> str:
+    """The locale code the SPA hydrates its message catalog from (#630).
+
+    Uses Django's translation machinery — ``LocaleMiddleware``
+    activates the request's language before the view runs, so
+    ``translation.get_language()`` returns the resolved active
+    code (e.g. ``"es"``, ``"pt-br"``, ``"fr"``). When the middleware
+    isn't in the stack, ``get_language()`` returns
+    ``settings.LANGUAGE_CODE`` (Django's default fallback). Either
+    way the SPA gets a real two- or five-character code and
+    ``loadCatalog`` either matches it or falls back to English at
+    the SPA boundary — no Python-side fallback chain needed.
+    """
+    from django.utils import translation
+
+    code = translation.get_language() or "en"
+    # Strip whitespace; Django won't return whitespace-only but be
+    # defensive — the value lands directly into a meta tag.
+    return code.strip()
 
 
 def _resolve_initial_theme(request: HttpRequest) -> str | None:

@@ -28,6 +28,14 @@
     <meta name="dar-brand-title" content="{{ brand_title }}" />
     {% if brand_logo_url %}<meta name="dar-brand-logo" content="{{ brand_logo_url }}" />{% endif %}
     {% comment %}
+      Active locale (#630). The SPA hydrates its message catalog
+      from this — the chrome strings ("Add", "Search", "Loading…")
+      render in the user's language. LocaleMiddleware sets
+      `translation.get_language()` for the request; without it the
+      value collapses to `settings.LANGUAGE_CODE`.
+    {% endcomment %}
+    <meta name="dar-language" content="{{ active_language }}" />
+    {% comment %}
       The tab <title> uses the AdminSite's site_title (Django's tab-title
       source); the sidebar header reads dar-brand-title (site_header). Both
       collapse to BRAND_TITLE when the consumer set that override (#281).

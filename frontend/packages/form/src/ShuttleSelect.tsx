@@ -25,6 +25,7 @@
 import { useId, useMemo, useState } from 'react';
 
 import type { FieldChoice, WriteValue } from '@dar/data';
+import { t } from '@dar/ui';
 
 interface ShuttleSelectProps {
   /** Stable id prefix for the search inputs (a11y labelling). */
@@ -133,29 +134,29 @@ export function ShuttleSelect({
   return (
     <div className={containerClass}>
       <Pane
-        title={`Available ${label}`}
+        title={`${t('Available')} ${label}`}
         searchId={availId}
         items={visibleAvail}
-        emptyMessage="No matches."
+        emptyMessage={t('No matches.')}
         onItemActivate={(c) => {
           const pk = pkOf(c);
           if (pk !== null) addOne(pk);
         }}
-        actionLabel="Choose all"
+        actionLabel={t('Choose all')}
         onAction={() => addMany(visibleAvail)}
         filter={availFilter}
         setFilter={setAvailFilter}
       />
       <Pane
-        title={`Chosen ${label}`}
+        title={`${t('Chosen')} ${label}`}
         searchId={chosenId}
         items={visibleChosen}
-        emptyMessage="Nothing selected yet."
+        emptyMessage={t('Nothing selected yet.')}
         onItemActivate={(c) => {
           const pk = pkOf(c);
           if (pk !== null) removeOne(pk);
         }}
-        actionLabel="Remove all"
+        actionLabel={t('Remove all')}
         onAction={() => removeMany(visibleChosen)}
         filter={chosenFilter}
         setFilter={setChosenFilter}
@@ -218,7 +219,7 @@ function Pane({
         type="search"
         value={filter}
         onChange={(e) => setFilter(e.target.value)}
-        placeholder="Filter"
+        placeholder={t('Filter')}
         className="w-full rounded border border-gray-300 px-2 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-gray-500"
       />
       <ul

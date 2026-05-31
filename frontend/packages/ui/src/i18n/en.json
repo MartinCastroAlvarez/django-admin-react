@@ -1,0 +1,3 @@
+{
+  "_comment": "English source catalog. Empty by design — source-as-key means English keys round-trip themselves through `t(en)`. Kept as a file (not omitted) so eslint / lint / future tooling can introspect the catalog set uniformly."
+}

@@ -51,3 +51,10 @@ export type { ResetButtonProps } from './ResetButton';
 
 export { RefreshButton } from './RefreshButton';
 export type { RefreshButtonProps } from './RefreshButton';
+
+// SPA chrome i18n (#630). Every package can call `t(en)` to translate
+// a user-visible English source string to the active locale's catalog
+// entry, falling back to the English source when no entry exists.
+// The active catalog is hydrated once at boot from
+// `<meta name="dar-language">`; see `loadCatalog` in main.tsx.
+export { t, loadCatalog } from './i18n';
