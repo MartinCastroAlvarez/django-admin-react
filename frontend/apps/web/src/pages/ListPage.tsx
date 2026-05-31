@@ -41,6 +41,7 @@ import { FilterBar } from '@dar/search';
 
 import { useToast } from '../toast';
 import { CHANGELIST_FILTERS_PARAM, withPreservedFilters } from '../changelistFilters';
+import { handleActionResult } from './action-result';
 
 // Lazy-loaded so the @dnd-kit suite (the heaviest dep in this modal)
 // only lands in the bundle of users who open the Customize modal
@@ -132,6 +133,14 @@ export function ListPage() {
     lockedColsKey(appLabel, modelName),
   );
   const [colsOpen, setColsOpen] = useState(false);
+  // Popup-blocked fallback (#644). When an action returns a redirect
+  // and `window.open` is suppressed by the browser's popup blocker
+  // (the call isn't a direct user gesture by then — we're inside an
+  // async handler after the POST resolves), surface a banner with a
+  // clickable link so the redirect isn't silently swallowed.
+  const [pendingRedirect, setPendingRedirect] = useState<{ url: string; label: string } | null>(
+    null,
+  );
 
   // Drag-to-resize column widths, persisted per app/model (a UI
   // preference, like hidden columns) via @dar/customization. The Table
@@ -334,31 +343,18 @@ export function ListPage() {
       const result = await client.runAction(appLabel, modelName, action.name, pks);
       setSelected(new Set());
       setSelectAcross(false);
-      // Intermediate / form-returning action (#250). When the admin action
-      // returns an HttpResponse (e.g. Django's delete-selected, or a
-      // custom action that needs a confirmation/parameter page), the
-      // backend forwards its Location as `redirect`. Open it in a new tab
-      // so the operator can complete the flow there — the SPA stays
-      // mounted, no silent no-op. (Parameterised in-SPA forms are a
-      // follow-up; this closes the "silent no-op" minimum.)
-      if (result.redirect) {
-        window.open(result.redirect, '_blank', 'noopener,noreferrer');
-        toast.info(`${action.label} opened in a new tab.`);
-        return;
-      }
-      await refresh();
-      // Prefer the action's own message_user output (#442); fall back to a
-      // generic confirmation when the action queued nothing.
-      const msgs = result.messages ?? [];
-      if (msgs.length > 0) {
-        for (const m of msgs) {
-          if (m.level === 'error' || m.level === 'warning') toast.error(m.message);
-          else if (m.level === 'info' || m.level === 'debug') toast.info(m.message);
-          else toast.success(m.message);
-        }
-      } else {
-        toast.success(`${action.label} — ${count} item${count === 1 ? '' : 's'}.`);
-      }
+      // Per-result dispatch lives in `handleActionResult` so the
+      // popup-blocked + refresh + level-toast flow is unit-testable
+      // without rendering the whole page (#250, #442, #632, #644).
+      await handleActionResult({
+        result,
+        action,
+        count,
+        toast,
+        refresh,
+        openLink: (url) => window.open(url, '_blank', 'noopener,noreferrer'),
+        onPopupBlocked: (info) => setPendingRedirect(info),
+      });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Action failed.');
     } finally {
@@ -658,6 +654,34 @@ export function ListPage() {
               {savingEdits ? 'Saving…' : 'Save changes'}
             </Button>
           </div>
+        </div>
+      )}
+
+      {/* Popup-blocked fallback for an action redirect (#644). If
+          window.open returns null (the browser suppressed the
+          new-tab because we're past the direct-user-gesture moment),
+          render a clickable link banner so the redirect URL isn't
+          silently swallowed. The user opens it manually with a real
+          click; dismiss closes the banner. Amber = "this needs your
+          attention but it isn't an error." */}
+      {pendingRedirect && (
+        <div className="flex items-center justify-between rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+          <span>
+            {pendingRedirect.label} wants to open a page —{' '}
+            <a
+              href={pendingRedirect.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium underline decoration-amber-500 underline-offset-2 hover:decoration-amber-700"
+              onClick={() => setPendingRedirect(null)}
+            >
+              click to open in a new tab
+            </a>
+            .
+          </span>
+          <Button variant="secondary" onClick={() => setPendingRedirect(null)}>
+            Dismiss
+          </Button>
         </div>
       )}
 
