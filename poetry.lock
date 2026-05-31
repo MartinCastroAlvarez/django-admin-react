@@ -539,35 +539,35 @@ bcrypt = ["bcrypt"]
 
 [[package]]
 name = "django-admin-mcp-api"
-version = "1.0.1"
+version = "1.1.0"
 description = "MCP (Model Context Protocol) adapter for django-admin-rest-api. A wire-protocol-only layer that lets agents reach the existing REST API — no new functionality, permissions, or validation."
 optional = false
 python-versions = "<4.0,>=3.10"
 groups = ["main"]
 files = [
-    {file = "django_admin_mcp_api-1.0.1-py3-none-any.whl", hash = "sha256:94a615d373f8c5bf4e20951ad95e8974aa5496fe425ac1177605992ad5f6c443"},
-    {file = "django_admin_mcp_api-1.0.1.tar.gz", hash = "sha256:063a6d5bd0a43667ed81cc22e9f8beb97d6e27d931dbf7531fb9d5d23f6731f5"},
+    {file = "django_admin_mcp_api-1.1.0-py3-none-any.whl", hash = "sha256:f1db825249e6b1b01d27380f4f5902febba723b6b79829f242c0f7bc9461414b"},
+    {file = "django_admin_mcp_api-1.1.0.tar.gz", hash = "sha256:a84b39400f2960385ef834a9e6087bda475259f2661dfc7680fd8ca337e04016"},
 ]
 
 [package.dependencies]
-django = ">=5.0,<7.0"
-django-admin-rest-api = ">=1.0.0,<2.0.0"
+django = ">=4.2,<7.0"
+django-admin-rest-api = ">=1.1.0,<2.0.0"
 jsonschema = ">=4.0,<5.0"
 
 [[package]]
 name = "django-admin-rest-api"
-version = "1.0.6"
+version = "1.1.0"
 description = "A JSON REST API for the Django admin — same permissions, same ModelAdmin, no new features. Powers django-admin-react and django-admin-mcp."
 optional = false
 python-versions = "<4.0,>=3.10"
 groups = ["main"]
 files = [
-    {file = "django_admin_rest_api-1.0.6-py3-none-any.whl", hash = "sha256:3688333e6507086c942757d4eb2188828136f86cd48e224aa2084a1fc967fe51"},
-    {file = "django_admin_rest_api-1.0.6.tar.gz", hash = "sha256:3599becd9816168568d3af5bdb18485d9fc54e7518c0b223e4ad7a0d3a40d462"},
+    {file = "django_admin_rest_api-1.1.0-py3-none-any.whl", hash = "sha256:310479ae8ef2619c45b24e4a02b7b51111afae01dd519cd936de9ff5e13e01f0"},
+    {file = "django_admin_rest_api-1.1.0.tar.gz", hash = "sha256:b9e9eff5e7ad5181ba3622f95e5f9b2320e01db833b0390de283f8ce1481ad9b"},
 ]
 
 [package.dependencies]
-django = ">=5.0,<7.0"
+django = ">=4.2,<7.0"
 
 [[package]]
 name = "django-stubs"
@@ -2082,4 +2082,4 @@ zstd = ["backports-zstd (>=1.0.0) ; python_version < \"3.14\""]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.10"
-content-hash = "865210c08fd413ba3c2df1cedf9b5d622bdb9c9588a6b3749a085841a90e5b62"
+content-hash = "b193482b54c4e476ff5cf803e94bac2b6d33d802bcd606438b8b2ec39e079d72"
