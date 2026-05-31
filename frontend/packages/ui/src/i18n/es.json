@@ -40,6 +40,8 @@
   "Dismiss": "Descartar",
   "Look up related object in a new tab": "Buscar objeto relacionado en pestaña nueva",
   "Lookup ↗": "Buscar ↗",
+  "Custom widget": "Widget personalizado",
+  "is not registered; using the default text input.": "no está registrado; se usa la entrada de texto predeterminada.",
   "Action failed.": "La acción falló.",
   "The action could not be completed.": "No se pudo completar la acción.",
   "Couldn't load the list": "No se pudo cargar la lista",

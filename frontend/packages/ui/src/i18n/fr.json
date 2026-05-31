@@ -40,6 +40,8 @@
   "Dismiss": "Ignorer",
   "Look up related object in a new tab": "Rechercher l'objet associé dans un nouvel onglet",
   "Lookup ↗": "Rechercher ↗",
+  "Custom widget": "Widget personnalisé",
+  "is not registered; using the default text input.": "n'est pas enregistré ; utilisation de la saisie texte par défaut.",
   "Action failed.": "L'action a échoué.",
   "The action could not be completed.": "L'action n'a pas pu être effectuée.",
   "Couldn't load the list": "Impossible de charger la liste",

@@ -42,8 +42,20 @@ export type FieldType =
  * `shuttle_v` come from `filter_horizontal` / `filter_vertical` (#627) —
  * the SPA renders Django's two-pane "available / chosen" widget for the
  * M2M field, with horizontal or vertical orientation respectively.
+ * `custom` (api 1.3.0+) marks a field whose bound form widget class lives
+ * outside `django.*` — `formfield_overrides` / `formfield_for_dbfield` /
+ * a third-party widget. The SPA dispatches to a consumer-registered
+ * widget via `registerFieldWidget(widget_class, …)` (#625); falls back
+ * to the default control + an "open in legacy admin" note when no
+ * registration matches.
  */
-export type WidgetHint = 'radio' | 'raw_id' | 'password' | 'shuttle_h' | 'shuttle_v';
+export type WidgetHint =
+  | 'radio'
+  | 'raw_id'
+  | 'password'
+  | 'shuttle_h'
+  | 'shuttle_v'
+  | 'custom';
 
 export interface Permissions {
   view: boolean;
@@ -446,6 +458,14 @@ export interface FieldDescriptor {
    * has redacted `value` (it ships `null`).
    */
   widget?: WidgetHint;
+  /**
+   * Dotted Python path of the bound form widget's class (api 1.3.0+),
+   * present only when `widget` is `"custom"`. The SPA dispatches to a
+   * consumer-registered widget via `registerFieldWidget(widget_class,
+   * …)`; falls back to the default control + an "open in legacy admin"
+   * note when no registration matches (#625).
+   */
+  widget_class?: string;
 }
 
 export interface FieldsetDescriptor {
