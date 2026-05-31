@@ -17,6 +17,7 @@ import { Checkbox } from '@dar/ui';
 
 import { AutocompleteInput } from './AutocompleteInput';
 import { RelatedAddModal } from './RelatedAddModal';
+import { ShuttleSelect } from './ShuttleSelect';
 
 interface FieldInputProps {
   name: string;
@@ -161,6 +162,29 @@ export function FieldInput({ name, field, value, error, onChange }: FieldInputPr
         id={id}
         base={base}
         onChange={onChange}
+      />
+    );
+  } else if (
+    field.type === 'manytomany' &&
+    (field.widget === 'shuttle_h' || field.widget === 'shuttle_v') &&
+    field.choices &&
+    field.choices.length > 0
+  ) {
+    // filter_horizontal / filter_vertical (#627). The admin opted into
+    // Django's two-pane "available / chosen" shuttle widget — the API
+    // emits `widget: "shuttle_h"` or `"shuttle_v"` (api 1.2.0+) and
+    // we render a real shuttle with per-pane search, selection-order
+    // preservation, and "Choose all / Remove all" bulk actions.
+    // Scales well past the ~50-option ceiling where the default
+    // checkbox list breaks down.
+    control = (
+      <ShuttleSelect
+        id={id}
+        choices={field.choices}
+        value={value}
+        orientation={field.widget === 'shuttle_v' ? 'v' : 'h'}
+        label={field.label}
+        onChange={(next) => onChange(next as unknown as WriteValue)}
       />
     );
   } else if (field.type === 'manytomany') {
