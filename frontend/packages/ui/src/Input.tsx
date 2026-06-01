@@ -6,6 +6,11 @@ export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   error?: ReactNode;
 }
 
+/**
+ * Text input primitive with an optional label, help text, and error
+ * message. Generates a stable-per-render `id` when none is supplied so the
+ * label's `htmlFor` always resolves. Forwards all native input attributes.
+ */
 export function Input({ label, helpText, error, id, className = '', ...rest }: InputProps) {
   const inputId = id ?? `dar-input-${Math.random().toString(36).slice(2, 8)}`;
   return (

@@ -6,6 +6,11 @@ export interface EmptyStateProps {
   action?: ReactNode;
 }
 
+/**
+ * Centered placeholder for empty collections: a required `title`, an
+ * optional `description`, and an optional `action` node (e.g. an "Add"
+ * button) rendered below.
+ */
 export function EmptyState({ title, description, action }: EmptyStateProps) {
   return (
     <div className="flex flex-col items-center justify-center text-center py-12 px-4">
