@@ -237,30 +237,40 @@ export function DetailPage({
 
   return (
     <div className="space-y-4">
-      {/* Header (#572): the title is the page's most important element
-          and gets as much horizontal space as it needs (`flex-1
-          min-w-0`); the toolbar is `shrink-0` and only pushes the title
-          when it genuinely can't fit on its row. `justify-end` on the
-          toolbar's flex-wrap keeps wrapped button rows flush right to
-          the page padding, instead of left-aligned within their column. */}
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
-        <div className="min-w-0 flex-1 space-y-1">
-          <Breadcrumb
-            items={[
-              { label: 'Home', to: '/' },
-              { label: modelPlural, to: listPath },
-              { label: data.label },
-            ]}
-            renderLink={(to, className, label) => (
-              <Link to={to} className={className}>
-                {label}
-              </Link>
-            )}
-          />
-          <h1 className="text-2xl font-semibold">{data.label}</h1>
-        </div>
+      {/* Header (#572 / #658): three stacked full-width rows so the
+          title never shares horizontal space with the toolbar — the
+          old side-by-side layout collapsed long single-token titles
+          (filenames, slugs, UUIDs) into one-word-per-line at full H1
+          size, AND let an 8+ action toolbar push the title clean off
+          the viewport. Each concern now owns its own row:
+
+            row 1: breadcrumb (full width, truncates on tight viewports)
+            row 2: H1 (full width, `overflow-wrap: anywhere` so a
+                       single long token wraps inside the container)
+            row 3: toolbar (full width, `flex-wrap` so 8+ actions flow
+                            to new lines; primary actions Edit/Delete
+                            sit at the trailing edge via `ml-auto`) */}
+      <header className="space-y-2">
+        <Breadcrumb
+          items={[
+            { label: 'Home', to: '/' },
+            { label: modelPlural, to: listPath },
+            { label: data.label },
+          ]}
+          renderLink={(to, className, label) => (
+            <Link to={to} className={className}>
+              {label}
+            </Link>
+          )}
+        />
+        {/* `break-words` (Tailwind's overflow-wrap: anywhere) keeps a
+            very long single-token title wrapping inside the container
+            at H1 size, instead of forcing each hyphen segment onto its
+            own line. `text-balance` rebalances the wrap for shorter
+            multi-word titles too. */}
+        <h1 className="text-2xl font-semibold text-balance break-words">{data.label}</h1>
         {!editing && (
-          <div className="flex shrink-0 flex-wrap justify-end gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={() => setHistoryOpen(true)}
@@ -343,33 +353,41 @@ export function DetailPage({
                 onError={(message) => toast.error(message)}
               />
             ))}
-            {/* Refresh (#592): refetch the object + inlines + history
-                with no full page reload. Placed between the actions
-                cluster and the Edit / Delete pair so destructive
-                buttons stay at the trailing edge. */}
-            <RefreshButton
-              onRefresh={refresh}
-              tooltip="Refresh"
-              icon={<RefreshCw className="h-4 w-4" aria-hidden />}
-            />
-            {canChange && (
-              <Button variant="primary" onClick={() => setEditing(true)}>
-                <span className="inline-flex items-center gap-1.5">
-                  <Pencil className="h-4 w-4" aria-hidden /> Edit
-                </span>
-              </Button>
-            )}
-            {canDelete && (
-              <DeleteButton
-                label={data.label}
-                loadPreview={() => fetchDeletePreview({ client, appLabel, modelName, pk })}
-                onConfirm={async () => {
-                  await deleteObject({ client, appLabel, modelName, pk });
-                  toast.success(`Deleted “${data.label}”.`);
-                  navigate(listPath);
-                }}
+            {/* Primary-actions cluster (Refresh + Edit + Delete) is
+                grouped with ``ml-auto`` so it floats to the trailing
+                edge of the toolbar row even when the leading
+                ``@admin.action`` cluster wraps onto multiple lines.
+                ``flex-wrap`` on the cluster itself keeps Edit / Delete
+                together if the row is too narrow for the whole group
+                — destructive Delete stays adjacent to the constructive
+                Edit, never orphaned. */}
+            <div className="ml-auto flex flex-wrap items-center gap-2">
+              {/* Refresh (#592): refetch the object + inlines + history
+                  with no full page reload. */}
+              <RefreshButton
+                onRefresh={refresh}
+                tooltip="Refresh"
+                icon={<RefreshCw className="h-4 w-4" aria-hidden />}
               />
-            )}
+              {canChange && (
+                <Button variant="primary" onClick={() => setEditing(true)}>
+                  <span className="inline-flex items-center gap-1.5">
+                    <Pencil className="h-4 w-4" aria-hidden /> Edit
+                  </span>
+                </Button>
+              )}
+              {canDelete && (
+                <DeleteButton
+                  label={data.label}
+                  loadPreview={() => fetchDeletePreview({ client, appLabel, modelName, pk })}
+                  onConfirm={async () => {
+                    await deleteObject({ client, appLabel, modelName, pk });
+                    toast.success(`Deleted “${data.label}”.`);
+                    navigate(listPath);
+                  }}
+                />
+              )}
+            </div>
           </div>
         )}
       </header>
