@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.9.0] — 2026-06-01
+
+### Added
+
+- **Change-form parity via the rest-api form-spec endpoint (#659).** The
+  change form is now driven by `GET <app>/<model>/<pk>/form-spec/`
+  (django-admin-rest-api 1.4.0+, #59) instead of discovering fields
+  client-side from the model serializer. The SPA now honours the
+  **ModelAdmin layer**: request-aware `get_form(request, obj)` /
+  `get_fieldsets(request, obj)` / `get_readonly_fields(request, obj)`,
+  `formfield_overrides`, custom `Form` classes, and the admin relation
+  widgets — resolved server-side and mapped through the closed
+  `widget.kind` enum. The original change-form querystring is forwarded,
+  so a `get_form` that swaps the `Form` on `?variant=…` renders the same
+  fields the legacy `/admin/` does. When the backend can't render the
+  form from JSON (a `change_form_template` override → `renderer:
+  "legacy-iframe"`), the SPA embeds the legacy admin page in an iframe
+  inside the SPA shell instead of silently dropping the customisation
+  (closes part of #624). A spec-fetch failure (older backend) degrades
+  gracefully to the previous detail-payload-driven form. New API client
+  method `formSpec()` + `useFormSpec` hook; the existing `FieldInput`
+  renders the adapted fields unchanged (one control set, no drift).
+
 ### Changed
 
 - **Split DetailPage/ListPage into focused modules (no behavior change)

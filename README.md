@@ -646,7 +646,8 @@ issues link the work to close each gap.
 
 | Stock-Django hook | SPA behaviour | Tracked |
 |---|---|---|
-| `change_form_template` / `change_list_template` / `add_form_template` / `change_password_template` / `object_history_template` overrides | Silently ignored — the SPA renders entirely from the JSON wire. | [#624](https://github.com/MartinCastroAlvarez/django-admin-react/issues/624) |
+| `change_form_template` / `add_form_template` overrides | **Embedded in an iframe** (since 1.9.0, #659): the change/add form-spec endpoint returns a `legacy-iframe` pointer and the SPA embeds the legacy admin page inside the SPA shell (breadcrumb / sidebar / toolbar stay SPA-rendered). Port the form to documented ModelAdmin hooks at your own pace. | [#624](https://github.com/MartinCastroAlvarez/django-admin-react/issues/624) |
+| `change_list_template` / `change_password_template` / `object_history_template` overrides | Silently ignored — those surfaces render entirely from the JSON wire. | [#624](https://github.com/MartinCastroAlvarez/django-admin-react/issues/624) |
 | `formfield_overrides = {Field: {"widget": CustomWidget}}` | Custom widget invisible — the SPA picks its own control from the field's `type`. No React-side widget-registration API yet. | [#625](https://github.com/MartinCastroAlvarez/django-admin-react/issues/625) |
 | `raw_id_fields` | Falls back to the autocomplete picker (same as `autocomplete_fields`). Defeats the purpose for FKs with 10M+ rows where autocomplete `get_search_results` is too expensive. | [#626](https://github.com/MartinCastroAlvarez/django-admin-react/issues/626) |
 | `radio_fields = {"status": admin.HORIZONTAL}` | Renders a `<select>` (default choice control) instead of inline radio buttons. | [#626](https://github.com/MartinCastroAlvarez/django-admin-react/issues/626) |

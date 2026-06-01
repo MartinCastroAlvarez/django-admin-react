@@ -636,6 +636,101 @@ export interface AddFormResponse {
 }
 
 /**
+ * Closed widget-kind enum from the form-spec endpoint (rest-api 1.4.0+,
+ * `#59`). Derived from each field's *resolved* Django form widget — every
+ * stdlib + admin widget maps to one of these, with `custom` for a widget
+ * whose class lives outside `django.*`. This is *how* to render a field
+ * (the control); `FieldType` is *what* the value is. The SPA maps the
+ * relevant kinds onto its existing `WidgetHint` controls; the rest fall
+ * back to the control implied by `FieldType`.
+ */
+export type WidgetKind =
+  | 'text'
+  | 'textarea'
+  | 'number'
+  | 'email'
+  | 'url'
+  | 'password'
+  | 'hidden'
+  | 'checkbox'
+  | 'checkbox-multiple'
+  | 'select'
+  | 'select-multiple'
+  | 'radio'
+  | 'date'
+  | 'datetime'
+  | 'time'
+  | 'split-datetime'
+  | 'select-date'
+  | 'file'
+  | 'autocomplete'
+  | 'autocomplete-multiple'
+  | 'raw-id'
+  | 'shuttle'
+  | 'custom';
+
+/**
+ * The resolved-widget block on a form-spec field. `kind` is the closed
+ * enum above; `attrs` carries the widget's HTML attrs (so `formfield_overrides`
+ * is visible — a forced `Textarea`'s `{rows: 10}`, a `CharField`'s
+ * `{maxlength: 150}`). `widget_class` (+ `template_name`) is present when
+ * the widget class lives outside `django.*`, so a consumer-registered
+ * renderer (`registerFieldWidget`, #625) can dispatch on it.
+ */
+export interface WidgetBlock {
+  kind: WidgetKind;
+  attrs: Record<string, string | number | boolean>;
+  widget_class?: string;
+  template_name?: string;
+}
+
+/**
+ * One field in a form-spec payload. Same value vocabulary as
+ * `FieldDescriptor` (the backend reuses the detail serializer, so `initial`
+ * has the identical shape `FieldDescriptor.value` does — FK `{id,label}`,
+ * M2M `[{id,label}]`, a redacted password `null`), plus the closed
+ * `widget` block and per-field `errors`.
+ */
+export interface FormSpecField {
+  label: string;
+  help_text: string;
+  required: boolean;
+  readonly: boolean;
+  type: FieldType;
+  widget: WidgetBlock;
+  initial: FieldValue;
+  errors: string[];
+  choices?: FieldChoice[];
+  to?: { app_label: string; model_name: string };
+  max_length?: number;
+  decimal_places?: number;
+}
+
+/**
+ * Response of `GET /api/v1/<app>/<model>/<pk>/form-spec/` (or
+ * `…/add/form-spec/`) — the ModelAdmin-resolved form (rest-api 1.4.0+,
+ * #59). Either the JSON form spec (`renderer: "form-spec"`) or, when the
+ * admin overrides `change_form_template` / `add_form_template`, a pointer
+ * to embed the legacy admin page in an iframe (`renderer: "legacy-iframe"`).
+ */
+export interface FormSpecResponse {
+  renderer: 'form-spec';
+  fieldsets: FieldsetDescriptor[];
+  fields: Record<string, FormSpecField>;
+  /** Dotted path of the resolved `Form` class — changes when a
+   *  request-aware `get_form` switched form by querystring/user. */
+  variant: string;
+}
+
+/** Escape hatch: embed the legacy admin change/add page in an iframe. */
+export interface LegacyIframeResponse {
+  renderer: 'legacy-iframe';
+  legacy_url: string;
+}
+
+export type FormSpecPayload = FormSpecResponse | LegacyIframeResponse;
+
+/**
  * One object-history entry (Django LogEntry) — `GET <app>/<model>/<pk>/history/`.
  * `action` is `addition` / `change` / `deletion` / `unknown`;
  * `change_message_human` is Django's rendered summary.

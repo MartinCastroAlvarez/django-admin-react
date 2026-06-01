@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "django-admin-react"
-version = "1.8.1"
+version = "1.9.0"
 description = "A drop-in React single-page admin for Django, driven entirely by ModelAdmin."
 authors = ["django-admin-react contributors"]
 license = "MIT"
@@ -52,7 +52,10 @@ django = ">=4.2,<7.0"
 # React SPA super-layer over `django-admin-rest-api`. The package's URLs
 # are included by `django_admin_react.urls`, and consumers add
 # `"django_admin_rest_api"` to `INSTALLED_APPS` alongside this package.
-django-admin-rest-api = "^1.3.0"
+# Floor raised to 1.4.0 in v1.9.0 (#659): the change form consumes the
+# `form-spec` endpoint that ships in rest-api 1.4.0 (#59). The SPA degrades
+# gracefully on an older backend, but the documented parity needs 1.4.0+.
+django-admin-rest-api = "^1.4.0"
 # `django-admin-mcp-api` — MCP-protocol adapter over the same REST API
 # so agents reach the SAME `ModelAdmin`-driven surface. Wire-protocol-only
 # layer; adds NO new functionality, permissions, or validation.
@@ -61,7 +64,7 @@ django-admin-rest-api = "^1.3.0"
 # so a consumer on Django 4.2 actually gets a Django-4.2-compatible MCP
 # (the 1.0.x line pins ``django>=5.0``, which would refuse to install
 # alongside Django 4.2).
-django-admin-mcp-api = ">=1.1.0,<2.0.0"
+django-admin-mcp-api = ">=1.2.0,<2.0.0"
 
 [tool.poetry.group.dev.dependencies]
 # Dependabot #5: pytest's tmpdir handled symlinks unsafely
