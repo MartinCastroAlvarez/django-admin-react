@@ -5,13 +5,13 @@
 #   pre-commit install
 #
 # Then every `git commit` runs these hooks against the staged diff.
-# Anything below the [BLOCK] threshold in
-# `docs/agents/security-expert/REVIEW_CHECKLIST.md` §1 aborts the commit.
+# The security rules these enforce are documented in `SECURITY.md` §3.
 #
 # This file is the commit-time half of the quality gate, run together
 # with `scripts/lint.sh` before a PR. CI (`.github/workflows/ci.yml`)
-# currently runs the test suites, not these hooks; wiring the lint/security
-# hooks into CI is a follow-up (#452).
+# runs the Python lint gate (ruff check + ruff format --check + mypy +
+# bandit) and the test suites; these hooks add the secret-scan + pygrep
+# house rules at commit time.
 
 repos:
   # -------------------------------------------------------------------
@@ -24,7 +24,9 @@ repos:
         args: ["protect", "--staged", "--no-banner", "--redact"]
 
   # -------------------------------------------------------------------
-  # Python formatting + linting (same tools scripts/lint.sh uses).
+  # Python lint + format + import order — Ruff is the single source of
+  # truth (#651/#652). Black, standalone isort, and flake8 were removed;
+  # ruff-format owns formatting and the `I` rules own import sorting.
   # -------------------------------------------------------------------
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.6.9
@@ -33,18 +35,6 @@ repos:
         args: ["--fix", "--exit-non-zero-on-fix"]
         files: ^(django_admin_react|tests|examples)/
       - id: ruff-format
-        files: ^(django_admin_react|tests|examples)/
-
-  - repo: https://github.com/psf/black-pre-commit-mirror
-    rev: 24.8.0
-    hooks:
-      - id: black
-        files: ^(django_admin_react|tests|examples)/
-
-  - repo: https://github.com/pycqa/isort
-    rev: 5.13.2
-    hooks:
-      - id: isort
         files: ^(django_admin_react|tests|examples)/
 
   # -------------------------------------------------------------------
@@ -63,7 +53,7 @@ repos:
 
   # -------------------------------------------------------------------
   # House rules — local hooks that enforce package-specific invariants
-  # from docs/agents/security-expert/REVIEW_CHECKLIST.md.
+  # from SECURITY.md §3.
   # -------------------------------------------------------------------
   - repo: local
     hooks:
@@ -71,10 +61,9 @@ repos:
       #
       # The `exclude` list covers the small set of files that
       # legitimately *document* the forbidden patterns (e.g., the
-      # rule itself in SECURITY.md / ACCEPTANCE.md, the review
-      # checklist, the security test that scans for them, and forum
-      # review files that quote the rule when reviewing it). All
-      # other files in the repo MUST be free of these substrings.
+      # rule itself in SECURITY.md and the security test that scans for
+      # them). All other files in the repo MUST be free of these
+      # substrings.
       - id: no-partial-tokens
         name: No partial token redactions (e.g., ghp_…XYZ)
         language: pygrep
@@ -83,10 +72,7 @@ repos:
         exclude: |
           (?x)^(
             SECURITY\.md
-            |ACCEPTANCE\.md
             |\.pre-commit-config\.yaml
-            |docs/threat-model\.md
-            |docs/agents/security-expert/.*
             |tests/test_security\.py
             |scripts/README\.md
           )$
@@ -118,3 +104,12 @@ repos:
         language: pygrep
         entry: "from ['\"]@dar/api['\"]"
         files: '^frontend/packages/(list|details|models|shell)/'
+
+      # Doc-reference integrity (#653): fail if a docstring/comment cites
+      # a *.md file or §N section that no longer exists.
+      - id: doc-ref-guard
+        name: No dangling *.md / §N doc references
+        language: system
+        entry: poetry run pytest tests/test_doc_refs.py -q
+        pass_filenames: false
+        files: '\.(py|yaml)$'

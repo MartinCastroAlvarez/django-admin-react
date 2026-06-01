@@ -1,7 +1,7 @@
 """PWA surface: web app manifest + service worker (Issue #86).
 
-Wire/UX contract: ``docs/ux/pwa.md``. The Security lane owns this
-surface because its load-bearing properties are security ones:
+Frontend build/ship context: ``ARCHITECTURE.md`` §5.4. The Security lane
+owns this surface because its load-bearing properties are security ones:
 
 - The **manifest** (``<mount>/web.manifest``) is served unauthenticated
   (the install prompt fires before login) and is computed at request
@@ -15,8 +15,7 @@ surface because its load-bearing properties are security ones:
   no-store`` (so the package's no-store API reads are never cached),
   never caches non-GET requests (mutation safety), and exposes a
   cache-purge message used on logout so read-cached payloads can't
-  outlive the session (``pwa.md`` §5 — defense-in-depth atop session
-  expiry).
+  outlive the session (defense-in-depth atop session expiry).
 
 Both views live **outside** ``api/`` because they're served at the
 mount root, not under ``api/v1/``, and the manifest is intentionally
@@ -33,12 +32,12 @@ from django.http import JsonResponse
 from django.shortcuts import render
 from django.views.generic import View
 
-from django_admin_react import conf as dar_conf
-
 # Re-use the API package's admin-site lookup (this repo implements no
 # API; the registry helper lives there). The PWA only needs the active
 # `AdminSite.name` for the manifest's start URL.
 from django_admin_rest_api.api.registry import get_admin_site
+
+from django_admin_react import conf as dar_conf
 
 # Theme colours keyed by the resolved colour scheme. Kept here (not in
 # the SPA's CSS-var system) because the manifest is rendered server-side
@@ -79,7 +78,7 @@ def _mount(request: HttpRequest, suffix: str) -> str:
 def _resolved_scheme(request: HttpRequest) -> str:
     """Resolve light/dark from the ``Sec-CH-Prefers-Color-Scheme`` hint.
 
-    Pairs with the theming client-hint path (``theming.md`` §2). Any
+    Pairs with the theming client-hint path (``ARCHITECTURE.md`` §5.3). Any
     value other than a case-insensitive ``"dark"`` resolves to light —
     the safe, neutral default when the hint is absent or unexpected.
     """
@@ -93,7 +92,7 @@ class ManifestView(View):
     Unauthenticated by design (the install prompt needs it pre-login).
     Carries no per-user data; every field is static or mount-/header-
     derived. ``Cache-Control: no-store`` is **not** set — the manifest
-    is deliberately cacheable/network-first (``pwa.md`` §2.1).
+    is deliberately cacheable/network-first.
     """
 
     http_method_names = ["get"]
