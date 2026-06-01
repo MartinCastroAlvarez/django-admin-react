@@ -28,6 +28,7 @@ import json
 import re
 from functools import lru_cache
 from pathlib import Path
+from typing import TYPE_CHECKING
 from typing import Any
 from typing import cast
 
@@ -47,8 +48,6 @@ from django.urls import reverse_lazy
 from django.utils.http import urlencode
 from django.views.generic import View
 
-from django_admin_react import conf as dar_conf
-
 # Re-use the API package's helpers — this repo implements no API of its
 # own (#544), and the staff-gate / admin-site lookup logic is the same
 # `ModelAdmin`-driven source of truth. The SPA shell view consults them
@@ -56,6 +55,15 @@ from django_admin_react import conf as dar_conf
 # user; the wire calls then go through the package's endpoints.
 from django_admin_rest_api.api.permissions import is_admin_user
 from django_admin_rest_api.api.registry import get_admin_site
+
+from django_admin_react import conf as dar_conf
+
+if TYPE_CHECKING:
+    # Type-only import: the package must keep working with
+    # ``django.contrib.admin`` removed from ``INSTALLED_APPS`` (see
+    # ``DarStaffAuthenticationForm``), so ``AdminSite`` is imported only
+    # for annotations and never at runtime.
+    from django.contrib.admin import AdminSite
 
 # Path the Vite build writes its manifest to (matches
 # ``frontend/apps/web/vite.config.ts``'s build.outDir + manifest).
@@ -75,7 +83,6 @@ class SpaIndexView(View):
     http_method_names = ["get"]
 
     def get(self, request: HttpRequest, *args: Any, **kwargs: Any) -> HttpResponse:
-        # noqa: ARG002 — args/kwargs only present to satisfy CBV signature.
         admin_site = get_admin_site()
         # Default: redirect anonymous / unauthorized users to the HTML
         # login. When the consumer opts into the React login
@@ -196,8 +203,8 @@ class DarLoginView(LoginView):
     # and redirects back to login) → login → … in an infinite loop.
     # Leaving it False makes the login page simply render for an
     # already-authenticated user, breaking the loop. (Proper
-    # "you need staff access" messaging for that case is ACCEPTANCE
-    # §2.3 O-5 — a separate SpaIndexView follow-up.)
+    # "you need staff access" messaging for that case is a separate
+    # SpaIndexView follow-up.)
     redirect_authenticated_user = False
 
     def get_context_data(self, **kwargs: Any) -> dict[str, Any]:
@@ -248,7 +255,7 @@ def _load_manifest_entry() -> dict[str, Any] | None:
 # --------------------------------------------------------------------------- #
 # Helpers                                                                     #
 # --------------------------------------------------------------------------- #
-def _resolve_brand_title(admin_site: Any) -> str:
+def _resolve_brand_title(admin_site: AdminSite) -> str:
     """Compute the SPA brand title.
 
     Resolution order:
@@ -269,7 +276,7 @@ def _resolve_brand_title(admin_site: Any) -> str:
     return "Django Admin"
 
 
-def _resolve_tab_title(admin_site: Any) -> str:
+def _resolve_tab_title(admin_site: AdminSite) -> str:
     """Compute the browser-tab ``<title>``.
 
     Mirrors Django admin, which uses ``AdminSite.site_title`` for the
@@ -293,7 +300,7 @@ def _resolve_tab_title(admin_site: Any) -> str:
     return "Django Admin"
 
 
-def _resolve_brand_logo(admin_site: Any) -> str | None:
+def _resolve_brand_logo(admin_site: AdminSite) -> str | None:
     """Compute the SPA logo / favicon URL.
 
     Resolution order:
@@ -324,7 +331,7 @@ def _resolve_brand_logo(admin_site: Any) -> str | None:
 _HEX_COLOR_RE = re.compile(r"^#(?:[0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$")
 
 
-def _resolve_primary_color(admin_site: Any) -> str:
+def _resolve_primary_color(admin_site: AdminSite) -> str:
     """The validated accent color injected as ``--dar-primary``.
 
     Resolution order — matches ``BRAND_TITLE`` / ``BRAND_LOGO_URL`` so a

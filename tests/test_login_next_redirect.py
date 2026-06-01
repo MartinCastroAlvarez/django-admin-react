@@ -47,9 +47,10 @@ def test_next_param_rejects_external_host(staff_user):
     parsed = urlparse(target)
     # An empty netloc means same-host (a path-only redirect like `/admin/`).
     # Any non-empty netloc must NOT be the attacker's host.
-    assert parsed.netloc in ("", "testserver"), (
-        f"Login redirected to off-host URL {target!r} — open redirect."
-    )
+    assert parsed.netloc in (
+        "",
+        "testserver",
+    ), f"Login redirected to off-host URL {target!r} — open redirect."
 
 
 def test_next_param_accepts_same_host_path(staff_user):
