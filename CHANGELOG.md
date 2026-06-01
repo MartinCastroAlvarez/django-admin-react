@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- **Split DetailPage/ListPage into focused modules (no behavior change)
+  (#657).** Extracted the inner components of `DetailPage.tsx`
+  (`DetailValue`, `FieldsetSection`, `ObjectActionButton`, `EditForm`,
+  `CustomViewsMenu`, `DeleteButton`, `CollapsedEmptyInline`,
+  `InlineSection`) into one-per-file modules under
+  `apps/web/src/pages/detail/`, and lifted `ListPage.tsx`'s `capitalize` /
+  `emptyLabel` helpers into `apps/web/src/pages/list/helpers.ts`. The page
+  components keep their original paths + named exports; runtime behavior,
+  props, and rendered output are unchanged.
 - **Python lint stack consolidated onto Ruff (#651, #652).** Removed Black,
   standalone isort, and flake8 entirely (their `[tool.*]` config, dev
   dependencies, pre-commit hooks, and `scripts/lint.sh` steps). Ruff now owns

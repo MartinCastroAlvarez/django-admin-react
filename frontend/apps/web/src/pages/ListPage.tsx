@@ -42,6 +42,7 @@ import { FilterBar } from '@dar/search';
 import { useToast } from '../toast';
 import { CHANGELIST_FILTERS_PARAM, withPreservedFilters } from '../changelistFilters';
 import { handleActionResult } from './action-result';
+import { capitalize, emptyLabel } from './list/helpers';
 
 // Lazy-loaded so the @dnd-kit suite (the heaviest dep in this modal)
 // only lands in the bundle of users who open the Customize modal
@@ -870,17 +871,4 @@ export function ListPage() {
       )}
     </div>
   );
-}
-
-function capitalize(value: string): string {
-  if (!value) return value;
-  return value.charAt(0).toUpperCase() + value.slice(1);
-}
-
-// Empty-state copy. When a search / filter is active, say so; otherwise a
-// plain "No objects yet." An active server-side default filter is surfaced
-// by the Filter button + modal (see #283), not by over-explaining it here.
-function emptyLabel(hasQuery: boolean, chipCount: number): string {
-  if (hasQuery || chipCount > 0) return 'No results match the current search / filters.';
-  return 'No objects yet.';
 }
