@@ -11,15 +11,12 @@
 # (run the test suites in CI); the no-CI revisit is recorded in
 # `SECURITY.md` §8 / `docs/agents/decisions.md` / OQ-A-001.
 #
-# SCOPE: the backend job runs `pytest` (the regression that motivated
-# #452 was a broken test). The frontend job runs the full `pnpm` gate —
-# typecheck + lint + test + build — which is already self-consistent and
-# green. Enforcing the *Python lint* gate in CI is a deliberate near-term
-# follow-up: `scripts/lint.sh` currently runs two formatters (`ruff
-# format` + `black`) whose output conflicts, so it is not yet satisfiable
-# on a clean tree. That gets de-conflicted and the small existing lint
-# debt cleared first (follow-up off #452), then the lint step is added
-# here.
+# SCOPE: the backend job runs the Python lint gate (ruff check + ruff
+# format --check + mypy + bandit) and then `pytest`. The frontend job
+# runs the full `pnpm` gate — typecheck + lint + test + build. The Python
+# lint stack was collapsed onto a single Ruff-based chain in #651/#652
+# (black/isort/flake8 removed), which made the gate satisfiable on a
+# clean tree and let it be wired in here.
 #
 # SECURITY POSTURE:
 #   - Least-privilege: top-level `contents: read`; no job needs write.
@@ -86,6 +83,18 @@ jobs:
 
       - name: Pin Django to the matrix version
         run: poetry run pip install "django~=${{ matrix.django }}.0"
+
+      # Python lint gate (#651/#652): a single Ruff-based stack —
+      # ruff check (lint, incl. `I` import order) + ruff format --check +
+      # mypy (strict subset on the package) + bandit (security). Black,
+      # standalone isort, and flake8 were removed. This is the same gate
+      # scripts/lint.sh runs locally.
+      - name: Lint (ruff + mypy + bandit)
+        run: |
+          poetry run ruff check django_admin_react tests
+          poetry run ruff format --check django_admin_react tests
+          poetry run mypy django_admin_react
+          poetry run bandit -r django_admin_react -c pyproject.toml -q
 
       # pytest with coverage (per pyproject `addopts`), including
       # tests/test_security.py. `filterwarnings = ["error"]` means a new

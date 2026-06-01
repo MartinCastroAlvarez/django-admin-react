@@ -9,10 +9,11 @@
 #   LINT_FE_ONLY=1 bash scripts/lint.sh   # skip Python
 #
 # Run this locally before opening / merging a PR — it is the fast
-# feedback loop and the authoritative lint gate. CI
-# (.github/workflows/ci.yml) runs the test suites (backend `pytest` + the
-# frontend gate); adding this script's Python lint gate to CI is a
-# follow-up (it must be de-conflicted first — two formatters disagree, #452).
+# feedback loop and the authoritative lint gate. The Python lint stack is
+# a single chain — Ruff (check + format + import order) + mypy + bandit —
+# so it can't conflict with itself (#651/#652 collapsed the old
+# ruff/black/isort/flake8 stack). CI (.github/workflows/ci.yml) runs the
+# same Python lint gate plus the test suites.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -57,15 +58,6 @@ if [[ "$FE_ONLY" != "1" ]]; then
 
   step "ruff format --check"
   poetry run ruff format --check "${PY_TARGETS[@]}"
-
-  step "black --check"
-  poetry run black --check "${PY_TARGETS[@]}"
-
-  step "isort --check-only"
-  poetry run isort --check-only "${PY_TARGETS[@]}"
-
-  step "flake8"
-  poetry run flake8 "${PY_TARGETS[@]}"
 
   step "pylint (errors only)"
   poetry run pylint --errors-only "${PY_TARGETS[@]}"

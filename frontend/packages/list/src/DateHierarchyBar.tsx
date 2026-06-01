@@ -20,10 +20,13 @@ export interface DateHierarchyBarProps {
   onNavigate: (path: { year?: number | null; month?: number | null; day?: number | null }) => void;
 }
 
-// date_hierarchy drill-down bar (#304 — Django changelist parity). Reads
-// `active` for the current drill path (breadcrumb, each crumb navigates
-// up) and `buckets` for the next level's options (drill down). The
-// backend caps the level by the field; clicking wires ?year/?month/?day.
+/**
+ * `date_hierarchy` drill-down bar (#304 — Django changelist parity).
+ * Reads `dh.active` for the current drill path (a breadcrumb whose crumbs
+ * navigate up) and `dh.buckets` for the next level's options (drill down).
+ * The backend caps the level by the field; clicking calls `onNavigate`
+ * with the chosen `?year`/`?month`/`?day`.
+ */
 export function DateHierarchyBar({ dh, onNavigate }: DateHierarchyBarProps) {
   const { active, buckets } = dh;
   const level: 'year' | 'month' | 'day' | 'done' =

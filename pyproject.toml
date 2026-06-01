@@ -75,20 +75,17 @@ django-admin-mcp-api = ">=1.1.0,<2.0.0"
 pytest = "^9.0.3"
 pytest-django = "^4.8"
 pytest-cov = "^5.0"
+# Single Python lint stack (#651/#652): Ruff owns lint + format +
+# import sorting (the `I` rules), mypy owns typing, bandit owns
+# security. Black, standalone isort, and flake8 were removed — their
+# pycodestyle/pyflakes/isort coverage is subsumed by Ruff's `E/W/F/I`
+# selectors, and running them alongside ruff-format produced the
+# three-way formatter conflict tracked in #452.
 ruff = "^0.6"
 mypy = "^1.10"
 django-stubs = { version = "^5.0", extras = ["compatible-mypy"] }
 bandit = "^1.7"
 pip-audit = "^2.7"
-# Dependabot #4: black wrote intermediate cache files with
-# unsanitized names — arbitrary-file-write (CVE-2026-32274). The
-# advisory's first-patched version is 26.3.1; we pin to that minimum
-# so ``poetry lock --update`` cannot resolve back to the vulnerable
-# 26.3.0 even though the lockfile is already on 26.5.x.
-black = "^26.3.1"
-isort = "^5.13"
-flake8 = "^7.1"
-Flake8-pyproject = "^1.2"
 pylint = "^3.2"
 pylint-django = "^2.5"
 
@@ -127,7 +124,7 @@ ignore = [
 "examples/**/*.py" = ["S101", "DJ001"]
 
 [tool.ruff.lint.isort]
-# Match standalone isort: one import per line (repo policy).
+# One import per line (repo policy).
 force-single-line = true
 known-first-party = ["django_admin_react", "tests"]
 
@@ -151,11 +148,17 @@ filterwarnings = [
 ]
 
 # --------------------------------------------------------------------------- #
-# MyPy — best effort for v1
+# MyPy — strict subset on the package (#655). Full ``strict = true`` would
+# also require typing the test suite (gaps tracked in #318); instead we
+# enable the high-value strict flags that the ~740-LOC package already
+# satisfies, so typing coverage can't regress. ``scripts/lint.sh`` runs
+# ``mypy django_admin_react`` as the blocking gate.
 # --------------------------------------------------------------------------- #
 [tool.mypy]
 python_version = "3.10"
 strict = false
+disallow_untyped_defs = true
+warn_return_any = true
 warn_unused_ignores = true
 warn_redundant_casts = true
 ignore_missing_imports = true
@@ -165,50 +168,8 @@ plugins = ["mypy_django_plugin.main"]
 django_settings_module = "tests.test_project.settings"
 
 # --------------------------------------------------------------------------- #
-# Black — formatter (the source of truth for line wrapping)
-# --------------------------------------------------------------------------- #
-[tool.black]
-line-length = 100
-target-version = ["py310", "py311", "py312"]
-include = "\\.pyi?$"
-extend-exclude = "frontend|examples/[^/]+/migrations|tests/test_project/migrations|dist"
-
-# --------------------------------------------------------------------------- #
-# isort — import sorter (one import per line per repo policy)
-# --------------------------------------------------------------------------- #
-[tool.isort]
-profile = "black"
-line_length = 100
-force_single_line = true
-known_first_party = ["django_admin_react", "tests"]
-skip_glob = ["frontend/*", "examples/*/migrations/*", "dist/*"]
-
-# --------------------------------------------------------------------------- #
-# flake8 — additional lint checks beyond ruff / black
-# --------------------------------------------------------------------------- #
-[tool.flake8]
-max-line-length = 100
-extend-ignore = [
-    "E203",  # whitespace before ':' — conflicts with black
-    "E501",  # line length — already enforced by black
-    "W503",  # line break before binary operator — black style
-]
-exclude = [
-    ".git",
-    "__pycache__",
-    "frontend",
-    "examples/*/migrations",
-    "tests/test_project/migrations",
-    "dist",
-    ".venv",
-]
-per-file-ignores = [
-    "tests/*:S101",
-]
-
-# --------------------------------------------------------------------------- #
 # pylint — used in `--errors-only` mode for additional checks not in
-# ruff / black / flake8. Style is owned by ruff + black.
+# ruff. Style + formatting + import order are owned by ruff.
 # --------------------------------------------------------------------------- #
 [tool.pylint.main]
 load-plugins = ["pylint_django"]
@@ -227,7 +188,7 @@ disable = [
     "missing-function-docstring",
     "too-few-public-methods",
     "import-outside-toplevel",    # we intentionally do lazy imports
-    "line-too-long",              # black owns line length
+    "line-too-long",              # ruff owns line length
     "fixme",
     "duplicate-code",
 ]

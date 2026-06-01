@@ -9,6 +9,11 @@ const SIZE_CLASSES: Record<NonNullable<SpinnerProps['size']>, string> = {
   lg: 'h-10 w-10',
 };
 
+/**
+ * Animated loading spinner with an `aria-live` status region. `size`
+ * selects one of three preset dimensions (default `md`); an optional
+ * `label` renders beside the spinner and is announced to assistive tech.
+ */
 export function Spinner({ size = 'md', label }: SpinnerProps) {
   return (
     <span role="status" aria-live="polite" className="inline-flex items-center gap-2 text-gray-500">

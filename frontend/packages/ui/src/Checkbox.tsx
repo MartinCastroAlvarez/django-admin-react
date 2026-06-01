@@ -12,6 +12,12 @@ import type { InputHTMLAttributes } from 'react';
 
 export type CheckboxProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'type'>;
 
+/**
+ * Styled checkbox primitive: an `appearance-none` box that matches the
+ * themed text inputs (border + transparent surface) with a primary fill
+ * and inline-SVG tick when checked. Accepts all native checkbox input
+ * attributes except `type`.
+ */
 export function Checkbox({ className = '', ...rest }: CheckboxProps) {
   return (
     <span className="relative inline-flex h-4 w-4 shrink-0 align-middle">

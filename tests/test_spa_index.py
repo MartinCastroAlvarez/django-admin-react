@@ -10,6 +10,7 @@ from __future__ import annotations
 import importlib
 import json
 from pathlib import Path
+from typing import Any
 from unittest import mock
 from urllib.parse import parse_qs
 from urllib.parse import urlsplit
@@ -330,7 +331,7 @@ def test_reverse_strip_template_has_no_leaking_hash_comments() -> None:
     )
     # The strip itself rendered (sanity check) AND no `{#` / `#}`
     # made it into the output as literal text.
-    assert 'Open this page in /admin2/' in out
+    assert "Open this page in /admin2/" in out
     assert "{#" not in out
     assert "#}" not in out
 
@@ -367,9 +368,7 @@ def test_reverse_strip_renders_above_admin_header_not_in_content(
             # `header` block, not the `content` block.
             strip_idx = body.index('aria-label="Experience toggle"')
             header_idx = body.index('id="header"')
-            assert strip_idx < header_idx, (
-                "Strip must render above #header, not inside content"
-            )
+            assert strip_idx < header_idx, "Strip must render above #header, not inside content"
         finally:
             _reload_conf()
 

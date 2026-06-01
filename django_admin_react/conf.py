@@ -91,7 +91,7 @@ DEFAULTS: dict[str, Any] = {
     "REACT_LOGIN": True,
     # PWA (Issue #86) — all optional; sane defaults make the manifest
     # work with zero config. See ``django_admin_react/pwa.py`` +
-    # ``docs/ux/pwa.md``.
+    # ``ARCHITECTURE.md`` §5.4.
     #
     # ``PWA_NAME``       — installed-app name. ``None`` (default) falls
     #                      back to the AdminSite ``site_header``, then
@@ -152,8 +152,11 @@ DEFAULTS: dict[str, Any] = {
 class _PackageSettings:
     """Resolved package settings.
 
-    Real implementation lands in PR #2. For now this is a stub so other
-    modules can import the typed attribute names.
+    An immutable, frozen record of the merged
+    ``settings.DJANGO_ADMIN_REACT`` overrides on top of :data:`DEFAULTS`,
+    built once by :func:`_load` and cached. Each field carries its
+    default; modules read the typed attribute names off the cached
+    instance via this module's :func:`__getattr__`.
     """
 
     ADMIN_SITE: str = DEFAULTS["ADMIN_SITE"]

@@ -21,7 +21,6 @@ export default tseslint.config(
       '**/node_modules/**',
       '**/*.config.{js,cjs,mjs,ts}',
       'vitest.setup.ts',
-      '.eslintrc.cjs',
     ],
   },
   js.configs.recommended,
@@ -34,10 +33,11 @@ export default tseslint.config(
     plugins: { 'react-hooks': reactHooks },
     rules: {
       ...reactHooks.configs.recommended.rules,
-      // `Any` is used deliberately at wire boundaries (parsed JSON,
-      // Django-shaped signatures) — mirrors the Python side keeping
-      // `Any`. Tightening the tractable cases is tracked separately.
-      '@typescript-eslint/no-explicit-any': 'off',
+      // The codebase carries zero `any` today; lock that in (#656). A
+      // genuine wire boundary that needs `any` should add a narrowly
+      // scoped per-line `eslint-disable-next-line` with a reason rather
+      // than reopening the rule globally.
+      '@typescript-eslint/no-explicit-any': 'error',
       // Align with tsconfig's `noUnusedParameters` underscore convention.
       '@typescript-eslint/no-unused-vars': [
         'error',

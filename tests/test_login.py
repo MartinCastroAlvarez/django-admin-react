@@ -135,9 +135,11 @@ def test_spa_falls_back_to_package_login_when_admin_off(client: Client) -> None:
     of the React-rendered login (the post-2026-05-28 default is
     `REACT_LOGIN=True`, which serves the shell to anon instead — that
     path is covered in `test_spa_index.py`)."""
-    import django_admin_react.conf as _conf
     import importlib
+
+    import django_admin_react.conf as _conf
     import django_admin_react.views as _views
+
     importlib.reload(_conf)
     importlib.reload(_views)
     try:

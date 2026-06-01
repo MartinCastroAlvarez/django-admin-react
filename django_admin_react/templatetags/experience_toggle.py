@@ -76,7 +76,7 @@ def experience_toggle_strip(context: dict[str, Any]) -> dict[str, Any]:
     if not path.startswith(legacy_root):
         return {"visible": False}
 
-    tail = path[len(legacy_root):]
+    tail = path[len(legacy_root) :]
     query = request.META.get("QUERY_STRING", "") if hasattr(request, "META") else ""
     target = react_root + tail + (("?" + query) if query else "")
     return {"visible": True, "target": target, "react_root": react_root}
