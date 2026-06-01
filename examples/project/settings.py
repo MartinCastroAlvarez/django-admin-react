@@ -43,6 +43,9 @@ INSTALLED_APPS = [
     "examples.blog",
     "examples.ecommerce",
     "examples.hr",
+    # Custom-form fixture: a ModelAdmin with a request-driven custom view +
+    # custom template, proving the legacy-iframe escape hatch (#659).
+    "examples.jobs",
 ]
 
 MIDDLEWARE = [

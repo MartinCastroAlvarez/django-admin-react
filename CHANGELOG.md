@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.10.0] — 2026-06-02
+
+### Added
+- **`examples/jobs` — custom-form / legacy-iframe fixture app.** A single
+  `Job` model whose `ModelAdmin` exercises the request-driven custom-view +
+  custom-template pattern using *only* documented Django hooks
+  (`formfield_for_dbfield`, an admin `action`, a `change_view` branch, a
+  hand-rolled dual-listbox template) — no SPA-specific API. Proves the two
+  rendering paths end-to-end: Path A (`/admin-react/jobs/job/<pk>/change/`)
+  renders the stock form-spec with the large-textarea `metadata` widget;
+  Path B (`?run_custom=1`) returns `renderer: "legacy-iframe"` and the SPA
+  embeds the legacy page in an iframe inside its own chrome. Backend tests
+  cover both paths and the ordered POST contract (#659).
+
+### Changed
+- **Raised dependency floors for the cross-repo custom-form contract:**
+  `django-admin-rest-api` → `^1.5.0` (broadened `legacy-iframe` detection
+  for request-driven custom views, #59) and `django-admin-mcp-api` →
+  `>=1.3.0,<2.0.0` (matching MCP release, #70). The SPA's `LegacyIframe`
+  renderer (#659) already consumes the `legacy-iframe` discriminator.
+
 ## [1.9.0] — 2026-06-01
 
 ### Added

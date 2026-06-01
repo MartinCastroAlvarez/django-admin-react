@@ -1,0 +1,144 @@
+{% extends "admin/base_site.html" %}
+{% comment %}
+Custom change-view template (Path B) — a dual-listbox / ordered step picker.
+
+This is a *pure custom template* with a custom POST contract: no ModelForm,
+no fieldsets, no model fields. The form-spec resolver detects this (the
+overridden change_view renders a non-standard template) and tells the React
+SPA to embed THIS legacy page in an iframe. The contract that must hold:
+
+  request.POST.getlist("selected_steps")  ← ordered, in DOM order of the
+                                             right-hand column.
+{% endcomment %}
+
+{% block extrastyle %}{{ block.super }}
+<style>
+  .dlb { display: flex; gap: 1.5rem; align-items: flex-start; margin: 1rem 0; }
+  .dlb__col { flex: 1; min-width: 200px; }
+  .dlb__col h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  .dlb__list { list-style: none; margin: 0; padding: 0.25rem; min-height: 220px;
+               border: 1px solid var(--border-color, #ccc); border-radius: 4px;
+               background: var(--body-bg, #fff); }
+  .dlb__item { display: flex; justify-content: space-between; align-items: center;
+               padding: 0.4rem 0.6rem; margin: 0.2rem; border: 1px solid var(--border-color, #ddd);
+               border-radius: 4px; cursor: grab; background: var(--darkened-bg, #f8f8f8); }
+  .dlb__item.is-selected { outline: 2px solid var(--primary, #79aec8); }
+  .dlb__item button { margin-left: 0.4rem; }
+  .dlb__ref { margin-top: 1rem; }
+  .dlb__ref th, .dlb__ref td { padding: 0.3rem 0.6rem; text-align: left; }
+</style>
+{% endblock %}
+
+{% block content %}
+<p class="help">Drag to reorder, or use the arrows. The order on the right is
+the order the steps run in.</p>
+
+<form method="post" action="{{ request.get_full_path }}" id="run-custom-form">
+  {% csrf_token %}
+
+  <div class="dlb">
+    <div class="dlb__col">
+      <h2>Available</h2>
+      <ul class="dlb__list" id="available" data-side="available">
+        {% for step in available_steps %}
+          <li class="dlb__item" draggable="true" data-step="{{ step.name }}">
+            <span>{{ step.label }}</span>
+            <button type="button" class="add-step" aria-label="Add {{ step.label }}">→</button>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <div class="dlb__col">
+      <h2>Selected (ordered)</h2>
+      <ul class="dlb__list" id="selected" data-side="selected">
+        {% for step in selected_steps %}
+          <li class="dlb__item" draggable="true" data-step="{{ step.name }}">
+            <span>{{ step.label }}</span>
+            <span>
+              <button type="button" class="up-step" aria-label="Move up">↑</button>
+              <button type="button" class="down-step" aria-label="Move down">↓</button>
+              <button type="button" class="remove-step" aria-label="Remove">✕</button>
+            </span>
+          </li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+
+  {# Hidden inputs are (re)emitted in DOM order on submit so getlist() keeps order. #}
+  <div id="selected-inputs"></div>
+
+  <table class="dlb__ref">
+    <caption>All known steps</caption>
+    <thead><tr><th>Step</th><th>Default order</th></tr></thead>
+    <tbody>
+      {% for step in all_steps %}
+        <tr><td>{{ step.label }}</td><td>{{ step.default_order }}</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+
+  <div class="submit-row">
+    <a href="{{ cancel_url }}" class="button cancel-link">Cancel</a>
+    <input type="submit" value="Queue steps" class="default">
+  </div>
+</form>
+
+<script>
+(function () {
+  var form = document.getElementById("run-custom-form");
+  var available = document.getElementById("available");
+  var selected = document.getElementById("selected");
+  var inputs = document.getElementById("selected-inputs");
+
+  function move(item, target) { target.appendChild(item); }
+
+  // Click handlers (delegated).
+  document.addEventListener("click", function (e) {
+    var btn = e.target.closest("button");
+    if (!btn) return;
+    var item = btn.closest(".dlb__item");
+    if (!item) return;
+    if (btn.classList.contains("add-step")) move(item, selected);
+    else if (btn.classList.contains("remove-step")) move(item, available);
+    else if (btn.classList.contains("up-step") && item.previousElementSibling)
+      item.parentNode.insertBefore(item, item.previousElementSibling);
+    else if (btn.classList.contains("down-step") && item.nextElementSibling)
+      item.parentNode.insertBefore(item.nextElementSibling, item);
+  });
+
+  // Minimal HTML5 drag-and-drop reordering / cross-column moves.
+  var dragged = null;
+  document.addEventListener("dragstart", function (e) {
+    var item = e.target.closest(".dlb__item");
+    if (item) { dragged = item; item.classList.add("is-selected"); }
+  });
+  document.addEventListener("dragend", function () {
+    if (dragged) dragged.classList.remove("is-selected");
+    dragged = null;
+  });
+  [available, selected].forEach(function (list) {
+    list.addEventListener("dragover", function (e) {
+      e.preventDefault();
+      if (!dragged) return;
+      var after = [].slice.call(list.querySelectorAll(".dlb__item:not(.is-selected)"))
+        .find(function (el) { return e.clientY < el.getBoundingClientRect().top + el.offsetHeight / 2; });
+      if (after) list.insertBefore(dragged, after); else list.appendChild(dragged);
+    });
+  });
+
+  // Emit hidden inputs in the right column's DOM order just before submit.
+  form.addEventListener("submit", function () {
+    inputs.innerHTML = "";
+    selected.querySelectorAll(".dlb__item").forEach(function (item) {
+      var input = document.createElement("input");
+      input.type = "hidden";
+      input.name = "selected_steps";
+      input.value = item.getAttribute("data-step");
+      inputs.appendChild(input);
+    });
+  });
+})();
+</script>
+{% endblock %}

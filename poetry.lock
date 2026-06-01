@@ -471,31 +471,31 @@ bcrypt = ["bcrypt"]
 
 [[package]]
 name = "django-admin-mcp-api"
-version = "1.2.0"
+version = "1.3.0"
 description = "MCP (Model Context Protocol) adapter for django-admin-rest-api. A wire-protocol-only layer that lets agents reach the existing REST API — no new functionality, permissions, or validation."
 optional = false
 python-versions = "<4.0,>=3.10"
 groups = ["main"]
 files = [
-    {file = "django_admin_mcp_api-1.2.0-py3-none-any.whl", hash = "sha256:2f94b1597c60944c4d9bf75432354c1dfd4a2a66f8ae71da46020974ee88e28e"},
-    {file = "django_admin_mcp_api-1.2.0.tar.gz", hash = "sha256:c2a82b19347ce3e2761411453ff2730a70f0e658124daa2ae504b5ffcbeb4938"},
+    {file = "django_admin_mcp_api-1.3.0-py3-none-any.whl", hash = "sha256:87e51eab6733e7313e60459c6f413bc767988ea79710b84fac0ccca860d66bd8"},
+    {file = "django_admin_mcp_api-1.3.0.tar.gz", hash = "sha256:4ec3dd1569b6e026710665ed9f32c1398482db8f2facf5c5955ada17de8ba2c8"},
 ]
 
 [package.dependencies]
 django = ">=4.2,<7.0"
-django-admin-rest-api = ">=1.4.0,<2.0.0"
+django-admin-rest-api = ">=1.5.0,<2.0.0"
 jsonschema = ">=4.0,<5.0"
 
 [[package]]
 name = "django-admin-rest-api"
-version = "1.4.0"
+version = "1.5.0"
 description = "A JSON REST API for the Django admin — same permissions, same ModelAdmin, no new features. Powers django-admin-react and django-admin-mcp."
 optional = false
 python-versions = "<4.0,>=3.10"
 groups = ["main"]
 files = [
-    {file = "django_admin_rest_api-1.4.0-py3-none-any.whl", hash = "sha256:66e9ed8536364b82e4eab139471d1115b2740233f31dacbd809e315caddd81fe"},
-    {file = "django_admin_rest_api-1.4.0.tar.gz", hash = "sha256:debead8b5d0effed517e178e3fc5546c444cdd3288fae6f691999253d313f917"},
+    {file = "django_admin_rest_api-1.5.0-py3-none-any.whl", hash = "sha256:3c9e6057f803a01c5d7f78144ea424f0a16206c593323c27fe6c344f6ebde310"},
+    {file = "django_admin_rest_api-1.5.0.tar.gz", hash = "sha256:c559a2b04d1fbe43c773d2430c493b50e3d9467e46e23a3546e7985cc609d3fc"},
 ]
 
 [package.dependencies]
@@ -1900,4 +1900,4 @@ zstd = ["backports-zstd (>=1.0.0) ; python_version < \"3.14\""]
 [metadata]
 lock-version = "2.1"
 python-versions = "^3.10"
-content-hash = "578e1141e6c1cbf842ec8e9b6a8c2ce8ce10f6376bd9b27e50a7a588c1443a1c"
+content-hash = "cbedae24e804c8e2e963192f3785c7b7ef5d056911ac112467cccc78515c71d1"
