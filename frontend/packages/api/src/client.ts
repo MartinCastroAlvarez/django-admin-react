@@ -15,6 +15,7 @@ import type {
   DeletePreviewResponse,
   DetailResponse,
   FieldErrorEnvelope,
+  FormSpecPayload,
   HistoryResponse,
   ListResponse,
   LoginResponse,
@@ -257,6 +258,28 @@ export class ApiClient {
   /** The create-form schema for a NEW object (GET <app>/<model>/add/). */
   addForm(appLabel: string, modelName: string): Promise<AddFormResponse> {
     return this.request<AddFormResponse>('GET', `${appLabel}/${modelName}/add/`);
+  }
+
+  /**
+   * The ModelAdmin-resolved form spec (rest-api 1.4.0+, #59): request-aware
+   * `get_form` / `get_fieldsets` / `get_readonly_fields` with a closed
+   * `widget.kind` per field, or a `legacy-iframe` pointer. Pass `pk` for
+   * the change form, omit it for the add form. `query` is the original
+   * change-form querystring (forwarded so a request-aware `get_form` that
+   * branches on `?variant=…` resolves the matching form).
+   */
+  formSpec(
+    appLabel: string,
+    modelName: string,
+    pk?: string | number,
+    query?: string,
+  ): Promise<FormSpecPayload> {
+    const base =
+      pk === undefined || pk === null || pk === ''
+        ? `${appLabel}/${modelName}/add/form-spec/`
+        : `${appLabel}/${modelName}/${pk}/form-spec/`;
+    const qs = query ? (query.startsWith('?') ? query : `?${query}`) : '';
+    return this.request<FormSpecPayload>('GET', `${base}${qs}`);
   }
 
   /** Object-history timeline (GET <app>/<model>/<pk>/history/) — #244. */

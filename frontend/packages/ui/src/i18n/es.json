@@ -45,5 +45,8 @@
   "Action failed.": "La acción falló.",
   "The action could not be completed.": "No se pudo completar la acción.",
   "Couldn't load the list": "No se pudo cargar la lista",
-  "This page requires JavaScript.": "Esta página requiere JavaScript."
+  "This page requires JavaScript.": "Esta página requiere JavaScript.",
+  "This form is rendered by the legacy admin (custom change_form_template).": "Este formulario lo renderiza el admin clásico (change_form_template personalizado).",
+  "Open in new tab": "Abrir en una pestaña nueva",
+  "Legacy admin form": "Formulario del admin clásico"
 }

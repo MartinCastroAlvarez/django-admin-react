@@ -34,6 +34,13 @@ export type {
   FieldsetDescriptor,
   FilterDescriptor,
   FilterOption,
+  FormSpecField,
+  FormSpecPayload,
+  FormSpecResponse,
+  LegacyIframeResponse,
+  WidgetBlock,
+  WidgetHint,
+  WidgetKind,
   HistoryEntry,
   HistoryResponse,
   ForeignKeyValue,
@@ -72,6 +79,8 @@ export type { RecentActionsState } from './recent-actions-context';
 
 export { useDetail } from './detail-context';
 export type { DetailState } from './detail-context';
+export { useFormSpec } from './form-spec-context';
+export type { FormSpecState, UseFormSpecParams } from './form-spec-context';
 
 export {
   createObject,

@@ -36,9 +36,9 @@ import { useModelMeta } from '../useModelMeta';
 import { toastMessages, useToast } from '../toast';
 import { followActionRedirect } from '../action-redirect';
 import { carryPreservedFilters, listPathWithPreservedFilters } from '../changelistFilters';
+import { ChangeForm } from './detail/ChangeForm';
 import { CustomViewsMenu } from './detail/CustomViewsMenu';
 import { DeleteButton } from './detail/DeleteButton';
-import { EditForm } from './detail/EditForm';
 import { FieldsetSection } from './detail/FieldsetSection';
 import { InlineSection } from './detail/InlineSection';
 import { ObjectActionButton } from './detail/ObjectActionButton';
@@ -242,8 +242,19 @@ export function DetailPage({
       </header>
 
       {editing ? (
-        <EditForm
+        <ChangeForm
           data={data}
+          appLabel={appLabel}
+          modelName={modelName}
+          pk={pk}
+          // Forward the original change-form querystring so a request-aware
+          // ModelAdmin.get_form (e.g. one branching on ?variant=…) resolves
+          // the matching form (#659). Strip the SPA-only `edit=1` flag.
+          query={(() => {
+            const sp = new URLSearchParams(searchParams);
+            sp.delete('edit');
+            return sp.toString();
+          })()}
           onCancel={() => setEditing(false)}
           onSave={async (payload, action) => {
             // "Save as new" creates a fresh object from the current
