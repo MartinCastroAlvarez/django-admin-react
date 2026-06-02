@@ -1,6 +1,10 @@
 # django-admin-react
 
-[![Latest on Django Packages](https://img.shields.io/badge/PyPI-django--admin--react--tags-8c3c26.svg)](https://djangopackages.org/packages/p/django-admin-react/)
+[![PyPI version](https://img.shields.io/pypi/v/django-admin-react.svg)](https://pypi.org/project/django-admin-react/)
+[![Python versions](https://img.shields.io/pypi/pyversions/django-admin-react.svg)](https://pypi.org/project/django-admin-react/)
+[![Django versions](https://img.shields.io/badge/Django-5.0%20%7C%205.1%20%7C%205.2%20%7C%206.0-44b78b.svg)](https://www.djangoproject.com/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Latest on Django Packages](https://img.shields.io/badge/Django%20Packages-django--admin--react-8c3c26.svg)](https://djangopackages.org/packages/p/django-admin-react/)
 
 A drop-in **React single-page admin** for any Django 5+ project. Same
 `pip install`, same `INSTALLED_APPS`, same `urls.py include()` — and
