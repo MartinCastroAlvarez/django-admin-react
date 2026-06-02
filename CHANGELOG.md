@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.10.1] — 2026-06-02
+
+### Fixed
+- **Restored the detail-page stacked-header layout (#658), which the #657
+  module-split refactor silently reverted.** The header had regressed to the
+  pre-#658 single-row layout where breadcrumb + title share a flex row with
+  the action toolbar — collapsing long single-token titles (filenames,
+  slugs, UUIDs) to one-word-per-line at full H1 size, and letting an 8+
+  action toolbar push the title off-screen. The header is again three
+  stacked full-width rows (breadcrumb / title with `overflow-wrap: anywhere`
+  / toolbar with Edit·Delete pinned trailing-edge via `ml-auto`). Added a
+  `DetailPage` test asserting the stacked layout so a future refactor can't
+  revert it unnoticed.
+
 ## [1.10.0] — 2026-06-02
 
 ### Added

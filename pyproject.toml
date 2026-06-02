@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "django-admin-react"
-version = "1.10.0"
+version = "1.10.1"
 description = "A drop-in React single-page admin for Django, driven entirely by ModelAdmin."
 authors = ["django-admin-react contributors"]
 license = "MIT"
@@ -58,7 +58,10 @@ django = ">=4.2,<7.0"
 # Raised to 1.5.0 in v1.10.0: the form-spec `legacy-iframe` fallback now
 # covers request-driven custom views (a `change_view` override that renders
 # a non-standard template), which the `examples/jobs` fixture exercises.
-django-admin-rest-api = "^1.5.0"
+# Raised to 1.6.0 in v1.11.0 (#664): the form-spec wire now emits
+# `prepopulated_fields` and autocomplete hints, which the SPA's widget-kind
+# rendering consumes (slugify-on-keystroke + autocomplete widget).
+django-admin-rest-api = "^1.6.0"
 # `django-admin-mcp-api` — MCP-protocol adapter over the same REST API
 # so agents reach the SAME `ModelAdmin`-driven surface. Wire-protocol-only
 # layer; adds NO new functionality, permissions, or validation.
