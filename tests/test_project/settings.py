@@ -24,6 +24,9 @@ INSTALLED_APPS = [
     # invisible on every legacy admin page). Documented in the
     # README's "Experience-toggle strip" section.
     "django_admin_react",
+    # The sibling REST API package — django_admin_react is a thin SPA layer
+    # over it, and the package's system check (#667) expects it installed.
+    "django_admin_rest_api",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
