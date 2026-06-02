@@ -140,7 +140,12 @@ export function DetailPage({
             multi-word titles too. */}
         <h1 className="text-2xl font-semibold text-balance break-words">{data.label}</h1>
         {!editing && (
-          <div className="flex flex-wrap items-center gap-2">
+          // Toolbar row (#658/#672): full-width (`w-full`) so it never
+          // shares horizontal space with the title/breadcrumb rows, and
+          // `flex-wrap` so 8–14 actions reflow onto further lines rather
+          // than overflowing. `min-w-0` lets the row shrink inside its
+          // flex ancestor so wrapping engages instead of pushing width.
+          <div className="flex w-full min-w-0 flex-wrap items-center gap-2">
             <button
               type="button"
               onClick={() => setHistoryOpen(true)}

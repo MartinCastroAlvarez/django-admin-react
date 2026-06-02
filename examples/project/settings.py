@@ -46,6 +46,9 @@ INSTALLED_APPS = [
     # Custom-form fixture: a ModelAdmin with a request-driven custom view +
     # custom template, proving the legacy-iframe escape hatch (#659).
     "examples.jobs",
+    # Many-actions fixture: a ModelAdmin with 12 batch + 2 detail-only
+    # actions, pinning the detail-page toolbar wrapping behaviour (#672).
+    "examples.many_actions",
 ]
 
 MIDDLEWARE = [

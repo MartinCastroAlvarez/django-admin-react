@@ -663,6 +663,57 @@ typical workaround is to keep that model on the legacy
 [experience-toggle strip](#experience-toggle-strip-optional) — the
 SPA + legacy admin happily coexist.
 
+#### Embedding the legacy admin in an iframe — required backend headers
+
+When a `ModelAdmin` overrides `change_form_template` / `add_form_template`,
+the SPA embeds the legacy admin page in an `<iframe>` (the row above). For
+the browser to actually render that frame, the **legacy admin responses must
+allow being framed by the SPA's origin** — otherwise the embed is refused and
+the SPA shows a "Embedding refused by the legacy admin — open in new tab"
+fallback (never a broken-image icon, #673).
+
+Most projects mount `django.middleware.clickjacking.XFrameOptionsMiddleware`,
+which by default sets `X-Frame-Options: DENY` on **every** response and blocks
+the iframe. Configure the legacy responses as follows:
+
+**Same origin (SPA and legacy admin under one host — the common case):**
+
+```python
+# settings.py
+X_FRAME_OPTIONS = "SAMEORIGIN"   # was the implicit "DENY"
+# …or drop XFrameOptionsMiddleware entirely if you don't need clickjacking
+# protection on the legacy surface.
+```
+
+`SAMEORIGIN` lets the same-origin SPA frame the legacy page while still
+blocking cross-site framing.
+
+**Cross-origin (SPA and legacy admin on different origins):**
+
+```python
+# On the legacy admin responses (e.g. via a middleware or
+# django-csp), allow ONLY the SPA origin to frame them:
+#   Content-Security-Policy: frame-ancestors https://admin.example.com
+#
+# And, because the iframe is a cross-site context, the legacy session
+# cookie must be sent in it:
+# settings.py
+SESSION_COOKIE_SAMESITE = "None"   # send the cookie in the cross-site frame
+SESSION_COOKIE_SECURE = True       # required whenever SameSite=None
+```
+
+Without these, the framed legacy page either refuses to load (`frame-ancestors`
+block) or loads unauthenticated (cookie dropped) and bounces through a login
+redirect the browser then refuses to display. The
+[`examples/jobs`](examples/jobs) `JobAdmin` (the `?run_custom=1` variant)
+exercises this path end-to-end against the example backend.
+
+> The SPA detects a refused frame client-side (a `loading → loaded → refused`
+> state machine: a ~4s window with no iframe `load` event ⇒ refused) and
+> renders the fallback. A future server-side `legacy_iframeable` flag computed
+> from the response middleware chain (cross-repo, rest-api) could switch to the
+> "open in new tab only" UI immediately — tracked as a follow-up.
+
 ---
 
 ## Writing safe `list_display` callables
