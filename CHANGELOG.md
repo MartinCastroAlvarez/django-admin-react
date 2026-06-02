@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.13.0] — 2026-06-03
+
+### Changed
+- **The detail page now opens in the read-only DETAILS view by default,
+  including on the Django-admin `/<app>/<model>/<pk>/change/` URL alias
+  (#682).** Previously `/change/` forced edit mode, so a shared record link
+  dropped recipients into an editable form (with empty inline "add" rows) —
+  one stray keystroke from an accidental save. Now both `/<pk>` and
+  `/<pk>/change/` render the same read-back view (FK/M2M as linked labels,
+  choices as their display label, inlines as read-only tables); the toolbar
+  **Edit** button flips the page into edit mode in place (no URL change), and
+  `?edit=1` still deep-links straight to edit (and lands the "Save and
+  continue editing" round-trip there). View-only users never see the Edit
+  button. The add form (`/add/`) is unaffected — it still opens ready to fill
+  in. No backend / form-spec contract change.
+
 ## [1.12.0] — 2026-06-02
 
 ### Added
