@@ -30,6 +30,10 @@ export function ObjectActionButton({
       variant="secondary"
       loading={busy}
       disabled={busy}
+      // Long action labels/descriptions (#672) wrap *inside* the button
+      // (`whitespace-normal` + `break-words`) instead of forcing a wide
+      // min-content box that would push the toolbar past the viewport.
+      className="max-w-full whitespace-normal text-left break-words"
       title={action.description}
       onClick={async () => {
         setBusy(true);
