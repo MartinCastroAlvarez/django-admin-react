@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.11.1] — 2026-06-02
+
+### Fixed
+- **Detail-page toolbar no longer pushes the title off-screen (#672).** The
+  header already stacked breadcrumb / title / toolbar as three full-width rows
+  (#658/#674), but a `ModelAdmin` with 8+ actions still overflowed
+  horizontally and dragged the H1 + breadcrumb out of view. Root cause was the
+  flexbox `min-width: auto` default on the content column: `<main>` is a flex
+  item, so it refused to shrink below the intrinsic width of the widest
+  toolbar and `flex-1` blew it past the viewport — no header re-stacking could
+  help. `<main>` now carries `min-w-0` so it shrinks to the viewport and the
+  toolbar's `flex-wrap` actually reflows the buttons; the toolbar row is
+  `w-full min-w-0`, long action labels wrap inside their button
+  (`whitespace-normal break-words`) instead of forming a wide min-content box,
+  and the Edit/Delete cluster stays right-aligned (`ml-auto`) on the last line
+  regardless of how many custom actions exist. New `examples/many_actions`
+  `PipelineAdmin` fixture (12 batch + 2 detail-only actions) plus
+  `DetailPage.test.tsx` guards pin the wrapping behaviour.
+- **Legacy-iframe shows a clear fallback instead of a broken-image icon
+  (#673).** When the legacy admin refuses to be framed (Django's
+  `XFrameOptionsMiddleware` sends `X-Frame-Options: DENY`, or a cross-origin
+  `frame-ancestors` block), the browser painted its broken-image glyph and no
+  `error` event fired. `LegacyIframe` now runs a `loading → loaded → refused`
+  state machine — `onLoad` marks the frame loaded; a ~4s timeout with no
+  `onLoad` marks it `refused` and swaps in an explicit "Embedding refused by
+  the legacy admin — open in new tab" fallback (keeping the proven-working
+  Open-in-new-tab button and the #665 same-origin validation + `sandbox`).
+  README now documents the required backend headers
+  (`X-Frame-Options: SAMEORIGIN` / removing `XFrameOptionsMiddleware`; for
+  cross-origin, `Content-Security-Policy: frame-ancestors <spa-origin>` plus
+  `SESSION_COOKIE_SAMESITE = "None"` + `SESSION_COOKIE_SECURE`), and the
+  `examples/jobs` `?run_custom=1` variant exercises the path end-to-end.
+
 ## [1.11.0] — 2026-06-02
 
 ### Added
