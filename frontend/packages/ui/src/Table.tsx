@@ -41,6 +41,17 @@ export interface TableColumn<Row> {
    * scrolling content (#586 — column-lock / frozen-cols feature).
    */
   sticky?: boolean;
+  /**
+   * Render this column's cell as a link to the row's detail/change page
+   * (the `rowHref` target). Mirrors Django's `list_display_links` (#666):
+   * the ModelAdmin chooses which column(s) link, not the SPA. When NO
+   * column sets this, the table renders no cell links and rows are not
+   * clickable (matching `list_display_links = None`). Falls back to a
+   * sensible default (the first non-selection column) only when the caller
+   * leaves every column's `isLink` unset AND `rowHref` is provided — see
+   * the Table body for the back-compat path.
+   */
+  isLink?: boolean;
 }
 
 export interface TableProps<Row> {
@@ -97,7 +108,26 @@ export interface TableProps<Row> {
    * table keeps roughly its prior height.
    */
   skeletonRows?: number;
+  /**
+   * Row virtualization for very long lists (#670 — the `?all` "Show all N"
+   * path renders up to `list_max_show_all`, 200 by default, rows at once).
+   * When set, each body row gets `content-visibility: auto` +
+   * `contain-intrinsic-size`, so the browser skips layout/paint for
+   * off-screen rows (native windowing) while keeping them in the DOM for
+   * Ctrl-F / a11y / native scroll. Cheaper and far less fragile than a
+   * JS windowing library given the sticky-column offset measurement this
+   * primitive already does. Off (undefined) for normal paginated lists,
+   * which are short enough that the optimisation isn't worth the
+   * intrinsic-size estimate.
+   */
+  virtualizeRows?: boolean;
 }
+
+// Estimated row height for `contain-intrinsic-size` when virtualizing
+// (#670). Only an estimate — it sets the placeholder size for an
+// off-screen, not-yet-laid-out row so the scrollbar stays proportional;
+// the real height is used once the row scrolls into view.
+const ESTIMATED_ROW_HEIGHT_PX = 41;
 
 const ALIGN_CLASSES = {
   left: 'text-left',
@@ -123,6 +153,7 @@ export function Table<Row>({
   skeletonRows,
   columnWidths,
   onColumnResize,
+  virtualizeRows = false,
 }: TableProps<Row>) {
   // Hooks must run unconditionally and in stable order on every
   // render — the empty-state early-return below has to come AFTER
@@ -188,6 +219,26 @@ export function Table<Row>({
   // auto layout — when the user controls widths, they widen to see more).
   const hasWidths = columnWidths != null && Object.keys(columnWidths).length > 0;
   const resizable = onColumnResize != null;
+
+  // list_display_links (#666): which columns render their cell as a link to
+  // `rowHref(row)`. The caller (ListPage) sets `isLink` per the wire's
+  // `list_display_links`. Back-compat: when NO column declares `isLink` at
+  // all, fall back to linking the first column (the historic behaviour) so
+  // existing callers that don't pass the flag keep their links. When the
+  // caller DOES set `isLink` on some column(s), we honour exactly those —
+  // and when it explicitly sets none-to-true (e.g. `list_display_links =
+  // None`), no cell links and the rows are not clickable.
+  const anyExplicitLink = columns.some((c) => c.isLink !== undefined);
+  const isLinkCol = (col: TableColumn<Row>, index: number): boolean => {
+    if (!rowHref) return false;
+    if (anyExplicitLink) return col.isLink === true;
+    return index === 0; // legacy default
+  };
+  // When the caller explicitly links NO column (`list_display_links = None`
+  // → every column carries `isLink: false`), the rows are inert. Otherwise
+  // behaviour is unchanged: the row is clickable when `onRowClick` is set.
+  const linksDisabled = anyExplicitLink && !columns.some((c) => c.isLink === true);
+  const rowClickActive = linksDisabled ? undefined : onRowClick;
 
   // Helpers to build the sticky `<th>` / `<td>` style + className.
   // `style.left` is set so the browser knows where to pin during
@@ -371,13 +422,24 @@ export function Table<Row>({
                 return (
                   <tr
                     key={key}
-                    onClick={onRowClick ? () => onRowClick(row) : undefined}
+                    onClick={rowClickActive ? () => rowClickActive(row) : undefined}
                     // `data-selected` propagates the checkbox state to
                     // both the row's bg AND the frozen-cells' bg via
                     // the `--dar-row-bg` custom property (apps/web/
                     // src/index.css #613).
                     data-selected={isSelected ? 'true' : undefined}
-                    className={onRowClick ? 'cursor-pointer hover:bg-gray-50' : ''}
+                    // Native row windowing on the show-all path (#670): skip
+                    // layout/paint for off-screen rows, keeping them in the
+                    // DOM for find-in-page / a11y / native scroll.
+                    style={
+                      virtualizeRows
+                        ? {
+                            contentVisibility: 'auto',
+                            containIntrinsicSize: `auto ${ESTIMATED_ROW_HEIGHT_PX}px`,
+                          }
+                        : undefined
+                    }
+                    className={rowClickActive ? 'cursor-pointer hover:bg-gray-50' : ''}
                   >
                     {selectable && (
                       <td
@@ -414,10 +476,12 @@ export function Table<Row>({
                                 : 'max-w-[16rem] truncate'
                           }
                         >
-                          {ci === 0 && rowHref ? (
-                            // Real anchor on the first cell so the browser's
-                            // native open-in-new-tab works (#253); a plain
-                            // left-click is intercepted for in-app nav.
+                          {isLinkCol(col, ci) && rowHref ? (
+                            // Real anchor on each list_display_links column so
+                            // the browser's native open-in-new-tab works
+                            // (#253); a plain left-click is intercepted for
+                            // in-app nav. Which column(s) link is the
+                            // ModelAdmin's choice (#666).
                             <a
                               href={rowHref(row)}
                               className="text-inherit no-underline hover:underline"

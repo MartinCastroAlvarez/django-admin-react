@@ -423,6 +423,19 @@ export function ListPage() {
   // live here was retired in v1.3.0 along with the HTML5-DnD modal
   // it served (#586).
 
+  // list_display_links (#666): the ModelAdmin chooses which column(s) link
+  // to the change page. The backend emits the resolved set (defaulting to
+  // the first column); an empty array means `list_display_links = None` —
+  // no column links and the rows are not clickable. When the field is
+  // ABSENT (a pre-1.6.0 backend), fall back to the legacy behaviour of
+  // linking the first non-pk column, so older deployments are unaffected.
+  const displayLinks = data.list_display_links;
+  const firstNonPkName = orderedDescriptors.find((c) => !isPkCol(c.name))?.name;
+  const isLinkColumn = (name: string): boolean => {
+    if (displayLinks === undefined) return name === firstNonPkName; // legacy fallback
+    return displayLinks.includes(name);
+  };
+
   const columns = orderedDescriptors
     // The pk column is never hidden, even if a stale preference lists it.
     .filter((c) => isPkCol(c.name) || !hiddenCols.has(c.name))
@@ -431,6 +444,7 @@ export function ListPage() {
       header: c.label,
       sortable: c.sortable,
       noTruncate: isPkCol(c.name),
+      isLink: isLinkColumn(c.name),
       // Frozen / sticky columns (#586): pk is implicitly always
       // locked + sticky; the user-locked set adds more. The Table
       // primitive measures pixel offsets after layout and writes
@@ -804,6 +818,10 @@ export function ListPage() {
             loading={loading}
             columnWidths={colWidths}
             onColumnResize={resizeColumn}
+            // Native row windowing on the "Show all N" path (#670): up to
+            // list_max_show_all (200) rows render at once; off-screen rows
+            // skip layout/paint via content-visibility.
+            virtualizeRows={showAll}
           />
         </Card>
       )}
