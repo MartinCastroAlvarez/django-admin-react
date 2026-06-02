@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.11.2] — 2026-06-02
+
+### Fixed
+- **Detail-page toolbar: History / Refresh / Edit / Delete now flow inline
+  with the custom `@admin.action` buttons (#677).** They were grouped in a
+  right-aligned `ml-auto` cluster (#658/#672), which read as a *second*
+  toolbar in its own column and could float disconnected from its row on
+  narrow viewports. The toolbar is now a single `flex-wrap` container with no
+  `ml-auto` spacer: every built-in is a plain button in the same flow,
+  wrapping naturally wherever it falls, in DOM order `[History] [...custom
+  actions] [Refresh] [Edit] [Delete]`. Destructive emphasis on Delete remains
+  the button's own variant, not its position. Regression tests updated to pin
+  the no-`ml-auto` inline contract.
+
 ## [1.11.1] — 2026-06-02
 
 ### Fixed

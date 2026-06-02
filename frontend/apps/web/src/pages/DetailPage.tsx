@@ -115,11 +115,12 @@ export function DetailPage({
             row 2: H1 (full width, `overflow-wrap: anywhere` so a
                        single long token wraps inside the container)
             row 3: toolbar (full width, `flex-wrap` so 8+ actions flow
-                            to new lines; primary actions Edit/Delete
-                            sit at the trailing edge via `ml-auto`)
+                            to new lines; History / Refresh / Edit /
+                            Delete are plain buttons in the same flow,
+                            no right-aligned cluster — #677)
 
-          NOTE: re-applied after the #657 module-split refactor silently
-          reverted it to the pre-#658 single-row layout. */}
+          NOTE: the stacked rows were re-applied after the #657
+          module-split refactor silently reverted them (#674). */}
       <header className="space-y-2">
         <Breadcrumb
           items={[
@@ -228,41 +229,39 @@ export function DetailPage({
                 onError={(message) => toast.error(message)}
               />
             ))}
-            {/* Primary-actions cluster (Refresh + Edit + Delete) is
-                grouped with `ml-auto` so it floats to the trailing
-                edge of the toolbar row even when the leading
-                `@admin.action` cluster wraps onto multiple lines.
-                `flex-wrap` on the cluster itself keeps Edit / Delete
-                together if the row is too narrow for the whole group
-                — destructive Delete stays adjacent to the constructive
-                Edit, never orphaned. */}
-            <div className="ml-auto flex flex-wrap items-center gap-2">
-              {/* Refresh (#592): refetch the object + inlines + history
-                  with no full page reload. */}
-              <RefreshButton
-                onRefresh={refresh}
-                tooltip="Refresh"
-                icon={<RefreshCw className="h-4 w-4" aria-hidden />}
+            {/* History / Refresh / Edit / Delete are plain toolbar
+                buttons (#677): they flow inline with the custom
+                `@admin.action` buttons in the same `flex-wrap` row and
+                wrap naturally wherever they fall. No `ml-auto` spacer or
+                "primary cluster" right-alignment — two visual columns in
+                one toolbar read as two separate toolbars. Destructive
+                emphasis on Delete is the button's own `variant`, never
+                its position. */}
+            {/* Refresh (#592): refetch the object + inlines + history
+                with no full page reload. */}
+            <RefreshButton
+              onRefresh={refresh}
+              tooltip="Refresh"
+              icon={<RefreshCw className="h-4 w-4" aria-hidden />}
+            />
+            {canChange && (
+              <Button variant="primary" onClick={() => setEditing(true)}>
+                <span className="inline-flex items-center gap-1.5">
+                  <Pencil className="h-4 w-4" aria-hidden /> Edit
+                </span>
+              </Button>
+            )}
+            {canDelete && (
+              <DeleteButton
+                label={data.label}
+                loadPreview={() => fetchDeletePreview({ client, appLabel, modelName, pk })}
+                onConfirm={async () => {
+                  await deleteObject({ client, appLabel, modelName, pk });
+                  toast.success(`Deleted “${data.label}”.`);
+                  navigate(listPath);
+                }}
               />
-              {canChange && (
-                <Button variant="primary" onClick={() => setEditing(true)}>
-                  <span className="inline-flex items-center gap-1.5">
-                    <Pencil className="h-4 w-4" aria-hidden /> Edit
-                  </span>
-                </Button>
-              )}
-              {canDelete && (
-                <DeleteButton
-                  label={data.label}
-                  loadPreview={() => fetchDeletePreview({ client, appLabel, modelName, pk })}
-                  onConfirm={async () => {
-                    await deleteObject({ client, appLabel, modelName, pk });
-                    toast.success(`Deleted “${data.label}”.`);
-                    navigate(listPath);
-                  }}
-                />
-              )}
-            </div>
+            )}
           </div>
         )}
       </header>

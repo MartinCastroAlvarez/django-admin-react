@@ -109,14 +109,20 @@ describe('DetailPage header (#658 regression guard)', () => {
     expect(header?.className).not.toContain('sm:flex-row');
   });
 
-  it('floats the primary actions (Edit/Delete) to the trailing edge of their own row', () => {
+  it('renders History/Refresh/Edit/Delete inline, with no ml-auto cluster (#677)', () => {
     renderPage();
 
     const edit = screen.getByRole('button', { name: /edit/i });
-    // #658 row 3: Edit/Delete live in an `ml-auto` cluster so they stay
-    // trailing-edge even when the leading action cluster wraps.
-    const cluster = edit.closest('div.ml-auto');
-    expect(cluster).not.toBeNull();
+    const history = screen.getByRole('button', { name: /history/i });
+    const header = edit.closest('header');
+    // #677: NO `ml-auto` (or any) spacer right-aligns a subset of the
+    // toolbar — two visual columns read as two toolbars. Every built-in
+    // is a plain button in the single flex-wrap flow.
+    expect(header?.querySelector('.ml-auto')).toBeNull();
+    // History and Edit share the one flex-wrap toolbar container.
+    const toolbar = history.closest('div.flex.flex-wrap');
+    expect(toolbar).not.toBeNull();
+    expect(edit.closest('div.flex.flex-wrap')).toBe(toolbar);
   });
 });
 
@@ -160,27 +166,28 @@ describe('DetailPage many-actions toolbar (#672 regression guard)', () => {
     expect(toolbar?.contains(title)).toBe(false);
   });
 
-  it('keeps Edit/Delete right-aligned (ml-auto) on the last line after all 14 actions', () => {
+  it('renders Edit/Delete inline after the 14 actions in DOM order, no ml-auto (#677)', () => {
     detailState = detail({ object_actions: MANY_ACTIONS as never });
     renderPage();
 
     const edit = screen.getByRole('button', { name: /edit/i });
-    const cluster = edit.closest('div.ml-auto');
-    expect(cluster).not.toBeNull();
-    // Delete lives in the SAME trailing cluster, never orphaned.
     const del = screen.getByRole('button', { name: /delete/i });
-    expect(cluster?.contains(del)).toBe(true);
-
-    // The trailing cluster comes AFTER every custom action in DOM order, so
-    // `ml-auto` parks it on the last toolbar line.
     const toolbar = edit.closest('div.flex.flex-wrap');
+    expect(toolbar).not.toBeNull();
+    // #677: no right-aligned cluster anywhere in the toolbar — Edit and
+    // Delete flow inline with the custom actions in the same container.
+    expect(toolbar?.querySelector('.ml-auto')).toBeNull();
+    expect(del.closest('div.flex.flex-wrap')).toBe(toolbar);
+
+    // Render order == DOM order: built-ins still come AFTER every custom
+    // action (no reordering / skipping), they're just not right-aligned.
+    const children = Array.from(toolbar?.children ?? []);
     const lastAction = screen.getByRole('button', {
       name: MANY_ACTIONS[MANY_ACTIONS.length - 1]!.label,
     });
-    const children = Array.from(toolbar?.children ?? []);
     const lastActionIdx = children.findIndex((c) => c.contains(lastAction));
-    const clusterIdx = children.findIndex((c) => c.contains(edit));
-    expect(clusterIdx).toBeGreaterThan(lastActionIdx);
+    const editIdx = children.findIndex((c) => c.contains(edit));
+    expect(editIdx).toBeGreaterThan(lastActionIdx);
   });
 
   it('lets long action labels wrap inside the button (no wide min-content box)', () => {
