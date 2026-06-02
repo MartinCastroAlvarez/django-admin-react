@@ -18,12 +18,34 @@ import type {
   WidgetHint,
 } from '@dar/data';
 
-// The closed `widget.kind` enum → the SPA's existing `WidgetHint` controls.
-// Kinds with no dedicated hint (select, checkbox, date, file, autocomplete,
-// …) return undefined: FieldInput then renders the control implied by
-// `FieldType`, which already covers them (a select for `choice`, an
-// AutocompleteInput for an FK with a `to` target, etc.).
-const KIND_TO_HINT: Partial<Record<WidgetKind, WidgetHint>> = {
+// The closed `widget.kind` enum → the SPA's `WidgetHint` controls (#664).
+//
+// EVERY one of the 23 declared `WidgetKind` values is mapped explicitly so
+// no kind silently degrades to a wrong control:
+//   • `undefined` — the control `FieldType` already implies is faithful
+//     (e.g. `text` → text input, `select` → <select>, `date` → date input,
+//     `datetime` → datetime-local, `time` → time input, `checkbox` →
+//     boolean checkbox, `number` → number input, `email`/`url` → typed
+//     inputs). Listed here on purpose so adding a kind is a compile error
+//     until it's classified (the test asserts the record is exhaustive).
+//   • a real hint — a kind that needs a control `FieldType` would NOT pick
+//     (hidden, split-datetime, the multi-selects, autocomplete, file, …).
+// There is no implicit fallback: an unmapped kind would be a `undefined`
+// type error, and a kind we can't render faithfully maps to the explicit,
+// operator-visible `unsupported_widget` tracked fallback in FieldInput.
+const KIND_TO_HINT: Record<WidgetKind, WidgetHint | undefined> = {
+  // Kinds whose FieldType-derived control is already faithful.
+  text: undefined,
+  textarea: undefined,
+  number: undefined,
+  email: undefined,
+  url: undefined,
+  checkbox: undefined,
+  select: undefined,
+  date: undefined,
+  datetime: undefined,
+  time: undefined,
+  // Security / parity hints that were already wired.
   password: 'password',
   radio: 'radio',
   'raw-id': 'raw_id',
@@ -32,6 +54,15 @@ const KIND_TO_HINT: Partial<Record<WidgetKind, WidgetHint>> = {
   // ShuttleSelect supports both and the difference is purely visual).
   shuttle: 'shuttle_h',
   custom: 'custom',
+  // Kinds that need a control FieldType alone would render WRONGLY (#664).
+  hidden: 'hidden',
+  'split-datetime': 'split_datetime',
+  'select-date': 'select_date',
+  'checkbox-multiple': 'checkbox_multiple',
+  'select-multiple': 'select_multiple',
+  autocomplete: 'autocomplete',
+  'autocomplete-multiple': 'autocomplete_multiple',
+  file: 'file',
 };
 
 function maxLengthFrom(field: FormSpecField): number | undefined {

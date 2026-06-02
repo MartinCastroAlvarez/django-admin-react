@@ -48,6 +48,21 @@ export type FieldType =
  * widget via `registerFieldWidget(widget_class, …)` (#625); falls back
  * to the default control + an "open in legacy admin" note when no
  * registration matches.
+ *
+ * The remaining hints map the form-spec `widget.kind` values that need a
+ * different control than `FieldType` alone implies (#664):
+ * `hidden` (render a real hidden input, never a visible field);
+ * `split_datetime` (`SplitDateTimeWidget` — two controls: date + time);
+ * `select_date` (`SelectDateWidget` — month / day / year selects);
+ * `checkbox_multiple` (a checkbox bank) / `select_multiple` (a native
+ * `<select multiple>`) for non-relational multi-value choice fields;
+ * `autocomplete` / `autocomplete_multiple` (`autocomplete_fields` typeahead);
+ * `file` (a file input — upload itself is tracked under #241, so this is a
+ * deliberately limited control with an operator note);
+ * `unsupported_widget` is the explicit tracked-fallback for any kind with
+ * no faithful control yet — it renders the default control plus a visible
+ * operator note (mirroring the `custom`-unregistered branch) so a gap is
+ * never a silent wrong control.
  */
 export type WidgetHint =
   | 'radio'
@@ -55,7 +70,16 @@ export type WidgetHint =
   | 'password'
   | 'shuttle_h'
   | 'shuttle_v'
-  | 'custom';
+  | 'custom'
+  | 'hidden'
+  | 'split_datetime'
+  | 'select_date'
+  | 'checkbox_multiple'
+  | 'select_multiple'
+  | 'autocomplete'
+  | 'autocomplete_multiple'
+  | 'file'
+  | 'unsupported_widget';
 
 export interface Permissions {
   view: boolean;
@@ -405,6 +429,17 @@ export interface ListResponse {
   pk_field: string;
   permissions: Permissions;
   columns: ColumnDescriptor[];
+  /**
+   * `ModelAdmin.list_display_links` (#251 / #666): the column name(s) whose
+   * cell links to the change page. The backend resolves
+   * `get_list_display_links` (which defaults to the first column) and emits
+   * the result; an empty array means `list_display_links = None` — *no*
+   * column links and the rows are not clickable. Only string column names
+   * round-trip (callable `list_display` entries are dropped backend-side).
+   * Optional for back-compat with a pre-1.6.0 backend: when absent the SPA
+   * falls back to linking the first non-pk column (legacy behaviour).
+   */
+  list_display_links?: string[];
   search_fields: string[];
   /** `ModelAdmin.search_help_text` — shown under the search box (#445).
    *  Empty string when unset. */
@@ -720,6 +755,15 @@ export interface FormSpecResponse {
   /** Dotted path of the resolved `Form` class — changes when a
    *  request-aware `get_form` switched form by querystring/user. */
   variant: string;
+  /**
+   * `ModelAdmin.prepopulated_fields` as `{target: [sources]}` (#245 / #664).
+   * Emitted by the form-spec endpoint only on the ADD form (rest-api 1.6.0+),
+   * matching Django's slugify-on-keystroke behaviour for a *new* object. The
+   * SPA slugifies the target from its sources as the user types, until the
+   * target is hand-edited. Restricted backend-side to rendered, non-readonly
+   * targets. Optional/absent on the change form and on a pre-1.6.0 backend.
+   */
+  prepopulated_fields?: Record<string, string[]>;
 }
 
 /** Escape hatch: embed the legacy admin change/add page in an iframe. */

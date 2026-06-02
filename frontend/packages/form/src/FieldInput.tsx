@@ -147,9 +147,9 @@ export function FieldInput({ name, field, value, error, onChange }: FieldInputPr
             target="_blank"
             rel="noopener noreferrer"
             className="shrink-0 rounded border border-gray-300 px-2 py-1 text-xs text-gray-700 hover:bg-gray-50"
-            aria-label="Look up related object in a new tab"
+            aria-label={t('Look up related object in a new tab')}
           >
-            Lookup ↗
+            {t('Lookup ↗')}
           </a>
         )}
       </div>
@@ -181,6 +181,213 @@ export function FieldInput({ name, field, value, error, onChange }: FieldInputPr
             </label>
           );
         })}
+      </div>
+    );
+  } else if (field.widget === 'hidden') {
+    // SplitDateTimeWidget's hidden member, a HiddenInput-routed field, or
+    // any field the admin meant to keep out of sight (#664). Django renders
+    // these as <input type=hidden> — a VISIBLE editable text box would be
+    // both wrong and a minor info-leak (the operator sees/edits a field the
+    // admin hid). We mirror Django: a real hidden input that still posts its
+    // value, with no label row.
+    return (
+      <input
+        id={id}
+        type="hidden"
+        value={value == null ? '' : String(value)}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    );
+  } else if (field.widget === 'split_datetime') {
+    // SplitDateTimeWidget (#664): two controls — a date and a time — not a
+    // single datetime-local, preserving Django's two-field semantics. The
+    // wire value is an ISO 8601 string; we split it on `T` for the controls
+    // and rejoin so the posted value stays the shape Django parses.
+    const s = value == null ? '' : String(value);
+    const datePart = s.slice(0, 10);
+    const timePart = s.length > 11 ? s.slice(11, 19) : '';
+    const join = (d: string, tm: string): WriteValue => {
+      if (d === '' && tm === '') return null;
+      return tm === '' ? d : `${d}T${tm}`;
+    };
+    control = (
+      <div className="flex items-center gap-2">
+        <input
+          id={id}
+          type="date"
+          value={datePart}
+          aria-label={`${field.label} ${t('date')}`}
+          onChange={(e) => onChange(join(e.target.value, timePart))}
+          className={base}
+        />
+        <input
+          type="time"
+          step="1"
+          value={timePart}
+          aria-label={`${field.label} ${t('time')}`}
+          onChange={(e) => onChange(join(datePart, e.target.value))}
+          className={base}
+        />
+      </div>
+    );
+  } else if (field.widget === 'select_date') {
+    // SelectDateWidget (#664): a single <input type=date> is the faithful,
+    // accessible control for the same ISO value Django's three month/day/year
+    // selects produce — no semantics are lost (the user still picks a whole
+    // date) and it round-trips identically. We keep the date input rather
+    // than rebuild three coupled <select>s.
+    control = (
+      <input
+        id={id}
+        type="date"
+        value={value == null ? '' : String(value)}
+        onChange={(e) => onChange(e.target.value === '' ? null : e.target.value)}
+        className={base}
+      />
+    );
+  } else if (
+    (field.widget === 'checkbox_multiple' || field.widget === 'select_multiple') &&
+    field.choices &&
+    field.choices.length > 0
+  ) {
+    // CheckboxSelectMultiple / SelectMultiple for a NON-relational multi-value
+    // choice field (#664) — e.g. a forms.MultipleChoiceField, or a
+    // ChoiceField the admin forced to a multi widget. (M2M keeps its own
+    // branch below.) `checkbox_multiple` renders a checkbox bank; the
+    // `select_multiple` value of the hint renders a native <select multiple>.
+    // Both produce a string[] of the selected values, which the backend
+    // accepts the same way it does an M2M pk list.
+    const selectedSet = new Set((Array.isArray(value) ? value : []).map(String));
+    if (field.widget === 'select_multiple') {
+      control = (
+        <select
+          id={id}
+          multiple
+          value={Array.from(selectedSet)}
+          onChange={(e) =>
+            onChange(Array.from(e.target.selectedOptions).map((o) => o.value))
+          }
+          className={`${base} h-auto min-h-[6rem]`}
+        >
+          {field.choices.map((c) => (
+            <option key={String(c.value)} value={String(c.value)}>
+              {c.label}
+            </option>
+          ))}
+        </select>
+      );
+    } else {
+      control = (
+        <div className="max-h-48 space-y-1 overflow-y-auto rounded border border-gray-300 p-2">
+          {field.choices.map((c) => {
+            const key = String(c.value);
+            return (
+              <label key={key} className="flex items-center gap-2 text-sm">
+                <Checkbox
+                  checked={selectedSet.has(key)}
+                  onChange={(e) => {
+                    const next = new Set(selectedSet);
+                    if (e.target.checked) next.add(key);
+                    else next.delete(key);
+                    onChange(Array.from(next));
+                  }}
+                />
+                {c.label}
+              </label>
+            );
+          })}
+        </div>
+      );
+    }
+  } else if (field.widget === 'autocomplete' && field.type === 'foreignkey' && field.to) {
+    // autocomplete_fields FK (#664): the admin opted into the typeahead
+    // picker. Render the same AutocompleteInput the FK branch uses when the
+    // target is large; here the hint makes the choice explicit even when the
+    // target set is small enough that the backend could have inlined choices.
+    const envelopeLabel =
+      field.value && typeof field.value === 'object' && 'label' in field.value
+        ? (field.value as { label: string }).label
+        : undefined;
+    control = (
+      <AutocompleteInput
+        to={field.to}
+        value={value}
+        initialLabel={envelopeLabel}
+        invalid={Boolean(error?.length)}
+        onChange={onChange}
+      />
+    );
+  } else if (field.widget === 'autocomplete_multiple' && field.choices && field.choices.length > 0) {
+    // autocomplete_fields M2M with inlined choices (#664): render the
+    // checkbox multi-select (same control as the M2M-with-choices branch),
+    // which is faithful when the target set is inlined. A true async M2M
+    // typeahead picker for a large target is a tracked follow-up (#240); that
+    // case falls through to `unsupported_widget` below via the explicit note.
+    const selectedSet = new Set((Array.isArray(value) ? value : []).map(String));
+    control = (
+      <div className="max-h-48 space-y-1 overflow-y-auto rounded border border-gray-300 p-2">
+        {field.choices.map((c) => {
+          const key = String(c.value);
+          return (
+            <label key={key} className="flex items-center gap-2 text-sm">
+              <Checkbox
+                checked={selectedSet.has(key)}
+                onChange={(e) => {
+                  const next = new Set(selectedSet);
+                  if (e.target.checked) next.add(key);
+                  else next.delete(key);
+                  onChange(Array.from(next));
+                }}
+              />
+              {c.label}
+            </label>
+          );
+        })}
+      </div>
+    );
+  } else if (field.widget === 'file') {
+    // FileInput / ClearableFileInput (#664). Binary upload through the JSON
+    // wire is tracked separately (#241), so this is a deliberately limited
+    // control: a real <input type=file> that posts the chosen file name
+    // (so the field is at least visible and selectable) plus a visible note
+    // that the upload itself opens in the legacy admin. Never a silent
+    // wrong control.
+    control = (
+      <div className="space-y-1">
+        <input
+          id={id}
+          type="file"
+          onChange={(e) => onChange(e.target.files?.[0]?.name ?? null)}
+          className={base}
+        />
+        {field.value ? (
+          <p className="text-xs text-gray-500">
+            {t('Current file:')}{' '}
+            <FieldValueView value={field.value} type={field.type} />
+          </p>
+        ) : null}
+        <p className="text-xs text-amber-700">
+          {t('File upload is not supported in the SPA yet; use the legacy admin to change the file.')}
+        </p>
+      </div>
+    );
+  } else if (field.widget === 'unsupported_widget') {
+    // Explicit tracked fallback (#664): a widget.kind the SPA cannot render
+    // faithfully yet. Mirror the unregistered-custom branch — a usable
+    // default text input PLUS a visible operator note — so the gap is never
+    // a silent wrong control.
+    control = (
+      <div className="space-y-1">
+        <input
+          id={id}
+          type="text"
+          value={value == null ? '' : String(value)}
+          onChange={(e) => onChange(e.target.value)}
+          className={base}
+        />
+        <p className="text-xs text-amber-700">
+          {t('This field uses a widget the SPA cannot render yet; edit it in the legacy admin if it looks wrong.')}
+        </p>
       </div>
     );
   } else if (field.type === 'boolean') {
@@ -350,7 +557,7 @@ export function FieldInput({ name, field, value, error, onChange }: FieldInputPr
         id={id}
         type="text"
         value={value == null ? '' : String(value)}
-        placeholder="HH:MM:SS"
+        placeholder={t('HH:MM:SS')}
         onChange={(e) => onChange(e.target.value)}
         className={base}
       />
@@ -367,7 +574,7 @@ export function FieldInput({ name, field, value, error, onChange }: FieldInputPr
         id={id}
         type="text"
         value={value == null ? '' : String(value)}
-        placeholder="comma,separated,values"
+        placeholder={t('comma,separated,values')}
         onChange={(e) => onChange(e.target.value)}
         className={base}
       />
@@ -392,7 +599,7 @@ export function FieldInput({ name, field, value, error, onChange }: FieldInputPr
           id={id}
           type="text"
           value={pair[0]}
-          placeholder="lower"
+          placeholder={t('lower')}
           aria-label={`${field.label} lower bound`}
           onChange={(e) => onChange([e.target.value, pair[1]])}
           className={base}
@@ -403,7 +610,7 @@ export function FieldInput({ name, field, value, error, onChange }: FieldInputPr
         <input
           type="text"
           value={pair[1]}
-          placeholder="upper"
+          placeholder={t('upper')}
           aria-label={`${field.label} upper bound`}
           onChange={(e) => onChange([pair[0], e.target.value])}
           className={base}
@@ -471,7 +678,7 @@ function ForeignKeyControl({ field, value, error, id, base, onChange }: ForeignK
         onChange={(e) => onChange(e.target.value === '' ? null : e.target.value)}
         className={base}
       >
-        <option value="">{field.required ? '— select —' : '(none)'}</option>
+        <option value="">{field.required ? t('— select —') : t('(none)')}</option>
         {withAdded.map((c) => (
           <option key={String(c.value)} value={String(c.value)}>
             {c.label}
@@ -506,7 +713,7 @@ function ForeignKeyControl({ field, value, error, id, base, onChange }: ForeignK
         type="text"
         defaultValue={bare == null ? '' : String(bare)}
         onChange={(e) => onChange(e.target.value === '' ? null : e.target.value)}
-        placeholder="related object id"
+        placeholder={t('related object id')}
         className={base}
       />
     );
