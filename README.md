@@ -651,7 +651,7 @@ issues link the work to close each gap.
 
 | Stock-Django hook | SPA behaviour | Tracked |
 |---|---|---|
-| `change_form_template` / `add_form_template` overrides | **Embedded in an iframe** (since 1.9.0, #659): the change/add form-spec endpoint returns a `legacy-iframe` pointer and the SPA embeds the legacy admin page inside the SPA shell (breadcrumb / sidebar / toolbar stay SPA-rendered). Port the form to documented ModelAdmin hooks at your own pace. | [#624](https://github.com/MartinCastroAlvarez/django-admin-react/issues/624) |
+| `change_form_template` / `add_form_template` overrides | **Rendered server-side as an html-fragment, in-shell** (since 1.12.0, #679): the change/add form-spec endpoint renders the custom template server-side, strips the admin chrome, and returns `{renderer: "html-fragment", html, …}`; the SPA injects it into the content area while the breadcrumb / sidebar / title / toolbar stay React-rendered. The injected form's inline `<script>` / `<style>` run, its submit round-trips through the API (validation re-render / redirect / `messages` toasts), and **no iframe is used** — so no `X-Frame-Options` / `SameSite` configuration is required. Port the form to documented ModelAdmin hooks at your own pace. | [#624](https://github.com/MartinCastroAlvarez/django-admin-react/issues/624) |
 | `change_list_template` / `change_password_template` / `object_history_template` overrides | Silently ignored — those surfaces render entirely from the JSON wire. | [#624](https://github.com/MartinCastroAlvarez/django-admin-react/issues/624) |
 | `formfield_overrides = {Field: {"widget": CustomWidget}}` | Custom widget rendered via the React widget-registration API (`registerFieldWidget`, #625) when the consumer registers a renderer for the widget class; otherwise falls back to the default control + an operator-visible "not registered" note. | [#625](https://github.com/MartinCastroAlvarez/django-admin-react/issues/625) |
 | `empty_value_display` | **Hard-coded to `—`.** A per-`ModelAdmin` / per-field `empty_value_display` override is **not** surfaced — the SPA renders the literal em-dash for every empty value, regardless of the consumer's chosen placeholder. | [#629](https://github.com/MartinCastroAlvarez/django-admin-react/issues/629) |
@@ -667,56 +667,43 @@ typical workaround is to keep that model on the legacy
 [experience-toggle strip](#experience-toggle-strip-optional) — the
 SPA + legacy admin happily coexist.
 
-#### Embedding the legacy admin in an iframe — required backend headers
+#### Custom `change_form_template` admins — rendered in-shell (no iframe)
 
-When a `ModelAdmin` overrides `change_form_template` / `add_form_template`,
-the SPA embeds the legacy admin page in an `<iframe>` (the row above). For
-the browser to actually render that frame, the **legacy admin responses must
-allow being framed by the SPA's origin** — otherwise the embed is refused and
-the SPA shows a "Embedding refused by the legacy admin — open in new tab"
-fallback (never a broken-image icon, #673).
+When a `ModelAdmin` overrides `change_form_template` / `add_form_template`
+(or a `change_view` override renders a non-standard template — e.g. a
+`?run_custom=1` branch), the JSON form-spec can't reproduce the form. Since
+1.12.0 (#679) the form-spec endpoint (rest-api 1.7.0+) renders the admin's
+real view **server-side**, strips the admin chrome, and returns the content
+HTML for the SPA to inject inside its own shell:
 
-Most projects mount `django.middleware.clickjacking.XFrameOptionsMiddleware`,
-which by default sets `X-Frame-Options: DENY` on **every** response and blocks
-the iframe. Configure the legacy responses as follows:
-
-**Same origin (SPA and legacy admin under one host — the common case):**
-
-```python
-# settings.py
-X_FRAME_OPTIONS = "SAMEORIGIN"   # was the implicit "DENY"
-# …or drop XFrameOptionsMiddleware entirely if you don't need clickjacking
-# protection on the legacy surface.
+```json
+{
+  "renderer": "html-fragment",
+  "html": "<form …>…</form>",
+  "csrf_token": "…",
+  "submit_url": "/admin/<app>/<model>/<pk>/change/?<qs>",
+  "method": "POST",
+  "messages": [{ "level": "success", "text": "…" }]
+}
 ```
 
-`SAMEORIGIN` lets the same-origin SPA frame the legacy page while still
-blocking cross-site framing.
+The SPA injects `html` into the content area (breadcrumb / sidebar / title /
+toolbar stay React-rendered), **re-executes** the template's inline
+`<script>` (so custom-widget JS / dual-listbox handlers / drag-and-drop run),
+and wires the injected `<form>` to POST back through the API round-trip route
+(`credentials: "include"` + `X-CSRFToken`). On the response: another
+`html-fragment` re-injects in place (validation errors), a
+`{renderer: "redirect", to}` triggers an SPA `navigate(to)`, and any Django
+`messages` surface as toasts.
 
-**Cross-origin (SPA and legacy admin on different origins):**
-
-```python
-# On the legacy admin responses (e.g. via a middleware or
-# django-csp), allow ONLY the SPA origin to frame them:
-#   Content-Security-Policy: frame-ancestors https://admin.example.com
-#
-# And, because the iframe is a cross-site context, the legacy session
-# cookie must be sent in it:
-# settings.py
-SESSION_COOKIE_SAMESITE = "None"   # send the cookie in the cross-site frame
-SESSION_COOKIE_SECURE = True       # required whenever SameSite=None
-```
-
-Without these, the framed legacy page either refuses to load (`frame-ancestors`
-block) or loads unauthenticated (cookie dropped) and bounces through a login
-redirect the browser then refuses to display. The
-[`examples/jobs`](examples/jobs) `JobAdmin` (the `?run_custom=1` variant)
-exercises this path end-to-end against the example backend.
-
-> The SPA detects a refused frame client-side (a `loading → loaded → refused`
-> state machine: a ~4s window with no iframe `load` event ⇒ refused) and
-> renders the fallback. A future server-side `legacy_iframeable` flag computed
-> from the response middleware chain (cross-repo, rest-api) could switch to the
-> "open in new tab only" UI immediately — tracked as a follow-up.
+This needs **no iframe**, so there is nothing to configure: no
+`X-Frame-Options`, no `Content-Security-Policy: frame-ancestors`, no
+`SESSION_COOKIE_SAMESITE = "None"` cross-origin cookie bridge. The fragment is
+same-origin and trusted (it is your own admin template, rendered behind the
+same auth as `/admin/`), so its custom JS/CSS is injected verbatim. The
+[`examples/jobs`](examples/jobs) `JobAdmin` (the `?run_custom=1` dual-listbox
+variant) exercises the full path — form-spec → POST → validation re-render →
+redirect — end-to-end against the example backend.
 
 ---
 

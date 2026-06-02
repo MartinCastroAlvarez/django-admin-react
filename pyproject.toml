@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "django-admin-react"
-version = "1.11.2"
+version = "1.12.0"
 description = "A drop-in React single-page admin for Django, driven entirely by ModelAdmin."
 authors = ["django-admin-react contributors"]
 license = "MIT"
@@ -61,7 +61,13 @@ django = ">=4.2,<7.0"
 # Raised to 1.6.0 in v1.11.0 (#664): the form-spec wire now emits
 # `prepopulated_fields` and autocomplete hints, which the SPA's widget-kind
 # rendering consumes (slugify-on-keystroke + autocomplete widget).
-django-admin-rest-api = "^1.6.0"
+# Raised to 1.7.0 in v1.12.0 (#679): the form-spec endpoint now renders a
+# custom `change_form_template` admin SERVER-SIDE and returns
+# `renderer: "html-fragment"` (html / csrf_token / submit_url / method /
+# messages) plus a POST round-trip route (another html-fragment for
+# validation errors, or `{renderer: "redirect", to}`); the SPA injects the
+# fragment in-shell. The `legacy-iframe` renderer is gone (no more iframe).
+django-admin-rest-api = "^1.7.0"
 # `django-admin-mcp-api` — MCP-protocol adapter over the same REST API
 # so agents reach the SAME `ModelAdmin`-driven surface. Wire-protocol-only
 # layer; adds NO new functionality, permissions, or validation.

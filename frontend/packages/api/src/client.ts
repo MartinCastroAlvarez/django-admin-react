@@ -10,6 +10,7 @@ import type {
   AddFormResponse,
   BulkUpdateEntry,
   BulkUpdateResponse,
+  ChangePostPayload,
   CreatePayload,
   CreateResponse,
   DeletePreviewResponse,
@@ -280,6 +281,68 @@ export class ApiClient {
         : `${appLabel}/${modelName}/${pk}/form-spec/`;
     const qs = query ? (query.startsWith('?') ? query : `?${query}`) : '';
     return this.request<FormSpecPayload>('GET', `${base}${qs}`);
+  }
+
+  /**
+   * Submit a server-rendered html-fragment change form (#679). The SPA POSTs
+   * the injected `<form>`'s FormData back to the REST round-trip route
+   * `POST <app>/<model>/<pk>/change/?<qs>`, which re-runs the legacy
+   * `change_view` server-side and returns either another `html-fragment`
+   * (validation errors / self-redirect re-render) or a `redirect`.
+   *
+   * `query` is the original change-form querystring (e.g. `run_custom=1`) so
+   * the request-aware `change_view` resolves the same branch. The FormData is
+   * sent as-is (multipart) — the browser sets `Content-Type` with the
+   * boundary — with `credentials: "include"` and the `X-CSRFToken` header set
+   * from the fragment's `csrf_token` (the backend's CSRF middleware honours
+   * the header; no `@csrf_exempt`). Bypasses the JSON `request()` helper
+   * because the body is FormData, not JSON.
+   */
+  async submitChangeFragment(args: {
+    appLabel: string;
+    modelName: string;
+    pk: string | number;
+    query?: string;
+    body: FormData;
+    csrfToken: string;
+    method?: string;
+  }): Promise<ChangePostPayload> {
+    const qs = args.query ? (args.query.startsWith('?') ? args.query : `?${args.query}`) : '';
+    const path = `${args.appLabel}/${args.modelName}/${args.pk}/change/${qs}`;
+    const response = await this.fetchImpl(this.url(path), {
+      method: args.method ?? 'POST',
+      credentials: 'include',
+      headers: {
+        Accept: 'application/json',
+        // The fragment carries its own CSRF token; send it in the header the
+        // Django CSRF middleware checks (don't set Content-Type — the browser
+        // adds the multipart boundary for FormData).
+        'X-CSRFToken': args.csrfToken,
+      },
+      body: args.body,
+    });
+
+    const text = await response.text();
+    let parsed: unknown = null;
+    if (text) {
+      try {
+        parsed = JSON.parse(text);
+      } catch {
+        // Fall through with parsed === null.
+      }
+    }
+    if (!response.ok) {
+      const envelope = (parsed ?? null) as FieldErrorEnvelope | null;
+      if (this.isSessionAuthFailure(response.status, envelope)) {
+        this.onAuthFailure?.();
+      }
+      throw new ApiError(
+        response.status,
+        envelope,
+        envelope?.error?.message ?? `HTTP ${response.status}`,
+      );
+    }
+    return parsed as ChangePostPayload;
   }
 
   /** Object-history timeline (GET <app>/<model>/<pk>/history/) — #244. */

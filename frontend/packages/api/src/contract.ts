@@ -745,8 +745,9 @@ export interface FormSpecField {
  * Response of `GET /api/v1/<app>/<model>/<pk>/form-spec/` (or
  * `…/add/form-spec/`) — the ModelAdmin-resolved form (rest-api 1.4.0+,
  * #59). Either the JSON form spec (`renderer: "form-spec"`) or, when the
- * admin overrides `change_form_template` / `add_form_template`, a pointer
- * to embed the legacy admin page in an iframe (`renderer: "legacy-iframe"`).
+ * admin overrides `change_form_template` / `add_form_template`, a
+ * server-rendered html-fragment the SPA injects in-shell
+ * (`renderer: "html-fragment"`, rest-api 1.7.0+, #679).
  */
 export interface FormSpecResponse {
   renderer: 'form-spec';
@@ -766,13 +767,61 @@ export interface FormSpecResponse {
   prepopulated_fields?: Record<string, string[]>;
 }
 
-/** Escape hatch: embed the legacy admin change/add page in an iframe. */
-export interface LegacyIframeResponse {
-  renderer: 'legacy-iframe';
-  legacy_url: string;
+/**
+ * One Django `messages` entry surfaced from a server-rendered html-fragment
+ * round-trip (#679). `level` is Django's level tag (`success` / `error` /
+ * `warning` / `info` / `debug`); `text` is the rendered message. The SPA
+ * toasts these via the shared `toastMessages` adapter.
+ */
+export interface FragmentMessage {
+  level: string;
+  text: string;
 }
 
-export type FormSpecPayload = FormSpecResponse | LegacyIframeResponse;
+/**
+ * Escape hatch for a custom `change_form_template` / `add_form_template`
+ * admin (rest-api 1.7.0+, #679). The backend renders the admin's real
+ * change/add view SERVER-SIDE, strips the admin chrome, and returns the
+ * content-block HTML for the SPA to inject inside its own shell — no iframe,
+ * so no `X-Frame-Options` / `SameSite` failure mode.
+ *
+ * `html` is TRUSTED: it is the integrator's own admin template, rendered by
+ * their backend behind the same auth as `/admin/`, and is injected verbatim
+ * (inline `<script>` / `<style>` execute — that's the contract; see
+ * `HtmlFragment.tsx` for the trust boundary). `submit_url` + `method` +
+ * `csrf_token` wire the injected `<form>`; `messages` are toasted.
+ */
+export interface HtmlFragmentResponse {
+  renderer: 'html-fragment';
+  html: string;
+  csrf_token: string;
+  submit_url: string;
+  method: string;
+  messages: FragmentMessage[];
+}
+
+/**
+ * The POST round-trip (`POST <app>/<model>/<pk>/change/?<qs>`, #679) returns
+ * this when the legacy `change_view` redirects on success. `to` is the legacy
+ * target already mapped onto the SPA prefix by the backend (e.g.
+ * `/admin2/jobs/job/1/change/`); the SPA `navigate(to)`s it (never a full
+ * `window.location` reload). `messages` are toasted.
+ */
+export interface RedirectResponse {
+  renderer: 'redirect';
+  to: string;
+  messages: FragmentMessage[];
+}
+
+/** GET `…/form-spec/` resolves to one of these (#679: no more `legacy-iframe`). */
+export type FormSpecPayload = FormSpecResponse | HtmlFragmentResponse;
+
+/**
+ * POST `…/<pk>/change/` (the html-fragment round-trip, #679) resolves to
+ * another html-fragment (validation errors / self-redirect re-render) or a
+ * redirect (success).
+ */
+export type ChangePostPayload = HtmlFragmentResponse | RedirectResponse;
 
 /**
  * One object-history entry (Django LogEntry) — `GET <app>/<model>/<pk>/history/`.

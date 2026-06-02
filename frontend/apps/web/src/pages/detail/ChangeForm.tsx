@@ -1,9 +1,10 @@
-// ChangeForm — the form-spec-driven change form (#659).
+// ChangeForm — the form-spec-driven change form (#659, #679).
 //
 // On edit, fetch the ModelAdmin-resolved form spec (rest-api 1.4.0+, #59)
 // and render:
-//   - the legacy admin in an iframe, when the admin overrides
-//     `change_form_template` (`renderer: "legacy-iframe"`);
+//   - a server-rendered html-fragment INSIDE the SPA shell, when the admin
+//     overrides `change_form_template` (`renderer: "html-fragment"`,
+//     rest-api 1.7.0+, #679) — no iframe;
 //   - otherwise the existing EditForm, with its fields + fieldsets sourced
 //     from the spec (request-aware get_form / fieldsets / readonly, the
 //     closed widget.kind enum) instead of being discovered client-side
@@ -22,7 +23,7 @@ import {
 import { RecordSkeleton } from '../../components/RecordSkeleton';
 import { detailFromFormSpec } from './adaptFormSpec';
 import { EditForm, type SaveAction } from './EditForm';
-import { LegacyIframe } from './LegacyIframe';
+import { HtmlFragment } from './HtmlFragment';
 
 export interface ChangeFormProps {
   data: DetailResponse;
@@ -67,8 +68,19 @@ export function ChangeForm({
   }
   if (!spec) return <EditForm data={data} onCancel={onCancel} onSave={onSave} />;
 
-  if (spec.renderer === 'legacy-iframe') {
-    return <LegacyIframe url={spec.legacy_url} onCancel={onCancel} />;
+  if (spec.renderer === 'html-fragment') {
+    // Custom `change_form_template` (#679): inject the server-rendered form
+    // in-shell. `onCancel` is unused here — the fragment owns its own
+    // submit/cancel affordances and redirects via SPA navigate.
+    return (
+      <HtmlFragment
+        fragment={spec}
+        appLabel={appLabel}
+        modelName={modelName}
+        pk={pk}
+        query={query ?? ''}
+      />
+    );
   }
 
   return (
