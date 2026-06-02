@@ -44,21 +44,13 @@ import { InlineSection } from './detail/InlineSection';
 import { ObjectActionButton } from './detail/ObjectActionButton';
 
 export interface DetailPageProps {
-  /** Open the page directly in edit mode (Django-admin URL alias
-   *  `/<app>/<model>/<pk>/change/`, #601). Also still triggered by
-   *  the existing `?edit=1` query param from "Save and continue
-   *  editing" (#154). */
-  initialEditing?: boolean;
   /** Open the History modal on first paint (Django-admin URL alias
    *  `/<app>/<model>/<pk>/history/`, #601). The user can still close
    *  it; this just sets the initial state. */
   initialHistoryOpen?: boolean;
 }
 
-export function DetailPage({
-  initialEditing = false,
-  initialHistoryOpen = false,
-}: DetailPageProps = {}) {
+export function DetailPage({ initialHistoryOpen = false }: DetailPageProps = {}) {
   const params = useParams<{ appLabel: string; modelName: string; pk: string }>();
   const appLabel = params.appLabel ?? '';
   const modelName = params.modelName ?? '';
@@ -69,15 +61,13 @@ export function DetailPage({
   const [searchParams] = useSearchParams();
   const { data, loading, error, refresh } = useDetail({ client, appLabel, modelName, pk });
 
-  // Open straight in edit mode when arriving via "Save and continue
-  // editing" from the add form (`?edit=1`); otherwise start read-only.
-  // Initial mode is the OR of (a) the Django-admin URL alias the router
-  // matched and (b) the existing `?edit=1` "Save and continue editing"
-  // round-trip — either drops the user in edit mode on first paint
-  // (#154, #601).
-  const [editing, setEditing] = useState(
-    () => initialEditing || searchParams.get('edit') === '1',
-  );
+  // Default to the read-only DETAILS view — even on the Django-admin
+  // `/<pk>/change/` URL alias (#682). A shared link should be safe to
+  // open; the viewer reads the record first and clicks Edit to mutate.
+  // Edit mode is reached only via the toolbar Edit button (in-place, no
+  // URL change) or a `?edit=1` deep link — the latter also lands the
+  // "Save and continue editing" round-trip back in edit mode (#154).
+  const [editing, setEditing] = useState(() => searchParams.get('edit') === '1');
   const [historyOpen, setHistoryOpen] = useState(initialHistoryOpen);
   const { plural: modelPlural } = useModelMeta(appLabel, modelName);
 

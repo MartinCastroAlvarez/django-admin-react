@@ -61,6 +61,10 @@ vi.mock('@dar/data', async (importOriginal) => {
     ...actual,
     useApiClient: () => ({}),
     useDetail: () => ({ data: detailState, loading: false, error: null, refresh: async () => {} }),
+    // Edit mode: no live form-spec → ChangeForm falls back to the
+    // detail-payload-driven EditForm, which renders deterministically
+    // (a Save row) without a network fetch.
+    useFormSpec: () => ({ data: null, loading: false, error: null }),
   };
 });
 
@@ -200,5 +204,58 @@ describe('DetailPage many-actions toolbar (#672 regression guard)', () => {
     });
     expect(longest.className).toContain('whitespace-normal');
     expect(longest.className).toContain('break-words');
+  });
+});
+
+describe('DetailPage details/edit mode default (#682)', () => {
+  // #682: a record page — including the Django-admin `/<pk>/change/` URL
+  // alias — opens the READ-ONLY details view by default. A shared link is
+  // safe to open; edit mode is one Edit-button click (in place) or a
+  // `?edit=1` deep link away. Read mode shows the toolbar (History + Edit)
+  // and no Save; edit mode hides the toolbar entirely and shows Save.
+  function renderAt(entry: string) {
+    return render(
+      <MemoryRouter initialEntries={[entry]}>
+        <Routes>
+          <Route path="/:appLabel/:modelName/:pk" element={<DetailPage />} />
+          {/* Mirrors App.tsx: the /change alias renders the SAME element,
+              no forced edit mode. */}
+          <Route path="/:appLabel/:modelName/:pk/change" element={<DetailPage />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+  }
+
+  it('opens read-only details mode by default — no Save, toolbar Edit present', () => {
+    renderAt('/auth/group/1');
+    expect(screen.getByRole('button', { name: /history/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^edit$/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /save/i })).toBeNull();
+  });
+
+  it('opens read-only details mode on the /<pk>/change/ alias too', () => {
+    renderAt('/auth/group/1/change');
+    expect(screen.getByRole('button', { name: /^edit$/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /save/i })).toBeNull();
+  });
+
+  it('deep-links straight to edit mode with ?edit=1 (toolbar hidden, Save shown)', () => {
+    renderAt('/auth/group/1?edit=1');
+    // Edit mode hides the read-mode toolbar entirely…
+    expect(screen.queryByRole('button', { name: /history/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^edit$/i })).toBeNull();
+    // …and the form's Save row is present.
+    expect(screen.getByRole('button', { name: /save/i })).toBeInTheDocument();
+  });
+
+  it('hides the Edit button for view-only users (details mode only)', () => {
+    detailState = detail({
+      permissions: { view: true, add: false, change: false, delete: false },
+    });
+    renderAt('/auth/group/1');
+    // Still read mode (toolbar present) but no Edit affordance → can't mutate.
+    expect(screen.getByRole('button', { name: /history/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^edit$/i })).toBeNull();
+    expect(screen.queryByRole('button', { name: /save/i })).toBeNull();
   });
 });

@@ -85,13 +85,14 @@ export function App() {
                 at the legacy admin's prefix (after a /admin/ ↔ /admin-old/
                 swap), bookmarked + copy-pasted legacy URLs land here.
                 Treat each as an equivalent match — same DetailPage
-                component, just opened with the right initial mode /
-                panel so the user lands where the link said they would.
+                component. `/change/` opens the read-only DETAILS view by
+                default (#682), same as the bare `/<pk>` route; edit mode
+                is one Edit-button click away, or a `?edit=1` deep link.
                 Trailing slashes are normalised by React Router v6 (no
                 extra route needed for "<pk>/change/" vs "<pk>/change"). */}
             <Route
               path=":appLabel/:modelName/:pk/change"
-              element={<DetailPage initialEditing />}
+              element={<DetailPage />}
             />
             <Route
               path=":appLabel/:modelName/:pk/history"
