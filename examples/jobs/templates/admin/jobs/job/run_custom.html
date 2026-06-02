@@ -4,8 +4,12 @@ Custom change-view template (Path B) — a dual-listbox / ordered step picker.
 
 This is a *pure custom template* with a custom POST contract: no ModelForm,
 no fieldsets, no model fields. The form-spec resolver detects this (the
-overridden change_view renders a non-standard template) and tells the React
-SPA to embed THIS legacy page in an iframe. The contract that must hold:
+overridden change_view renders a non-standard template), renders it
+server-side, strips the admin chrome, and hands the SPA the content-block
+HTML — including the inline <script>/<style> below — to inject INSIDE its own
+shell (no iframe, #679). The inline JS must survive into the SPA and run after
+injection (the SPA re-executes injected <script> elements). The contract that
+must hold:
 
   request.POST.getlist("selected_steps")  ← ordered, in DOM order of the
                                              right-hand column.

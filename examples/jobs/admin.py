@@ -1,21 +1,27 @@
-"""``JobAdmin`` — the custom-form fixture that proves the legacy-iframe escape.
+"""``JobAdmin`` — the custom-form fixture that exercises the html-fragment path.
 
 This admin uses *only* documented Django ``ModelAdmin`` hooks — no
 django-admin-react / -rest-api / -mcp-specific API. The point: if this runs
-on the React admin at ``/admin-react/`` with at most a single-view iframe
-fallback, then any legacy ``/admin/`` ModelAdmin does too.
+inside the React admin shell at ``/admin2/`` with the server-rendered
+html-fragment renderer, then any legacy ``/admin/`` ModelAdmin does too.
 
 Two rendering paths:
 
-* **Path A** — ``/admin-react/jobs/job/<pk>/change/`` (no query). The stock
+* **Path A** — ``/admin2/jobs/job/<pk>/change/`` (no query). The stock
   change form, fully describable by the form-spec contract.
   ``formfield_for_dbfield`` swaps ``metadata`` to a large textarea, which
   the SPA renders natively from ``widget.kind == "textarea"``.
 * **Path B** — ``?run_custom=1``. ``change_view`` returns a hand-rolled
   dual-listbox template (not a ModelForm, not fieldsets). The form-spec
-  resolver detects the custom render and returns
-  ``{renderer: "legacy-iframe", legacy_url: …}``; the SPA embeds the legacy
-  page in an iframe inside its own chrome.
+  resolver (rest-api 1.7.0+, #75) detects the custom render, renders it
+  SERVER-SIDE, strips the admin chrome, and returns
+  ``{renderer: "html-fragment", html, csrf_token, submit_url, method,
+  messages}``. The SPA injects that HTML inside its own shell — breadcrumb /
+  sidebar / title / toolbar stay React-rendered, no iframe (#679). The
+  injected ``<form>`` POSTs back through the round-trip route, which
+  re-renders on a validation error (``messages.error`` + redirect-to-self) or
+  returns ``{renderer: "redirect", to}`` on success — surfaced as a SPA
+  ``navigate()`` plus toasts.
 """
 
 from __future__ import annotations
