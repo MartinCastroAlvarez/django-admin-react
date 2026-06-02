@@ -7,6 +7,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.12.0] — 2026-06-02
+
+### Added
+- **Custom `change_form_template` admins now render INSIDE the SPA shell via a
+  server-rendered html-fragment — no iframe (#679).** The form-spec endpoint
+  (rest-api 1.7.0+, #75) renders a custom-template admin server-side, strips
+  the admin chrome, and returns `{renderer: "html-fragment", html, csrf_token,
+  submit_url, method, messages}`. The SPA injects that HTML into the content
+  area while the breadcrumb / sidebar / title / toolbar stay React-rendered.
+  Inline `<script>` / `<style>` the integrator's template emits **execute /
+  apply after injection**: `dangerouslySetInnerHTML` leaves parsed `<script>`
+  elements inert, so the new `HtmlFragment` component clones each into a fresh
+  `<script>` and re-inserts it (the dual-listbox JS only runs because of this).
+  The injected `<form>` POSTs via `fetch(…, {credentials: "include", headers:
+  {"X-CSRFToken": …}})` to the round-trip route; a returned `html-fragment`
+  re-injects in place (validation errors, no SPA route change), a
+  `{renderer: "redirect", to}` triggers an SPA `navigate(to)` (never a
+  `window.location` reload), and any Django `messages` surface as toasts.
+  The backend HTML is **trusted** — it is the integrator's own admin template,
+  rendered behind the same auth as `/admin/` over the same-origin API — so the
+  custom JS/CSS is injected verbatim, deliberately not sanitised (see the
+  `HtmlFragment.tsx` trust-boundary note). ModelAdmins that use only documented
+  hooks (`form` / `fieldsets` / `formfield_overrides` / `get_form`) are
+  unaffected — they keep rendering via the JSON field-map path. The
+  `examples/jobs` `?run_custom=1` dual-listbox fixture exercises the full path
+  (form-spec → POST → validation re-render → redirect) end-to-end against the
+  example backend.
+
+### Removed
+- **The `legacy-iframe` renderer and its iframe fallback are gone (#679).**
+  No iframe element is ever rendered for a custom-template form again. This
+  drops `LegacyIframe` (and the #673 "detect framing refusal → open-in-new-tab"
+  workaround) and the `safeLegacyUrl` same-origin validation that only guarded
+  the iframe `src`. Custom-template admins now render in-shell via the
+  html-fragment renderer above — no `X-Frame-Options`, `SameSite=None; Secure`,
+  or cross-origin cookie bridge required. The contract type drops
+  `LegacyIframeResponse` / `renderer: "legacy-iframe"` and adds
+  `HtmlFragmentResponse` (`renderer: "html-fragment"`) + `RedirectResponse`
+  (`renderer: "redirect"`).
+
+### Changed
+- **`django-admin-rest-api` floor raised to `^1.7.0` (#679).** 1.7.0 ships the
+  html-fragment form-spec renderer (`renderer: "html-fragment"`) plus the POST
+  round-trip route the in-shell custom form submits to. The SPA still degrades
+  gracefully to the JSON form-spec / detail-driven form on an older backend.
+
 ## [1.11.2] — 2026-06-02
 
 ### Fixed

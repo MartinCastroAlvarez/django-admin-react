@@ -1,9 +1,12 @@
 import '@testing-library/jest-dom/vitest';
 
 import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { DetailResponse, FormSpecPayload } from '@dar/data';
+
+import { ToastProvider } from '../../toast';
 
 // Mocked SWR state the mocked useFormSpec returns, set per test.
 let specState: { data: FormSpecPayload | null; loading: boolean; error: Error | null };
@@ -12,7 +15,7 @@ vi.mock('@dar/data', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@dar/data')>();
   return {
     ...actual,
-    useApiClient: () => ({}),
+    useApiClient: () => ({ submitChangeFragment: vi.fn() }),
     useFormSpec: () => specState,
   };
 });
@@ -36,15 +39,19 @@ function detail(): DetailResponse {
 
 function renderChangeForm() {
   return render(
-    <ChangeForm
-      data={detail()}
-      appLabel="auth"
-      modelName="group"
-      pk="1"
-      query=""
-      onCancel={() => {}}
-      onSave={async () => {}}
-    />,
+    <MemoryRouter>
+      <ToastProvider>
+        <ChangeForm
+          data={detail()}
+          appLabel="auth"
+          modelName="group"
+          pk="1"
+          query=""
+          onCancel={() => {}}
+          onSave={async () => {}}
+        />
+      </ToastProvider>
+    </MemoryRouter>,
   );
 }
 
@@ -52,42 +59,26 @@ beforeEach(() => {
   specState = { data: null, loading: false, error: null };
 });
 
-describe('ChangeForm (#659)', () => {
-  it('embeds the legacy admin in an iframe when the backend returns legacy-iframe', () => {
+describe('ChangeForm (#659, #679)', () => {
+  it('injects the server-rendered html-fragment in-shell (no iframe) (#679)', () => {
     specState = {
-      data: { renderer: 'legacy-iframe', legacy_url: '/admin/auth/group/1/change/' },
+      data: {
+        renderer: 'html-fragment',
+        html: '<form id="run-custom-form"><button type="submit">Queue</button></form>',
+        csrf_token: 'tok',
+        submit_url: '/admin/auth/group/1/change/',
+        method: 'POST',
+        messages: [],
+      },
       loading: false,
       error: null,
     };
     renderChangeForm();
-    const iframe = screen.getByTitle('Legacy admin form') as HTMLIFrameElement;
-    expect(iframe).toBeInTheDocument();
-    expect(iframe.src).toContain('/admin/auth/group/1/change/');
-    // #665: the iframe is sandboxed with an explicit allowlist (no
-    // allow-top-navigation / allow-popups / allow-modals).
-    expect(iframe.getAttribute('sandbox')).toBe('allow-forms allow-scripts allow-same-origin');
-  });
-
-  it('rejects a javascript: legacy_url and renders an inert error card (no iframe) (#665)', () => {
-    specState = {
-      data: { renderer: 'legacy-iframe', legacy_url: 'javascript:fetch("/admin/")' },
-      loading: false,
-      error: null,
-    };
-    renderChangeForm();
-    expect(screen.queryByTitle('Legacy admin form')).not.toBeInTheDocument();
-    expect(screen.getByText(/can’t be displayed/i)).toBeInTheDocument();
-  });
-
-  it('rejects an off-origin legacy_url and renders the error card (#665)', () => {
-    specState = {
-      data: { renderer: 'legacy-iframe', legacy_url: 'https://attacker.example/admin/' },
-      loading: false,
-      error: null,
-    };
-    renderChangeForm();
-    expect(screen.queryByTitle('Legacy admin form')).not.toBeInTheDocument();
-    expect(screen.getByText(/can’t be displayed/i)).toBeInTheDocument();
+    // No iframe is ever rendered for a custom-template form.
+    expect(document.querySelector('iframe')).toBeNull();
+    // The fragment's own <form> is injected inside the SPA shell.
+    expect(document.querySelector('#run-custom-form')).toBeInTheDocument();
+    expect(screen.getByTestId('html-fragment-host')).toBeInTheDocument();
   });
 
   it('renders the form-spec fields (request-aware get_form / fieldsets) via EditForm', () => {
