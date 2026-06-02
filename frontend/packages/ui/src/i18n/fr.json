@@ -48,5 +48,19 @@
   "This page requires JavaScript.": "Cette page nécessite JavaScript.",
   "This form is rendered by the legacy admin (custom change_form_template).": "Ce formulaire est rendu par l’admin classique (change_form_template personnalisé).",
   "Open in new tab": "Ouvrir dans un nouvel onglet",
-  "Legacy admin form": "Formulaire de l’admin classique"
+  "Legacy admin form": "Formulaire de l’admin classique",
+  "— select —": "— sélectionner —",
+  "(none)": "(aucun)",
+  "date": "date",
+  "time": "heure",
+  "HH:MM:SS": "HH:MM:SS",
+  "comma,separated,values": "valeurs,séparées,par,virgules",
+  "lower": "minimum",
+  "upper": "maximum",
+  "related object id": "id de l'objet associé",
+  "Current file:": "Fichier actuel :",
+  "File upload is not supported in the SPA yet; use the legacy admin to change the file.": "L'envoi de fichiers n'est pas encore pris en charge dans la SPA ; utilisez l'admin classique pour changer le fichier.",
+  "This field uses a widget the SPA cannot render yet; edit it in the legacy admin if it looks wrong.": "Ce champ utilise un widget que la SPA ne peut pas encore afficher ; modifiez-le dans l'admin classique s'il s'affiche mal.",
+  "Page not found.": "Page introuvable.",
+  "This form can’t be displayed: its address is invalid or points off-site.": "Ce formulaire ne peut pas être affiché : son adresse est invalide ou pointe hors du site."
 }

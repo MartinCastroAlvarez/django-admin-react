@@ -63,6 +63,31 @@ describe('ChangeForm (#659)', () => {
     const iframe = screen.getByTitle('Legacy admin form') as HTMLIFrameElement;
     expect(iframe).toBeInTheDocument();
     expect(iframe.src).toContain('/admin/auth/group/1/change/');
+    // #665: the iframe is sandboxed with an explicit allowlist (no
+    // allow-top-navigation / allow-popups / allow-modals).
+    expect(iframe.getAttribute('sandbox')).toBe('allow-forms allow-scripts allow-same-origin');
+  });
+
+  it('rejects a javascript: legacy_url and renders an inert error card (no iframe) (#665)', () => {
+    specState = {
+      data: { renderer: 'legacy-iframe', legacy_url: 'javascript:fetch("/admin/")' },
+      loading: false,
+      error: null,
+    };
+    renderChangeForm();
+    expect(screen.queryByTitle('Legacy admin form')).not.toBeInTheDocument();
+    expect(screen.getByText(/can’t be displayed/i)).toBeInTheDocument();
+  });
+
+  it('rejects an off-origin legacy_url and renders the error card (#665)', () => {
+    specState = {
+      data: { renderer: 'legacy-iframe', legacy_url: 'https://attacker.example/admin/' },
+      loading: false,
+      error: null,
+    };
+    renderChangeForm();
+    expect(screen.queryByTitle('Legacy admin form')).not.toBeInTheDocument();
+    expect(screen.getByText(/can’t be displayed/i)).toBeInTheDocument();
   });
 
   it('renders the form-spec fields (request-aware get_form / fieldsets) via EditForm', () => {

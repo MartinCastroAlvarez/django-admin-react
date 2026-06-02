@@ -275,6 +275,7 @@ Content-Security-Policy:
   connect-src 'self';                 # the API is same-origin
   manifest-src 'self';
   worker-src 'self';                  # the PWA service worker
+  frame-src 'self';                   # legacy-admin iframe fallback (#659) — same-origin only
   frame-ancestors 'none';             # clickjacking (with X_FRAME_OPTIONS)
   base-uri 'self';
   form-action 'self';
@@ -291,6 +292,26 @@ Caveats — **validate before enforcing**:
   `style` attributes at runtime; it is far lower-risk than allowing
   inline scripts. Drop it if you verify your build needs no inline
   styles.
+- `frame-src 'self'` and the **X-Frame-Options interaction** — the SPA's
+  legacy-admin fallback (#659) embeds the legacy admin change/add page in
+  a **same-origin** `<iframe>` when a `ModelAdmin` overrides
+  `change_form_template` / `add_form_template`. `frame-src 'self'` is the
+  explicit allowlist for that frame: it both **permits** the intended
+  same-origin embed and **blocks** an off-origin `legacy_url` (defence in
+  depth — the SPA also validates the URL client-side as same-origin
+  http(s) and sandboxes the iframe with `allow-forms allow-scripts
+  allow-same-origin`). Two interaction notes:
+  - **`X_FRAME_OPTIONS = "DENY"` will break the iframe** if it is applied
+    to the legacy admin's *own* responses, because the legacy admin page
+    is what gets framed. If you use the legacy-iframe fallback, scope
+    `X-Frame-Options` (and any `frame-ancestors`) so the legacy admin
+    permits same-origin framing — e.g. set `X_FRAME_OPTIONS = "SAMEORIGIN"`
+    for the legacy admin responses, or omit the header on that mount.
+    `frame-ancestors 'none'` on the *SPA shell* is fine — it controls who
+    may frame the SPA, not what the SPA may frame.
+  - If you do **not** use a custom `change_form_template` (the SPA renders
+    every form from the JSON form-spec), no iframe is ever created and you
+    can drop `frame-src` and keep `X_FRAME_OPTIONS = "DENY"` everywhere.
 - This policy assumes the package is mounted on its own path under your
   domain. If you already ship a project-wide CSP, **merge** these
   directives rather than replacing your policy.

@@ -7,6 +7,79 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.11.0] — 2026-06-02
+
+### Added
+- **Faithful rendering for every form-spec `widget.kind` (#664).** The
+  form-spec wire declares 23 `widget.kind` values; the change form previously
+  mapped only 5 and let the rest silently fall back to the control implied by
+  `FieldType` — so `hidden` rendered as a *visible, editable* input,
+  `split-datetime` collapsed to one control, and the multi-selects / `file`
+  had no faithful path. `adaptFormSpec` now maps **all 23** explicitly (an
+  exhaustive `Record<WidgetKind, …>` so a new kind is a compile error), and
+  `FieldInput` gained branches for `hidden` (real hidden input),
+  `split-datetime` (date + time), `select-date` (date input),
+  `checkbox-multiple` / `select-multiple` (checkbox bank / `<select multiple>`),
+  `autocomplete` / `autocomplete-multiple`, and `file` (limited control + a
+  legacy-admin note; upload itself still tracked by #241). Any future kind
+  with no rich renderer maps to an explicit, operator-visible
+  `unsupported_widget` tracked fallback — never a silent wrong control.
+  `adaptFormSpec.test.ts` now asserts every enum member maps to something
+  sensible.
+- **System checks for misconfiguration (#667).** A new
+  `django_admin_react/checks.py` registers a `manage.py check` validator that
+  surfaces, with actionable hints: `django_admin_rest_api` missing from
+  `INSTALLED_APPS` (Error), an unimportable `ADMIN_SITE` dotted path (Error),
+  unknown `DJANGO_ADMIN_REACT` keys (Error, at startup instead of a lazy
+  `ValueError`), an `API_URL_PREFIX` that requires the consumer to mount the
+  REST API themselves (Warning), and a missing built SPA bundle / Vite
+  manifest (Warning).
+
+### Changed
+- **`list_display_links` is now honoured (#666).** The changelist wire emits
+  `list_display_links` (rest-api); the SPA links exactly the configured
+  column(s) to the change page — and links *none* (rows inert) when the admin
+  sets `list_display_links = None`. Previously the SPA hard-pinned the link to
+  the first column. A pre-1.6.0 backend (no field on the wire) keeps the
+  legacy first-column behaviour.
+- **Raised the `django-admin-rest-api` floor to `^1.6.0` (#664).** 1.6.0 adds
+  `prepopulated_fields` + autocomplete hints to the form-spec wire (already
+  consumed for the add form via #245/#629; the autocomplete hint now drives
+  the `autocomplete` widget kind).
+- **README parity table corrected (#668).** `raw_id_fields`, `radio_fields`,
+  and `filter_horizontal` / `filter_vertical` flip to ✅ (they ship today —
+  pk-input + lookup, radio bank, and the `ShuttleSelect` two-pane widget).
+  The stale "does NOT carry through" entries for those hooks were removed, and
+  a new section documents the genuine gaps: `empty_value_display` (hard-coded
+  `—`), custom `AdminSite.each_context` extra keys, and `list_select_related`.
+
+### Security
+- **Validated + sandboxed the legacy-admin iframe (#665).** `legacy_url` from
+  the form-spec `legacy-iframe` fallback is now validated before it reaches
+  the `<iframe src>` / `<a href>` sinks: only a same-origin `http(s)` URL is
+  framed/linked; a `javascript:` / `data:` / `blob:` scheme or an off-origin
+  target renders an inert error card instead (mirroring the
+  `action-redirect.ts` discipline every other navigational sink in the SPA
+  follows). The iframe now carries
+  `sandbox="allow-forms allow-scripts allow-same-origin"` (defence in depth —
+  drops `allow-top-navigation` / `allow-popups` / `allow-modals`).
+  `SECURITY.md` §QSEC-03 gained `frame-src 'self'` and documents the
+  X-Frame-Options ↔ legacy-iframe interaction.
+
+### Performance
+- **Route-level code-splitting + show-all row windowing (#670).** `LoginPage`
+  and `CreatePage` are now `React.lazy`-loaded at the route boundary (out of
+  the first-paint main chunk). The "Show all N" (`?all`) list path applies
+  native row windowing (`content-visibility: auto`) so off-screen rows skip
+  layout/paint while staying in the DOM for find-in-page / a11y.
+
+### Fixed
+- **i18n: routed untranslated strings through `t()` (#669).** `FieldInput`'s
+  `Lookup ↗` / lookup aria-label, the `— select —` / `(none)` placeholders,
+  and the time / array / range / FK placeholders, plus `App.tsx`'s "Page not
+  found.", now go through the catalog; the new keys (and the #664 / #665
+  operator notes) were added to the es / fr / pt catalogs.
+
 ## [1.10.1] — 2026-06-02
 
 ### Fixed

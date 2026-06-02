@@ -618,8 +618,9 @@ all share the v1 wire contract. Per-feature live status below.
 | `list_editable` + bulk PATCH                           | ✅                                                              |
 | `actions` — batch + detail (signature-classified)      | ✅                                                              |
 | `autocomplete_fields`                                  | ✅                                                              |
-| `raw_id_fields` (pk text input + lookup popup)         | 🟡 [#626](https://github.com/MartinCastroAlvarez/django-admin-react/issues/626) (API emits the hint; SPA still renders autocomplete) |
-| `radio_fields` (inline radio buttons vs `<select>`)    | 🟡 [#626](https://github.com/MartinCastroAlvarez/django-admin-react/issues/626) (API emits the hint; SPA still renders dropdown) |
+| `raw_id_fields` (pk text input + lookup popup)         | ✅                                                              |
+| `radio_fields` (inline radio buttons vs `<select>`)    | ✅                                                              |
+| `filter_horizontal` / `filter_vertical` (M2M shuttle)  | ✅                                                              |
 | `ManyToManyField` read + write                         | ✅                                                              |
 | `inlines` (TabularInline / StackedInline) — read + write | ✅                                                            |
 | `FileField` / `ImageField` — read                      | ✅                                                              |
@@ -648,14 +649,13 @@ issues link the work to close each gap.
 |---|---|---|
 | `change_form_template` / `add_form_template` overrides | **Embedded in an iframe** (since 1.9.0, #659): the change/add form-spec endpoint returns a `legacy-iframe` pointer and the SPA embeds the legacy admin page inside the SPA shell (breadcrumb / sidebar / toolbar stay SPA-rendered). Port the form to documented ModelAdmin hooks at your own pace. | [#624](https://github.com/MartinCastroAlvarez/django-admin-react/issues/624) |
 | `change_list_template` / `change_password_template` / `object_history_template` overrides | Silently ignored — those surfaces render entirely from the JSON wire. | [#624](https://github.com/MartinCastroAlvarez/django-admin-react/issues/624) |
-| `formfield_overrides = {Field: {"widget": CustomWidget}}` | Custom widget invisible — the SPA picks its own control from the field's `type`. No React-side widget-registration API yet. | [#625](https://github.com/MartinCastroAlvarez/django-admin-react/issues/625) |
-| `raw_id_fields` | Falls back to the autocomplete picker (same as `autocomplete_fields`). Defeats the purpose for FKs with 10M+ rows where autocomplete `get_search_results` is too expensive. | [#626](https://github.com/MartinCastroAlvarez/django-admin-react/issues/626) |
-| `radio_fields = {"status": admin.HORIZONTAL}` | Renders a `<select>` (default choice control) instead of inline radio buttons. | [#626](https://github.com/MartinCastroAlvarez/django-admin-react/issues/626) |
-| `filter_horizontal` / `filter_vertical` (M2M shuttle widget) | Renders the generic multi-select checkbox list, not Django's two-pane shuttle. Switch the field to `autocomplete_fields` for a workable SPA UX. | [#627](https://github.com/MartinCastroAlvarez/django-admin-react/issues/627) |
+| `formfield_overrides = {Field: {"widget": CustomWidget}}` | Custom widget rendered via the React widget-registration API (`registerFieldWidget`, #625) when the consumer registers a renderer for the widget class; otherwise falls back to the default control + an operator-visible "not registered" note. | [#625](https://github.com/MartinCastroAlvarez/django-admin-react/issues/625) |
+| `empty_value_display` | **Hard-coded to `—`.** A per-`ModelAdmin` / per-field `empty_value_display` override is **not** surfaced — the SPA renders the literal em-dash for every empty value, regardless of the consumer's chosen placeholder. | [#629](https://github.com/MartinCastroAlvarez/django-admin-react/issues/629) |
+| Custom `AdminSite.each_context(request)` extra keys | Not surfaced. Only a fixed set of site attributes (`site_header` / `site_title` / `site_logo` / `site_primary_color`) reaches the SPA; any extra keys a consumer adds in a custom `each_context` are dropped. | [#629](https://github.com/MartinCastroAlvarez/django-admin-react/issues/629) |
+| `list_select_related` | A backend query-optimisation concern, applied server-side by the REST API's queryset; it changes query efficiency, **not** the wire shape, so it is intentionally invisible to the SPA (no client-visible effect to surface). | [#629](https://github.com/MartinCastroAlvarez/django-admin-react/issues/629) |
 | `GenericForeignKey` / `GenericInlineModelAdmin` | Support gap — verify per-model before relying on the SPA. | [#628](https://github.com/MartinCastroAlvarez/django-admin-react/issues/628) |
-| `LANGUAGE_CODE` / `gettext` / `Accept-Language` | The SPA chrome stays English; translated `verbose_name` / `help_text` / `@admin.action(description=_("..."))` are not surfaced per-request. | [#630](https://github.com/MartinCastroAlvarez/django-admin-react/issues/630) |
+| `LANGUAGE_CODE` / `gettext` / `Accept-Language` | SPA chrome strings translate via the bundled catalogs (es / fr / pt; #630); translated `verbose_name` / `help_text` / `@admin.action(description=_("..."))` flow through when `LocaleMiddleware` is installed. | [#630](https://github.com/MartinCastroAlvarez/django-admin-react/issues/630) |
 | `ModelAdmin.get_urls()` custom views | Opens as a popout (`<a target="_blank">`) into the Django-rendered HTML page — no SPA chrome, no breadcrumb. The link IS surfaced; the UX is just outside the SPA. | [#623](https://github.com/MartinCastroAlvarez/django-admin-react/issues/623) |
-| Django 4.2 LTS support | Not yet — the package pins `django >= 5.0,<7.0`. | [#622](https://github.com/MartinCastroAlvarez/django-admin-react/issues/622) |
 
 If your admin relies on any "silently ignored" hook above, the
 typical workaround is to keep that model on the legacy

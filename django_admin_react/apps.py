@@ -6,6 +6,7 @@ templates, static assets) is opt-in via the consumer's own `urls.py`.
 """
 
 from django.apps import AppConfig
+from django.core.checks import register
 
 
 class DjangoAdminReactConfig(AppConfig):
@@ -25,3 +26,15 @@ class DjangoAdminReactConfig(AppConfig):
     label = "django_admin_react"
     verbose_name = "Django Admin React"
     default_auto_field = "django.db.models.BigAutoField"
+
+    def ready(self) -> None:
+        """Register the package's system checks at app-load (#667).
+
+        Importing + registering here (not at module import time) keeps the
+        checks tied to the app registry being ready, matching Django's
+        documented pattern. The import is local so adding the app has no
+        eager import cost beyond the AppConfig itself.
+        """
+        from django_admin_react.checks import check_django_admin_react
+
+        register(check_django_admin_react)

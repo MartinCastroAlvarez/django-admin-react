@@ -60,6 +60,17 @@ export function RecordCardList<Row>({
   // First column = identity → title; the rest become the label/value body.
   const [titleCol, ...detailCols] = columns;
 
+  // list_display_links (#666): when the caller explicitly links NO column
+  // (`list_display_links = None` → every column carries `isLink: false`),
+  // the title is plain text and the card is not tappable — matching the
+  // desktop `<Table>`. Otherwise behaviour is unchanged: the card is
+  // tappable when `onRowClick` is set, and the title is an anchor when
+  // `rowHref` is set (the legacy default of "first column = identity link").
+  const anyExplicitLink = columns.some((c) => c.isLink !== undefined);
+  const linksDisabled = anyExplicitLink && !columns.some((c) => c.isLink);
+  const titleLinks = !linksDisabled;
+  const cardNav = linksDisabled ? undefined : onRowClick;
+
   if (loading) {
     return (
       <ul className="space-y-2" aria-busy="true">
@@ -87,23 +98,23 @@ export function RecordCardList<Row>({
           <li
             key={key}
             onClick={
-              onRowClick
+              cardNav
                 ? (e) => {
                     // A modified click (Cmd/Ctrl/Shift/Alt) is the browser's
                     // open-in-new-tab gesture — let the title anchor handle
                     // it; don't also navigate in-app.
                     if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
-                    onRowClick(row);
+                    cardNav(row);
                   }
                 : undefined
             }
             className={`rounded-lg border bg-white p-4 ${
               isSelected ? 'border-primary' : 'border-gray-300'
-            } ${onRowClick ? 'cursor-pointer hover:bg-gray-50' : ''}`}
+            } ${cardNav ? 'cursor-pointer hover:bg-gray-50' : ''}`}
           >
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0 flex-1 font-medium text-gray-900">
-                {rowHref && titleCol ? (
+                {titleLinks && titleCol && rowHref ? (
                   // Real anchor so native open-in-new-tab works; a plain
                   // left-click is intercepted for in-app nav (#253).
                   <a
@@ -113,7 +124,7 @@ export function RecordCardList<Row>({
                       if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
                       e.preventDefault();
                       e.stopPropagation();
-                      onRowClick?.(row);
+                      cardNav?.(row);
                     }}
                   >
                     {title}

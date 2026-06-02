@@ -139,4 +139,56 @@ describe('Table', () => {
     expect(th.getAttribute('tabindex')).toBeNull();
     expect(th.getAttribute('aria-sort')).toBeNull();
   });
+
+  describe('list_display_links (#666)', () => {
+    const linkRows: Row[] = [{ id: 1, name: 'Alice' }];
+
+    it('links the column(s) flagged isLink, not the first column, when isLink is set explicitly', () => {
+      const cols: TableColumn<Row>[] = [
+        { key: 'id', header: 'ID', isLink: false, render: (r) => `#${r.id}` },
+        { key: 'name', header: 'Name', isLink: true, render: (r) => r.name },
+      ];
+      render(
+        <Table columns={cols} rows={linkRows} rowKey={(r) => r.id} rowHref={(r) => `/x/${r.id}`} />,
+      );
+      // The `name` cell is the link; the `id` cell is plain text.
+      const nameLink = screen.getByText('Alice').closest('a');
+      expect(nameLink).not.toBeNull();
+      expect(nameLink?.getAttribute('href')).toBe('/x/1');
+      expect(screen.getByText('#1').closest('a')).toBeNull();
+    });
+
+    it('renders NO cell links and an inert row when no column is a link (list_display_links = None)', () => {
+      const onRowClick = vi.fn();
+      const cols: TableColumn<Row>[] = [
+        { key: 'id', header: 'ID', isLink: false, render: (r) => `#${r.id}` },
+        { key: 'name', header: 'Name', isLink: false, render: (r) => r.name },
+      ];
+      const { container } = render(
+        <Table
+          columns={cols}
+          rows={linkRows}
+          rowKey={(r) => r.id}
+          rowHref={(r) => `/x/${r.id}`}
+          onRowClick={onRowClick}
+        />,
+      );
+      expect(container.querySelector('tbody a')).toBeNull();
+      // Row is not clickable when nothing links.
+      fireEvent.click(screen.getByText('Alice'));
+      expect(onRowClick).not.toHaveBeenCalled();
+      expect((container.querySelector('tbody tr') as HTMLElement).className).not.toContain(
+        'cursor-pointer',
+      );
+    });
+
+    it('falls back to linking the first column when no column declares isLink (legacy / pre-1.6.0)', () => {
+      render(
+        <Table columns={columns} rows={linkRows} rowKey={(r) => r.id} rowHref={(r) => `/x/${r.id}`} />,
+      );
+      // `columns` here is [id, name] with no isLink → first column links.
+      expect(screen.getByText('1').closest('a')).not.toBeNull();
+      expect(screen.getByText('Alice').closest('a')).toBeNull();
+    });
+  });
 });
