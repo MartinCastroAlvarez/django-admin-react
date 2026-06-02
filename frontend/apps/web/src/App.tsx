@@ -1,15 +1,34 @@
+import { Suspense, lazy } from 'react';
 import { Route, Routes, useParams } from 'react-router-dom';
 
 import { ApiError, useRegistry } from '@dar/data';
+import { t } from '@dar/ui';
 
 import { ErrorBoundary } from './ErrorBoundary';
 import { Layout } from './Layout';
 import { HomePage } from './pages/HomePage';
 import { ListPage } from './pages/ListPage';
 import { DetailPage } from './pages/DetailPage';
-import { LoginPage } from './pages/LoginPage';
-import { CreatePage } from './pages/CreatePage';
 import { ToastProvider } from './toast';
+
+// Route-level code-splitting (#670): the login + create pages aren't on the
+// first authenticated paint — login only renders when the session is dead,
+// and create only after the operator clicks "+ Add". Lazy-loading them keeps
+// their code out of the main chunk. (Home / List / Detail stay eager: one of
+// them is the very first paint on every load, so splitting them would only
+// add a Suspense flash.)
+const LoginPage = lazy(() =>
+  import('./pages/LoginPage').then((m) => ({ default: m.LoginPage })),
+);
+const CreatePage = lazy(() =>
+  import('./pages/CreatePage').then((m) => ({ default: m.CreatePage })),
+);
+
+// Shared fallback for a lazy route chunk still in flight — a small, layout-
+// neutral hint rather than a blank frame.
+function RouteFallback() {
+  return <div className="p-6 text-sm text-gray-500">{t('Loading…')}</div>;
+}
 
 // Remount ListPage when the model changes so per-model state (selection,
 // retained "keep previous data" rows) resets cleanly on a model switch —
@@ -34,7 +53,11 @@ export function App() {
   // registry can't keep a dead session looking alive.
   const { error, refresh } = registry;
   if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
-    return <LoginPage onSuccess={refresh} />;
+    return (
+      <Suspense fallback={<RouteFallback />}>
+        <LoginPage onSuccess={refresh} />
+      </Suspense>
+    );
   }
 
   return (
@@ -49,7 +72,14 @@ export function App() {
             {/* Literal `add` is ranked above the `:pk` route by React
               Router, so /app/model/add opens the create form, not a
               detail with pk="add". */}
-            <Route path=":appLabel/:modelName/add" element={<CreatePage />} />
+            <Route
+              path=":appLabel/:modelName/add"
+              element={
+                <Suspense fallback={<RouteFallback />}>
+                  <CreatePage />
+                </Suspense>
+              }
+            />
             <Route path=":appLabel/:modelName/:pk" element={<DetailPage />} />
             {/* Django-admin URL aliases (#601). When the SPA is mounted
                 at the legacy admin's prefix (after a /admin/ ↔ /admin-old/
@@ -75,7 +105,7 @@ export function App() {
             <Route path=":appLabel/:modelName/:pk/delete" element={<DetailPage />} />
             <Route
               path="*"
-              element={<div className="p-6 text-sm text-gray-500">Page not found.</div>}
+              element={<div className="p-6 text-sm text-gray-500">{t('Page not found.')}</div>}
             />
           </Routes>
         </ErrorBoundary>
