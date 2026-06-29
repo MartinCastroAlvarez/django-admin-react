@@ -54,15 +54,72 @@ export interface HtmlFragmentProps {
  * (copying attributes + text), and swap it in. A newly *created* and
  * *inserted* script element executes per the DOM spec.
  */
+// Event names an injected script may use to defer its init until "page ready".
+const READY_EVENTS = new Set(['DOMContentLoaded', 'readystatechange']);
+
 function executeScripts(container: HTMLElement): void {
-  const scripts = Array.from(container.querySelectorAll('script'));
-  for (const old of scripts) {
-    const replacement = document.createElement('script');
-    for (const attr of Array.from(old.attributes)) {
-      replacement.setAttribute(attr.name, attr.value);
+  // A very common admin-template idiom (Django's own, and what most hand-rolled
+  // dual-listbox / drag-and-drop forms use) wires every control inside
+  // `document.addEventListener('DOMContentLoaded', () => { … })`. By the time
+  // the SPA injects this fragment, the page's real `DOMContentLoaded`/`load`
+  // fired long ago and will never fire again, so such a handler would register
+  // but never run — leaving every button dead (#693).
+  //
+  // We can't just re-dispatch the events globally: that re-invokes EVERY
+  // `DOMContentLoaded` listener on the page, including stale ones from
+  // previously-injected fragments (whose DOM is gone → they throw) and the
+  // app's own. Instead, while the fragment's inline scripts run, we intercept
+  // their `DOMContentLoaded`/`load` registrations, keep them OFF the global
+  // targets (no leak, no re-fire on the next fragment), and invoke just those
+  // captured handlers once — exactly the "page is ready" signal they wait for.
+  const deferred: EventListener[] = [];
+  const capture =
+    (real: typeof document.addEventListener, names: Set<string>) =>
+    (type: string, listener: EventListenerOrEventListenerObject, options?: unknown): void => {
+      if (names.has(type) && typeof listener === 'function') {
+        deferred.push(listener as EventListener);
+        return;
+      }
+      (real as (t: string, l: EventListenerOrEventListenerObject, o?: unknown) => void)(
+        type,
+        listener,
+        options,
+      );
+    };
+
+  const origDocAdd = document.addEventListener;
+  const origWinAdd = window.addEventListener;
+  document.addEventListener = capture(origDocAdd.bind(document), READY_EVENTS) as typeof document.addEventListener;
+  window.addEventListener = capture(origWinAdd.bind(window), new Set(['load'])) as typeof window.addEventListener;
+
+  try {
+    const scripts = Array.from(container.querySelectorAll('script'));
+    for (const old of scripts) {
+      const replacement = document.createElement('script');
+      for (const attr of Array.from(old.attributes)) {
+        replacement.setAttribute(attr.name, attr.value);
+      }
+      replacement.text = old.textContent ?? '';
+      // Inline scripts execute synchronously on insertion, so their
+      // `addEventListener` calls hit our interceptor above before the `finally`
+      // restores the originals.
+      old.replaceWith(replacement);
     }
-    replacement.text = old.textContent ?? '';
-    old.replaceWith(replacement);
+  } finally {
+    document.addEventListener = origDocAdd;
+    window.addEventListener = origWinAdd;
+  }
+
+  // Fire the captured "ready" handlers once, scoped to this fragment.
+  const readyEvent = new Event('DOMContentLoaded');
+  for (const fn of deferred) {
+    try {
+      fn.call(document, readyEvent);
+    } catch (err) {
+      // A broken init handler must not take down the SPA; the rest of the
+      // form (and other handlers) should still wire up.
+      console.error('[django-admin-react] custom-form init handler threw', err);
+    }
   }
 }
 

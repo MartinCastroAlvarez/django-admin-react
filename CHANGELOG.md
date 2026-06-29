@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.13.1] — 2026-06-30
+
+### Fixed
+- **Custom-form (`html-fragment`) controls wired in `DOMContentLoaded` were
+  dead** (#693). When a `ModelAdmin`'s custom change-form template defers its
+  init to `document.addEventListener('DOMContentLoaded', …)` — the most common
+  Django/admin idiom, and what dual-listbox / parser-selection forms use — the
+  SPA injected the fragment *after* the page's real `DOMContentLoaded` had
+  already fired, so the handler registered but never ran and every button was
+  inert. `HtmlFragment` now intercepts the fragment scripts'
+  `DOMContentLoaded` / `load` registrations and invokes just those handlers
+  once, scoped to the fragment — without re-firing the events globally (which
+  would re-run stale handlers from previously-injected fragments). Forms that
+  init at top level or delegate on `document` are unaffected. The `jobs`
+  example's dual-listbox now uses the `DOMContentLoaded` idiom to guard this
+  end-to-end.
+
 ## [1.13.0] — 2026-06-03
 
 ### Changed

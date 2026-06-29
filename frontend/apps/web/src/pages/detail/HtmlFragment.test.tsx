@@ -87,6 +87,35 @@ describe('HtmlFragment (#679)', () => {
     expect(form).toHaveAttribute('data-script-ran', '1');
   });
 
+  it('wires controls whose init is deferred to DOMContentLoaded (#693)', () => {
+    // The Django/admin idiom: bind buttons INSIDE a DOMContentLoaded handler.
+    // The page's real DOMContentLoaded fired before the SPA injected this
+    // fragment, so without re-dispatching the lifecycle event the handler
+    // registers but never runs → the button is dead. This is the exact
+    // pattern Laminr's reprocess-parsers dual-listbox uses.
+    renderFragment(
+      fragment({
+        html:
+          '<form id="run-custom-form">' +
+          '<button type="button" id="add-btn">Add</button>' +
+          '<span id="result">idle</span>' +
+          '<script>document.addEventListener("DOMContentLoaded", function () {' +
+          'var b = document.getElementById("add-btn");' +
+          'var r = document.getElementById("result");' +
+          'b.addEventListener("click", function () { r.textContent = "clicked"; });' +
+          '});</script>' +
+          '</form>',
+      }),
+    );
+    const btn = document.getElementById('add-btn') as HTMLButtonElement;
+    const result = document.getElementById('result') as HTMLSpanElement;
+    expect(result).toHaveTextContent('idle');
+    fireEvent.click(btn);
+    // Fix: HtmlFragment re-dispatches DOMContentLoaded after executing the
+    // inline scripts, so the deferred handler ran and wired the click.
+    expect(result).toHaveTextContent('clicked');
+  });
+
   it('round-trips a POST through a validation error (re-inject) then a redirect (navigate)', async () => {
     // First submit → another html-fragment (validation error) → re-inject;
     // second submit → redirect → SPA navigate.

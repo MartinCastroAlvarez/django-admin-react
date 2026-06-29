@@ -90,7 +90,12 @@ the order the steps run in.</p>
 </form>
 
 <script>
-(function () {
+// Defer init to DOMContentLoaded — the most common Django/admin template
+// idiom (and exactly what Laminr's reprocess-parsers dual-listbox uses). The
+// SPA injects this fragment AFTER the page's real DOMContentLoaded fired, so
+// the SPA must re-run deferred-ready handlers (#693) or every control here is
+// dead. This fixture guards that path end-to-end.
+document.addEventListener("DOMContentLoaded", function () {
   var form = document.getElementById("run-custom-form");
   var available = document.getElementById("available");
   var selected = document.getElementById("selected");
@@ -143,6 +148,6 @@ the order the steps run in.</p>
       inputs.appendChild(input);
     });
   });
-})();
+});
 </script>
 {% endblock %}
