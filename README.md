@@ -35,15 +35,17 @@ urlpatterns = [
 > [Project board](https://github.com/users/MartinCastroAlvarez/projects/3)
 > and the [Issues list](https://github.com/MartinCastroAlvarez/django-admin-react/issues).
 
-## Three repos, one product
+## Five repos, one product
 
-The project is split into three independently-published, cross-referenced repos so each piece can be consumed on its own merits:
+The project is split into five independently-published, cross-referenced repos so each piece can be consumed on its own merits:
 
 | Repo | PyPI | Role |
 |---|---|---|
-| **[`django-admin-rest-api`](https://github.com/MartinCastroAlvarez/django-admin-api)** | [`django-admin-rest-api`](https://pypi.org/project/django-admin-rest-api/) | The JSON REST API for the Django admin — same permissions, same `ModelAdmin`, no new features. The wire surface. |
+| **[`django-admin-rest-api`](https://github.com/MartinCastroAlvarez/django-admin-rest-api)** | [`django-admin-rest-api`](https://pypi.org/project/django-admin-rest-api/) | The JSON REST API for the Django admin — same permissions, same `ModelAdmin`, no new features. The wire surface. |
 | **`django-admin-react`** *(this repo)* | [`django-admin-react`](https://pypi.org/project/django-admin-react/) | The React SPA frontend. A **super-layer** that depends on `django-admin-rest-api` for every wire call. |
-| **[`django-admin-mcp-api`](https://github.com/MartinCastroAlvarez/django-admin-mcp)** | [`django-admin-mcp-api`](https://pypi.org/project/django-admin-mcp-api/) | Wire-protocol-only **MCP** adapter (call, manifest, …) over `django-admin-rest-api` — lets agents reach the same `ModelAdmin`-driven REST surface, no new functionality / permissions / validation. |
+| **[`django-admin-mcp-api`](https://github.com/MartinCastroAlvarez/django-admin-mcp-api)** | [`django-admin-mcp-api`](https://pypi.org/project/django-admin-mcp-api/) | Wire-protocol-only **MCP** adapter (call, manifest, …) over `django-admin-rest-api` — lets agents reach the same `ModelAdmin`-driven REST surface, no new functionality / permissions / validation. |
+| **[`django-admin-graph`](https://github.com/MartinCastroAlvarez/django-admin-graph)** | *(coming soon)* | The admin site as a typed, versioned, permission-filtered graph (JSON, Mermaid, DOT). |
+| **[`django-admin-skills`](https://github.com/MartinCastroAlvarez/django-admin-skills)** | *(coming soon)* | Generates Agent Skills (`SKILL.md`) for Claude Code / Codex from the graph, so agents learn the admin without new permissions. |
 
 The wire contract itself lives in the **API repo** (`docs/api-contract.md` there). This README is about the SPA. The migration from "self-contained" to the 3-repo split is tracked in [META #544](https://github.com/MartinCastroAlvarez/django-admin-react/issues/544).
 
@@ -594,7 +596,7 @@ register_field_type(MoneyField, vocab_type="decimal")
 
 Coining a brand-new `vocab_type` (with a matching SPA widget) is an
 **API-repo** concern — open the issue at
-[`MartinCastroAlvarez/django-admin-api`](https://github.com/MartinCastroAlvarez/django-admin-api).
+[`MartinCastroAlvarez/django-admin-api`](https://github.com/MartinCastroAlvarez/django-admin-rest-api).
 
 ### Pre-built `get_*` overrides still work
 
@@ -918,7 +920,7 @@ Every endpoint is **staff-only by default** (or whatever
 `AdminSite.has_permission` returns), CSRF-required on unsafe
 methods, and emits `Cache-Control: no-store`. Full wire contract
 lives in the API repo:
-[`MartinCastroAlvarez/django-admin-api`](https://github.com/MartinCastroAlvarez/django-admin-api).
+[`MartinCastroAlvarez/django-admin-api`](https://github.com/MartinCastroAlvarez/django-admin-rest-api).
 
 ---
 
@@ -986,5 +988,5 @@ Open an [Issue](https://github.com/MartinCastroAlvarez/django-admin-react/issues
 or a [Discussion](https://github.com/MartinCastroAlvarez/django-admin-react/discussions)
 before sending a PR for anything non-trivial. **API-side contributions** (any
 `/api/v1/...` endpoint, the wire contract, permission gates, serializer
-denylist) go to [`MartinCastroAlvarez/django-admin-api`](https://github.com/MartinCastroAlvarez/django-admin-api)
+denylist) go to [`MartinCastroAlvarez/django-admin-api`](https://github.com/MartinCastroAlvarez/django-admin-rest-api)
 — this repo owns only the **React SPA super-layer** on top.
